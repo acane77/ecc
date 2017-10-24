@@ -1,0 +1,7 @@
+build
+build-*
+SDT.txt
+CMakeLists.txt.user
+*.autosave
+.vs
+.idea
