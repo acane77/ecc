@@ -11,6 +11,8 @@ namespace Miyuki::Proc {
         FileReadPtr M_fr;
         int peak;
 
+        char _getCharFromSlash();
+
     public:
         Lexer(FileReadPtr fr_ptr);
 

@@ -37,7 +37,10 @@ namespace Miyuki::Proc {
         static int startColumn;
 
         Token(int _tag) { tag = _tag; if (flread) { column = flread->getColumn(); row = flread->getRow(); filenam = ""; chrlen = column - startColumn; } }
-        virtual string toString() { return "Token"; }
+        virtual string toString() {
+            if (tag > 31 && tag < 127)  return "Sign: {0}"_format((char)tag);
+            return "Token[tag={0}]"_format(tag);
+        }
     };
 
     // Identifier & Keyword & Enumration
@@ -54,7 +57,7 @@ namespace Miyuki::Proc {
         // For Enmeration
         void changeTypeToEnumeration() { tag = Tag::Enumeration; }
 
-        string toString() { return "Word: {0}"_format(name); }
+        string toString() { return "{0}: {1}"_format(tag == Tag::ID ? "Identifier" : ( tag == Tag::Enumeration ? "Enumeration" : "Keyword" ),name); }
     };
 
     // Integer Constant
@@ -81,10 +84,19 @@ namespace Miyuki::Proc {
     // Charater Constant
     class CharToken : public Token {
     public:
-        char value;
+        uint64_t value;
 
-        CharToken(char _value) :Token(Tag::Character) { value = _value; }
-        string toString() { return "Character: {0}"_format(value); }
+        CharToken(uint64_t _value) :Token(Tag::Character) { value = _value; }
+        string toString() { return "Character: '{0}', value={1}"_format((char)value, value); }
+    };
+
+    // String Literals
+    class StringToken : public Token {
+    public:
+        string value;
+
+        StringToken(string _value) : Token(Tag::StringLiteral) { value = _value; }
+        string toString() { return "String literal: \"{0}\""_format(value); }
     };
 };
 
