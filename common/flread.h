@@ -5,10 +5,15 @@
 #include <string>
 #include <deque>
 #include "common/exception.h"
+#include "common/ptrdef.h"
 
 using namespace std;
 
 namespace Miyuki::Common {
+
+    // A line-by-line file reader
+
+    DEFINE_SHARED_PTR(FileRead)
 
     class FileRead {
         int column = 0;

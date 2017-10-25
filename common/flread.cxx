@@ -9,8 +9,8 @@ namespace Miyuki::Common {
 
     int FileRead::nextChar() {
         while (column >= line.length()) {
-            column = 0;
             if (!nextLine()) return -1;
+            column = 0;
         }
         return line[column++];
     }

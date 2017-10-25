@@ -13,5 +13,6 @@
 #include <exception>
 #include <map>
 #include <deque>
+#include <memory>
 
 #endif

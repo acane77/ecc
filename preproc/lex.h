@@ -1,4 +1,4 @@
-#include <../include/include.h>
+#include "include.h"
 
 namespace Miyuki::Preproc {
     class Lexer {

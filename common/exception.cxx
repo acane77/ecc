@@ -11,7 +11,7 @@ namespace Miyuki::Common {
     }
 
     const char *SyntaxError::what() const noexcept {
-        return "syntax error.";
+        return msg.c_str();
     }
 
 }
