@@ -12,7 +12,7 @@ namespace Miyuki::Proc::Tag {
 
         // Other Punctuators
         PointerAccess = 128, Increase, Decrease, LeftShift, RightShift,
-        GreateThanEqual, LessThanEqual, NotEqual, And, Or, Ellipsis, MulpileAssign,
+        GreaterThanEqual, LessThanEqual, Equal, NotEqual, And, Or, Ellipsis, MulpileAssign,
         DivideAssign, ModAssign, AddAssign, SubAssign, LeftShiftAssign,
         RightShiftAssign, BitwiseAndAssign, XorAssign, BitwiseOrAssign,
         Comma, Sharp, DoubleSharp,

@@ -1,5 +1,6 @@
 #include "token.h"
 #include "lex.h"
+#include "common/defines.h"
 #include <format.h>
 #include <climits>
 
@@ -12,6 +13,8 @@ namespace Miyuki::Proc {
     }
 
     TokenPtr Lexer::scan() {
+        int singelPunc;
+
         // Eat comments and wite spaces
         for (readch(); ; readch()) {
             if (peak == Tag::EndOfFile) return make_shared<Token>(Tag::EndOfFile);
@@ -50,16 +53,27 @@ namespace Miyuki::Proc {
 
         // Integer and floating constant
         long double floating;
+        // Integer of integer part of floating
         uint64_t intValue = 0;
-        int ary;
+        // Ary of the integer (or integer part of floating)
+        int ary = 10;
+        // Integer has unsigbed suffix (u)
         bool hasUnsignedSuffix = false;
+        // Integer or floating has long suffix (L)
         bool hasLongSuffix = false;
+        // Integer has long long suffix (LL)
         bool hasLongLongSuffix = false;
+        // Test if there's a floating suffix (F)
         bool hasFloatingSuffix = false;
+        // Floating or Integer suffix is vilid
         bool suffixInvalid = false;
+        // Represent if code goes to floating test directly instead of enterring to integer
+        bool gotoFloatingDirectly = true;
+        // Store suffix for feature use
         string suffix = "";
 
         if (isdigit(peak)) {
+            gotoFloatingDirectly = false;
             if (peak != '0') {
                 // decimal-constant
                 ary = 10;
@@ -124,14 +138,13 @@ add_exponment:
                     floating = intValue;
                     goto convert_to_floating_here;
                 }
-
+                retract();
+it_must_be_an_integer:
                 short bit;
                 if (hasLongLongSuffix) bit = 64;
                 else if (hasLongSuffix) bit = 32;
                 else if ((hasUnsignedSuffix && intValue < INT16_MAX) || (!hasUnsignedSuffix && intValue < INT16_MAX / 2) ) bit = 16;
                 else bit = 32;
-
-                retract();
                 return make_shared<IntToken>(intValue, hasUnsignedSuffix, bit);
             }
 
@@ -140,6 +153,20 @@ add_exponment:
         // Floating-constant (decimal)
         if (peak == '.') {
             readch(); long double decimalPart;
+            if (peak == '.') {
+                // if !gotoFloatingDirectly source like '123...', integer + ...
+                // why retract here? if here is .. it reads two more characters than
+                // nessesarry, so retract is required.
+                if (!gotoFloatingDirectly)  { retract(); retract(); goto it_must_be_an_integer; }
+                // it may be ..., .. is also possible
+                else goto maybe_an_ellipsis;
+            }
+            if (gotoFloatingDirectly && !(isdigit(peak))) {
+                // floating like .12 = 0.12, it must be a decimal number.
+                // assign directly just becsuse peak must be dot
+                retract(); peak = '.'; goto return_peak_as_is;
+            }
+
             if (intValue == 0 && ary == 8) ary = 10;
             if (ary == 8)  throw SyntaxError("Invalid number.");
             else if (ary == 10) {
@@ -253,6 +280,7 @@ convert_to_floating_here:
 scan_character:
             string chrseq;
             readch();
+            if (peak == '\'') throw SyntaxError("empty character constant");
             for (; ; readch()) {
                 if (peak == '\'') break;
                 else if (peak == '\r' || peak == '\n') throw SyntaxError("Unexpected new-line");
@@ -282,7 +310,97 @@ scan_character:
             return make_shared<StringToken>(chrseq);
         }
 
-        return make_shared<Token>(peak);
+return_peak_as_is:
+        // Punctuators
+        //  -> -- -=
+        singelPunc = peak;
+        if (peak == '-') {  readch();
+            if (peak == '>') return make_shared<Token>(Tag::PointerAccess);
+            if (peak == '-') return make_shared<Token>(Tag::Decrease);
+            if (peak == '=') return make_shared<Token>(Tag::SubAssign);
+        }
+        // ++
+        else if (peak == '+'){  readch();
+            if (peak == '+') return make_shared<Token>(Tag::Increase);
+            if (peak == '=') return make_shared<Token>(Tag::AddAssign);
+        }
+        // << <<= <= <:
+        else if (peak == '<') {  readch();
+            if (peak == '<') {  readch();
+                if (peak == '=')  return make_shared<Token>(Tag::LeftShiftAssign);
+                retract(); return make_shared<Token>(Tag::LeftShift);
+            }
+            else if (peak == '=') return make_shared<Token>(Tag::LessThanEqual);
+            else if (peak == ':') return make_shared<Token>(Tag::LessThanColon);
+            else if (peak == '%') return make_shared<Token>(Tag::LessThanMod);
+        }
+        // >> >>= >=
+        else if (peak == '>') {  readch();
+            if (peak == '>') {  readch();
+                if (peak == '=')  return make_shared<Token>(Tag::RightShiftAssign);
+                retract(); return make_shared<Token>(Tag::RightShift);
+            }
+            else if (peak == '=') return make_shared<Token>(Tag::GreaterThanEqual);
+        }
+        // ==
+        else if (peak == '=') {  readch();
+            if (peak == '=') return make_shared<Token>(Tag::Equal);
+        }
+        // !=
+        else if (peak == '!') {  readch();
+            if (peak == '=') return make_shared<Token>(Tag::NotEqual);
+        }
+        // &&
+        else if (peak == '&') {  readch();
+            if (peak == '&') return make_shared<Token>(Tag::And);
+            if (peak == '=') return make_shared<Token>(Tag::BitwiseAndAssign);
+        }
+        // ||
+        else if (peak == '|') {  readch();
+            if (peak == '|') return make_shared<Token>(Tag::Or);
+            if (peak == '=') return make_shared<Token>(Tag::BitwiseOrAssign);
+        }
+        // ...
+        else if (peak == '.') {  readch();
+maybe_an_ellipsis:
+            if (peak == '.') {  readch();
+                if (peak == '.') return make_shared<Token>(Tag::Ellipsis);
+                retract(); throw SyntaxError("invalid token '..'");
+            }
+        }
+        // *=
+        else if (peak == '*') {  readch();
+            if (peak == '=') return make_shared<Token>(Tag::MulpileAssign);
+        }
+        // /=
+        else if (peak == '/') {  readch();
+            if (peak == '=') return make_shared<Token>(Tag::DivideAssign);
+        }
+        // %=  %: %:%: %>
+        else if (peak == '%') {  readch();
+            if (peak == '=') return make_shared<Token>(Tag::ModAssign);
+            if (peak == '>') return make_shared<Token>(Tag::ModGreaterThan);
+            if (peak == ':' ) {  readch();
+                if (peak == '%') {
+                    if ((readch(), peak == ':')) return make_shared<Token>(Tag::ModColonDouble);
+                    else throw SyntaxError("Invalid token");
+                }
+                else return make_shared<Token>(Tag::ModColon);
+            }
+        }
+        // ##
+        else if (peak == '#') {  readch();
+            if (peak == '#') return make_shared<Token>(Tag::DoubleSharp);
+        }
+        // ^=
+        else if (peak == '^') {  readch();
+            if (peak == '=') return make_shared<Token>(Tag::XorAssign);
+        }
+        //
+        // other single-character punctuators
+        // singlePunc == peak means directly goes here, never enterred any if-statement
+        if (singelPunc != peak) retract();
+        return make_shared<Token>(singelPunc);
     }
 
     Lexer::~Lexer() {

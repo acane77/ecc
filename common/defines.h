@@ -3,6 +3,9 @@
 
 // Prefedined macros and constants
 
-#include "ptrdefs.h"
+#include "common/ptrdef.h"
+
+#define ishexdigit(x) ( isdigit(x) || (x >= 'A' && x <= 'F') || (x >= 'a' && x <= 'f') )
+#define isoctdigit(x) ( x >= '0' && x <= '8' )
 
 #endif
