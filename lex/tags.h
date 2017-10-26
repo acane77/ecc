@@ -1,11 +1,11 @@
-#ifndef _MIYUKI_PROCTAG_H
-#define _MIYUKI_PROCTAG_H
+#ifndef _MIYUKI_TAG_H
+#define _MIYUKI_TAG_H
 
 #include "tags.h"
 
 // tag.h  - defined tag used in lexer
 
-namespace Miyuki::Proc::Tag {
+namespace Miyuki::Lex::Tag {
     enum: int32_t {
         // Special
         EndOfFile = -1,
@@ -38,6 +38,13 @@ namespace Miyuki::Proc::Tag {
         Constant = Integer | Floating | Enumeration,
         Identifier = ID | Enumeration
 
+    };
+
+    enum Property : uint32_t {
+        PunctuatorStart = 0,
+        PunctuatorEnd = 191,
+        KeywordStart = 192,
+        KeywordEnd = 255,
     };
 }
 

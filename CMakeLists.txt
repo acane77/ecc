@@ -7,16 +7,16 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -std=c++1z")
 set(LINK_LIBS -lstdc++ -lfmt)
 
 # Add header file include directories
-include_directories(./ ./bytecode ./proc, ./preproc, ./codeg ./include ./common)
+include_directories(./ ./bytecode ./lex, ./parse, ./codeg ./include ./common)
 
 # Add block directories
 add_subdirectory(bytecode)
-add_subdirectory(proc)
-add_subdirectory(preproc)
+add_subdirectory(parse)
+add_subdirectory(lex)
 add_subdirectory(codeg)
 add_subdirectory(common)
 
 # Main program
 aux_source_directory(. JACC_SOURCE)	
 add_executable("jacc" ${JACC_SOURCE})
-target_link_libraries("jacc" bytecode proc preproc codeg commonlib ${LINK_LIBS})
+target_link_libraries("jacc" bytecode parse lex codeg common ${LINK_LIBS})

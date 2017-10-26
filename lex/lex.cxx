@@ -4,12 +4,12 @@
 #include <format.h>
 #include <climits>
 
-namespace Miyuki::Proc {
+namespace Miyuki::Lex {
 
     using namespace fmt;
 
     Lexer::Lexer(FileReadPtr frptr) {
-        M_fr = frptr;
+        M_fr = move(frptr);
     }
 
     TokenPtr Lexer::scan() {
@@ -70,7 +70,7 @@ namespace Miyuki::Proc {
         // Represent if code goes to floating test directly instead of enterring to integer
         bool gotoFloatingDirectly = true;
         // Store suffix for feature use
-        string suffix = "";
+        string suffix;
 
         if (isdigit(peak)) {
             gotoFloatingDirectly = false;
@@ -118,13 +118,13 @@ add_exponment:
             // integer-suffix
             else  {
                 for (; isalnum(peak) ; readch()) {
-                    suffix += peak;
+                    suffix += (char)peak;
                     if (suffixInvalid) continue;
                     if ((peak == 'u' || peak == 'U') && !hasUnsignedSuffix)
                         hasUnsignedSuffix = true;
                     else if ((peak == 'l' || peak == 'L') && !(hasLongLongSuffix || hasLongSuffix)) {
-                        char save = peak; readch();
-                        if (peak == save) { suffix += peak; hasLongLongSuffix = true; }
+                        char save = (char)peak; readch();
+                        if (peak == save) { suffix += (char)peak; hasLongLongSuffix = true; }
                         else { retract(); hasLongSuffix = true; }
                     }
                     else if ((peak == 'f' || peak == 'F') && !hasFloatingSuffix)

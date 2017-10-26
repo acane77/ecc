@@ -1,11 +1,11 @@
-#ifndef _MIYUKI_PROCLEXER_H
-#define _MIYUKI_PROCLEXER_H
+#ifndef _MIYUKI_LEXER_H
+#define _MIYUKI_LEXER_H
 
 #include "include.h"
 #include "common/flread.h"
-#include "proc/token.h"
+#include "lex/token.h"
 
-namespace Miyuki::Proc {
+namespace Miyuki::Lex {
     using namespace Miyuki::Common;
     class Lexer {
         FileReadPtr M_fr;
@@ -14,7 +14,7 @@ namespace Miyuki::Proc {
         char _getCharFromSlash();
 
     public:
-        Lexer(FileReadPtr fr_ptr);
+        explicit Lexer(FileReadPtr fr_ptr);
 
         void readch() { peak = M_fr->nextChar(); }
         void retract() { peak = M_fr->lastChar(); }
@@ -24,7 +24,7 @@ namespace Miyuki::Proc {
         int getColumn() { return M_fr->getColumn(); }
         int getRow() { return M_fr->getRow(); }
 
-        TokenPtr scan();
+        virtual TokenPtr scan();
 
         ~Lexer();
     };
