@@ -5,6 +5,8 @@
 
 namespace Miyuki::Lex {
 
+    DEFINE_SHARED_PTR(PreprocessorLexer)
+
     class PreprocessorLexer : public Lexer {
         uint16_t lexingContent = LexingContent::DefaultContent;
 

@@ -3,18 +3,24 @@
 
 #include <stack>
 #include <cassert>
+#include <string>
+#include <format.h>
 #include "ptrdef.h"
 #include "flread.h"
 
 namespace Miyuki::Common {
-
+    using namespace fmt;
     // This file defines source mamager
     //   Encapsulates the operation of the file switch
 
     DEFINE_SHARED_PTR(SourceManager)
 
     class SourceManager {
-        std::stack<FileReadPtr> fileStack;
+        // File read stack, stack top is the file we're reading
+        std::deque<FileReadPtr> fileStack;
+        // File which has been read, then add here for futher use
+        std::deque<FileReadPtr> readFile;
+        // Current file
         FileReadPtr  currFile;
         enum {
             MaxStackSize = 300
@@ -55,16 +61,31 @@ namespace Miyuki::Common {
             if ( getFileCount() >= MaxStackSize )
                 throw IOException("file stack too deeply");
             FileReadPtr fr = make_shared<FileRead>(path);
-            fileStack.push(fr);
+            fileStack.push_back(fr);
             currFile = fr;
         }
         void closeCurrFile() {
             assert( currFile && "no file opened" );
-            currFile.reset();
-            fileStack.pop();
-            currFile = fileStack.top();
+            readFile.push_back(currFile);
+            fileStack.pop_back();
+            currFile = fileStack.back();
         }
         const string &getCurrentFilename() const { return currFile->getFilename(); }
+        // get line from file stack
+        string getLine(string filename, int line) {
+            // first find files being read
+            for (int i=0; i<fileStack.size(); ++i) {
+                if (fileStack[i]->getFilename() == filename)
+                    return fileStack[i]->getLine(line);
+            }
+            // then find read file
+            for (int i=0; i<readFile.size(); ++i) {
+                if (readFile[i]->getFilename() == filename)
+                    return readFile[i]->getLine(line);
+            }
+            // not found
+            return "error: Cannot find source file {0}:{1}"_format( filename, line );
+        }
     };
 
 }

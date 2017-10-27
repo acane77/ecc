@@ -36,7 +36,7 @@ namespace Miyuki::Lex {
         int column;
         int row;
         int chrlen;
-        const char * filenam;
+        string filenam;
 
         // characteristic information
         uint32_t tag;
@@ -45,7 +45,12 @@ namespace Miyuki::Lex {
         static Common::SourceManagerPtr flread;
         static int startColumn;
 
-        explicit Token(uint32_t _tag) { tag = _tag; if (flread) { column = flread->getColumn(); row = flread->getRow(); filenam = ""; chrlen = column - startColumn; } }
+        explicit Token(uint32_t _tag) { tag = _tag;
+            if (flread) {
+                column = flread->getColumn(); row = flread->getRow();
+                filenam = flread->getCurrentFilename(); chrlen = column - startColumn;
+            }
+        }
         virtual string toString() {
             if (tag > 31 && tag < 127)  return "Sign: {0}"_format((char)tag);
             return "Token[tag={0}] {1}"_format(tag, toSourceLiteral() );
@@ -169,6 +174,7 @@ namespace Miyuki::Lex {
         string toString() override { return "PP Literal: {0}"_format(literal); }
         string toSourceLiteral() override { return literal; }
     };
+
 };
 
 #endif

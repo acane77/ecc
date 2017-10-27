@@ -11,6 +11,7 @@ namespace Miyuki::Common {
     class IOException : public exception {
         string msg;
     public:
+        bool isWarning;
         IOException(string& _msg) { msg = std::move(_msg); }
         IOException(string&& _msg) { msg = _msg; }
         IOException() { msg = "No such file or directory."; }

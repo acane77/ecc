@@ -2,12 +2,16 @@
 #define _MIYUKI_LEXER_H
 
 #include "include.h"
+#include "common/ptrdef.h"
 #include "common/srcmgr.h"
 #include "lex/token.h"
 #include "interfaces.h"
 
 namespace Miyuki::Lex {
     using namespace Miyuki::Common;
+
+    DEFINE_SHARED_PTR(Lexer)
+
     class Lexer {
     protected:
         SourceManagerPtr M_sm;
