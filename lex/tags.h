@@ -1,8 +1,6 @@
 #ifndef _MIYUKI_TAG_H
 #define _MIYUKI_TAG_H
 
-#include "tags.h"
-
 // tag.h  - defined tag used in lexer
 
 namespace Miyuki::Lex::Tag {
@@ -34,14 +32,17 @@ namespace Miyuki::Lex::Tag {
         Enumeration     = 1 << 11,
         Character       = 1 << 12,
         StringLiteral   = 1 << 13,
+        HeaderName      = 1 << 14,
+        PPNumber        = 1 << 15,
+        PPLiteral       = 1 << 16,
         Number = Integer | Floating,
         Constant = Integer | Floating | Enumeration,
         Identifier = ID | Enumeration
-
     };
 
     enum Property : uint32_t {
         PunctuatorStart = 0,
+        OtherPunctuatorStart = 128,
         PunctuatorEnd = 191,
         KeywordStart = 192,
         KeywordEnd = 255,

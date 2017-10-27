@@ -4,14 +4,26 @@
 #include "include.h"
 #include "common/flread.h"
 #include "lex/token.h"
+#include "interfaces.h"
 
 namespace Miyuki::Lex {
     using namespace Miyuki::Common;
     class Lexer {
+    protected:
         FileReadPtr M_fr;
         int peak;
 
+        // Get character value with a slash
         char _getCharFromSlash();
+        // Skip commemt and spaces, returns no token.
+        // Return value: wheather program meets EOF.
+        virtual bool eatCommentAndSpaces();
+        // Scan punctuators
+        virtual TokenPtr scanPunctuators();
+        virtual TokenPtr scanKeywordOrIdentifier(string& word);
+        virtual TokenPtr scanIdentifierAndStringCharacterLiteral();
+        virtual TokenPtr scanStringCharacterLiteral(uint32_t encoding);
+        virtual TokenPtr scanIntegerAndFloating();
 
     public:
         explicit Lexer(FileReadPtr fr_ptr);
