@@ -24,6 +24,8 @@ namespace Miyuki::Common {
         string line;
 
         fstream M_File;
+        string  filename;
+
     public:
         bool nextLine();
         bool lastLine();
@@ -39,6 +41,8 @@ namespace Miyuki::Common {
 
         int nextChar();
         int lastChar();
+
+        const string &getFilename() const { return filename; }
 
         ~FileRead() { M_File.close(); }
     };

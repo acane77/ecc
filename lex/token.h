@@ -1,7 +1,7 @@
 #ifndef _MIYUKI_LEXTOKEN_H
 #define _MIYUKI_LEXTOKEN_H
 
-#include "common/flread.h"
+#include "common/srcmgr.h"
 #include "include.h"
 #include "tags.h"
 #include "common/ptrdef.h"
@@ -22,6 +22,9 @@ namespace Miyuki::Lex {
     DEFINE_SHARED_PTR(IntToken)
     DEFINE_SHARED_PTR(FloatToken)
     DEFINE_SHARED_PTR(CharToken)
+    DEFINE_SHARED_PTR(HeaderToken)
+    DEFINE_SHARED_PTR(PPNumberToken)
+    DEFINE_SHARED_PTR(PPLiteralToken)
 
     // Punctuator Strings
     extern const char * PunctuatorString[];
@@ -39,7 +42,7 @@ namespace Miyuki::Lex {
         uint32_t tag;
 
         // use for getting know about more information
-        static Common::FileReadPtr flread;
+        static Common::SourceManagerPtr flread;
         static int startColumn;
 
         explicit Token(uint32_t _tag) { tag = _tag; if (flread) { column = flread->getColumn(); row = flread->getRow(); filenam = ""; chrlen = column - startColumn; } }
@@ -47,9 +50,9 @@ namespace Miyuki::Lex {
             if (tag > 31 && tag < 127)  return "Sign: {0}"_format((char)tag);
             return "Token[tag={0}] {1}"_format(tag, toSourceLiteral() );
         }
-        // generate string in source (for preprocessor propose) of String-Literal and Character-Constant
+        // generate string in source code (for preprocessor propose)
         virtual string toSourceLiteral();
-
+        // test if this is _tag
         bool is(uint32_t _tag) {
             // expected token is a punctuator or keyword or EOF - using literal value comparsion
             // Type comparsion - using bitwise-or

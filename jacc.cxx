@@ -14,10 +14,11 @@ int main(int argc, const char ** argv) {
     if (argc <= 1) fileName = "test.c";
     else fileName = argv[1];
 
-    Miyuki::Common::FileReadPtr read = make_shared<Miyuki::Common::FileRead>( fileName );
-    Miyuki::Lex::PreprocessorLexer lexer(read);
+    //Miyuki::Common::FileReadPtr read = make_shared<Miyuki::Common::FileRead>( fileName );
+    Miyuki::Lex::PreprocessorLexer lexer;
+    lexer.openFile(fileName);
+    Miyuki::Lex::Token::flread = lexer.getSourceManager();
 
-    Miyuki::Lex::Token::flread = read;
     try {
         Miyuki::Lex::TokenPtr ptr = lexer.scan();
         while (ptr->tag != Miyuki::Lex::Tag::EndOfFile) {
@@ -26,16 +27,16 @@ int main(int argc, const char ** argv) {
         }
     }
     catch (std::exception& e) {
-        string s = read->getLine();
+        string s = lexer.getLine();
         cout << s << endl;
         int tabcount = 0;
         for (int i=0; i<s.length(); i++)
             if (s[i] == '\t') { cout << "\t"; tabcount++; }
         for (int i=1; i<Miyuki::Lex::Token::startColumn; i++)
             cout << " ";
-        for (int i=Miyuki::Lex::Token::startColumn; i<read->getColumn(); i++)
+        for (int i=Miyuki::Lex::Token::startColumn; i<lexer.getColumn(); i++)
             cout << "~";
-        cout << endl << "" << read->getRow() << ":" << read->getColumn() << ": ";
+        cout << endl << "" << lexer.getRow() << ":" << lexer.getColumn() << ": ";
         cout << e.what();
     }
 }

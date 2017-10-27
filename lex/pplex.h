@@ -21,7 +21,7 @@ namespace Miyuki::Lex {
             Include = (1 << 2) | Preprocessing // Line start with a #include
         };
 
-        explicit PreprocessorLexer(FileReadPtr fr) : Lexer(fr) {  }
+        explicit PreprocessorLexer() : Lexer() {  }
         TokenPtr scan() override;
     };
 

@@ -5,6 +5,7 @@ namespace Miyuki::Common {
     FileRead::FileRead(const char *path) {
         M_File.open(path, ios_base::in | ios_base::out);
         if (!M_File) throw IOException();
+        filename = path;
     }
 
     int FileRead::nextChar() {

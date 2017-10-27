@@ -9,7 +9,12 @@ using namespace std;
 namespace Miyuki::Common {
 
     class IOException : public exception {
+        string msg;
     public:
+        IOException(string& _msg) { msg = std::move(_msg); }
+        IOException(string&& _msg) { msg = _msg; }
+        IOException() { msg = "No such file or directory."; }
+
         const char * what() const noexcept override;
     };
 
@@ -19,9 +24,8 @@ namespace Miyuki::Common {
     };
 
     class SyntaxError : public exception {
-    public:
         string msg;
-
+    public:
         SyntaxError(string& _msg) { msg = std::move(_msg); }
         SyntaxError(string&& _msg) { msg = _msg; }
 

@@ -5,7 +5,7 @@ namespace Miyuki::Lex {
     TokenPtr PreprocessorLexer::scan() {
         if (eatCommentAndSpaces())  return make_shared<Token>(Tag::EndOfFile);
 
-        Token::startColumn = M_fr->getColumn();
+        Token::startColumn = M_sm->getColumn();
 
         // Header Name
         if ( (lexingContent == LexingContent::Include) &&  ( peak == '\"' || peak == '<' ) ) {

@@ -2,7 +2,7 @@
 #define _MIYUKI_LEXER_H
 
 #include "include.h"
-#include "common/flread.h"
+#include "common/srcmgr.h"
 #include "lex/token.h"
 #include "interfaces.h"
 
@@ -10,7 +10,7 @@ namespace Miyuki::Lex {
     using namespace Miyuki::Common;
     class Lexer {
     protected:
-        FileReadPtr M_fr;
+        SourceManagerPtr M_sm;
         int peak;
 
         // Get character value with a slash
@@ -26,15 +26,21 @@ namespace Miyuki::Lex {
         virtual TokenPtr scanIntegerAndFloating();
 
     public:
-        explicit Lexer(FileReadPtr fr_ptr);
+        explicit Lexer();
 
-        void readch() { peak = M_fr->nextChar(); }
-        void retract() { peak = M_fr->lastChar(); }
-        string getLine(int i) { return M_fr->getLine(i); }
-        string getCurrentLine() { return M_fr->getLine(); }
-        void backToPos(int row, int col) { M_fr->to(row, col); }
-        int getColumn() { return M_fr->getColumn(); }
-        int getRow() { return M_fr->getRow(); }
+        void openFile(const char * path) { M_sm->openFile(path); }
+        void closeFile(const char * path) { M_sm->closeCurrFile(); }
+        const string& getFileName() { M_sm->getCurrentFilename(); }
+
+        void readch() { peak = M_sm->nextChar(); }
+        void retract() { peak = M_sm->lastChar(); }
+        string getLine(int i) { return M_sm->getLine(i); }
+        string getLine() { return M_sm->getLine(); }
+        string getCurrentLine() { return M_sm->getLine(); }
+        void backToPos(int row, int col) { M_sm->to(row, col); }
+        int getColumn() { return M_sm->getColumn(); }
+        int getRow() { return M_sm->getRow(); }
+        SourceManagerPtr getSourceManager() { return M_sm; }
 
         virtual TokenPtr scan();
 

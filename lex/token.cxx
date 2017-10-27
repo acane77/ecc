@@ -2,7 +2,7 @@
 #include "token.h"
 
 namespace Miyuki::Lex {
-    Miyuki::Common::FileReadPtr Token::flread = nullptr;
+    Miyuki::Common::SourceManagerPtr Token::flread = nullptr;
     int Token::startColumn = 0;
 
     const char * PunctuatorString[] = { "->", "++", "--", "<<", ">>", ">=", "<=", "==", "!=", "&&", "||", "...", "*=",

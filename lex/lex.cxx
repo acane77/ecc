@@ -8,15 +8,15 @@ namespace Miyuki::Lex {
 
     using namespace fmt;
 
-    Lexer::Lexer(FileReadPtr frptr) {
-        M_fr = move(frptr);
+    Lexer::Lexer() {
+        M_sm = make_shared<SourceManager>();
     }
 
     TokenPtr Lexer::scan() {
         // Eat comments and wite spaces
         if (eatCommentAndSpaces()) return make_shared<Token>(Tag::EndOfFile);
 
-        Token::startColumn = M_fr->getColumn();
+        Token::startColumn = M_sm->getColumn();
 
         /// Integer & Floating constant
         if (isdigit(peak) || peak == '.') {
