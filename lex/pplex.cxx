@@ -3,15 +3,94 @@
 namespace Miyuki::Lex {
 
     TokenPtr PreprocessorLexer::scan() {
+        if (eatCommentAndSpaces())  return make_shared<Token>(Tag::EndOfFile);
+
+        Token::startColumn = M_fr->getColumn();
+
+        // Header Name
+        if ( (lexingContent == LexingContent::Include) &&  ( peak == '\"' || peak == '<' ) ) {
+            char endChar = peak == '<' ? '>' : '\"';
+            string strseq;
+            for (readch(); peak != endChar ; readch()) {
+                if (peak == '\r' || peak == '\n')  { throw SyntaxError("missing terminal character '{0}'"_format(endChar) ); }
+                strseq += peak;
+            }
+            return make_shared<HeaderToken>(strseq);
+        }
+
+        /// Identifier, Keywords, String & Character Literal
+        if (isalpha(peak) || peak == '_' || peak == '\\' || peak == '\'' || peak == '"')
+            return scanIdentifierAndStringCharacterLiteral();
+
+        // PPNumber
+        if ( (lexingContent & LexingContent ::Preprocessing) && ( isdigit(peak) || peak == '.' ) ) {
+            TokenPtr ptr = scanPPNumber();
+            if (ptr) return ptr;
+        }
+
+        // Other literal tokens
+        if ( (lexingContent & LexingContent ::DefaultContent) && (isdigit(peak) || peak == '.') ) {
+            string charseq;
+            for (; isalnum(peak) || peak == '.' ; readch() )
+                charseq += peak;
+            retract();
+            return make_shared<PPLiteralToken>(charseq);
+        }
+
+        // Punctuators
+        TokenPtr puncTok = scanPunctuators();
+        if (puncTok->is('#')) lexingContent = LexingContent ::Preprocessing;
+        else if (puncTok->is('\n')) lexingContent = LexingContent ::DefaultContent;
+        return puncTok;
+    }
+
+    TokenPtr PreprocessorLexer::scanKeywordOrIdentifier(string &word) {
+        return make_shared<WordToken>(word);
+    }
+
+    TokenPtr PreprocessorLexer::scanPPNumber() {
+        bool noIntPart = !isdigit(peak), noFloatingPart;
+        FloatingType fracPart = 0.0, fraction = 0.1;
+        for ( ; isdigit(peak) ; readch() )
+            fracPart = fracPart * 10 + peak - '0';
+        // Has no floating part, just go exponment
+        if (peak != '.')  goto add_exponment;
+
+        // scan floating-point part
+        noFloatingPart = !isdigit(peak);
+        for ( ; isdigit(peak) ; readch() , fraction = fracPart / 10 )
+            fracPart = fracPart + fraction * ( peak - '0' );
+        // If has no int-part nor float-part means just a point,
+        // so return null, and scan as-is.
+        if (noFloatingPart && noIntPart)   return nullptr;
+        // scan exponment part
+add_exponment:
+        int exp = 0;
+        if (peak == 'e' || peak == 'E') {
+            for (readch(); isdigit(peak); readch() )
+                exp = exp * 10 + peak - '0';
+            for (int i=0; i<exp; i++)
+                fracPart = fracPart * 10;
+        }
+        else if (peak == 'p' || peak == 'P') {
+            for (readch(); isdigit(peak); readch() )
+                exp = exp * 10 + peak - '0';
+            fracPart = fracPart * (1 << exp);
+        }
+        retract();
+        return make_shared<PPNumberToken>(fracPart);
+    }
+
+    bool PreprocessorLexer::eatCommentAndSpaces() {
         for (readch(); ; readch()) {
-            if (peak == Tag::EndOfFile) return make_shared<Token>(Tag::EndOfFile);
+            if (peak == Tag::EndOfFile) return true;
             else if (peak == ' ' || peak == '\t' || peak == '\r') continue;
             else if (peak == '/') {
                 readch();
                 if (peak == '/') {
                     for (; ; readch()) {
                         if (peak == '\n')  break;
-                        if (peak == Tag::EndOfFile)   return make_shared<Token>(Tag::EndOfFile);
+                        if (peak == Tag::EndOfFile)   return true;
                     }
                 }
                 else if (peak == '*') {
@@ -34,31 +113,6 @@ namespace Miyuki::Lex {
             }
             else break;
         }
-
-        Token::startColumn = M_fr->getColumn();
-
-        /// Identifier, Keywords, String & Character Literal
-        if (isalpha(peak) || peak == '_' || peak == '\\' || peak == '\'' || peak == '"')
-            return scanIdentifierAndStringCharacterLiteral();
-
-        // Header Name
-        if ( lexingContent == LexingContent::Include &&  ( peak == '\"' || peak == '<' ) ) {
-            char endChar = peak == '<' ? '>' : '\"';
-            string strseq;
-            for (readch(); peak != endChar ; readch()) {
-                if (peak == '\r' || peak == '\n')  { throw SyntaxError("missing terminal character '{0}'"_format(endChar) ); }
-                strseq += peak;
-            }
-            return make_shared<HeaderToken>(strseq);
-        }
-
-        // 
-
-        // Punctuators
-        return scanPunctuators();
-    }
-
-    TokenPtr PreprocessorLexer::scanKeywordOrIdentifier(string &word) {
-        return make_shared<WordToken>(word);
+        return false;
     }
 }

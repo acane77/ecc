@@ -13,7 +13,7 @@ namespace Miyuki::Lex::Tag {
         GreaterThanEqual, LessThanEqual, Equal, NotEqual, And, Or, Ellipsis, MulpileAssign,
         DivideAssign, ModAssign, AddAssign, SubAssign, LeftShiftAssign,
         RightShiftAssign, BitwiseAndAssign, XorAssign, BitwiseOrAssign,
-        Comma, Sharp, DoubleSharp,
+        Comma, DoubleSharp,
         LessThanColon, ColonGreaterThan, LessThanMod, ModGreaterThan,
         ModColon, ModColonDouble,
 

@@ -7,16 +7,21 @@ namespace Miyuki::Lex {
 
     class PreprocessorLexer : public Lexer {
         uint16_t lexingContent = LexingContent::DefaultContent;
+
+        TokenPtr scanKeywordOrIdentifier(string& word) override;
+        bool eatCommentAndSpaces() override;
+        TokenPtr scanPPNumber();
     public:
         void setLexingContent(uint16_t lexingContent) { PreprocessorLexer::lexingContent = lexingContent; }
 
     public:
         enum LexingContent: uint16_t {
-            DefaultContent = 0, Include = 1
+            DefaultContent = 1,     // Normal code
+            Preprocessing = 1 << 1, // Line start with a #
+            Include = (1 << 2) | Preprocessing // Line start with a #include
         };
 
         explicit PreprocessorLexer(FileReadPtr fr) : Lexer(fr) {  }
-        TokenPtr scanKeywordOrIdentifier(string& word) override;
         TokenPtr scan() override;
     };
 

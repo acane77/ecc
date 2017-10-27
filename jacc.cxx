@@ -6,18 +6,22 @@
 #include "common/exception.h"
 
 using namespace std;
-int main() {
+int main(int argc, const char ** argv) {
     cout << "JACC - Java Code C\n";
     cout << "License under MIT License\n\n";
 
-    Miyuki::Common::FileReadPtr read = make_shared<Miyuki::Common::FileRead>( "test.c" );
-    Miyuki::Lex::Lexer lexer(read);
+    const char * fileName;
+    if (argc <= 1) fileName = "test.c";
+    else fileName = argv[1];
+
+    Miyuki::Common::FileReadPtr read = make_shared<Miyuki::Common::FileRead>( fileName );
+    Miyuki::Lex::PreprocessorLexer lexer(read);
 
     Miyuki::Lex::Token::flread = read;
     try {
         Miyuki::Lex::TokenPtr ptr = lexer.scan();
         while (ptr->tag != Miyuki::Lex::Tag::EndOfFile) {
-            cout << ptr->toString() << endl;
+            cout << ptr->toString() << " \n";
             ptr = lexer.scan();
         }
     }
