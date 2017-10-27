@@ -52,13 +52,13 @@ namespace Miyuki::Lex {
         bool noIntPart = !isdigit(peak), noFloatingPart;
         FloatingType fracPart = 0.0, fraction = 0.1;
         for ( ; isdigit(peak) ; readch() )
-            fracPart = fracPart * 10 + peak - '0';
+            fracPart = fracPart * 10 + (peak - '0');
         // Has no floating part, just go exponment
         if (peak != '.')  goto add_exponment;
 
         // scan floating-point part
-        noFloatingPart = !isdigit(peak);
-        for ( ; isdigit(peak) ; readch() , fraction = fracPart / 10 )
+        readch();  noFloatingPart = !isdigit(peak);
+        for ( ; isdigit(peak) ; readch() , fraction = fraction / 10 )
             fracPart = fracPart + fraction * ( peak - '0' );
         // If has no int-part nor float-part means just a point,
         // so return null, and scan as-is.
