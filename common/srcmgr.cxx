@@ -2,6 +2,6 @@
 
 namespace Miyuki::Common {
 
-    
+
 
 }

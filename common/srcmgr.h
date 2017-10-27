@@ -32,7 +32,21 @@ namespace Miyuki::Common {
         string getLine() { return currFile->getLine(); }
         int to(int r, int c = 0) { return currFile->to(r, c); }
 
-        int nextChar() { return currFile->nextChar(); }
+        int nextChar() {
+            int ch = currFile->nextChar();
+            if (ch == -1) {
+                // If reach current file's end,
+                // switch to last file
+                if (getFileCount() > 1) {
+                    closeCurrFile();
+                    return nextChar();
+                }
+                // this is the only file , and reach end
+                return -1;
+            }
+            // normally return character
+            return ch;
+        }
         int lastChar() { return currFile->lastChar(); }
 
         // Operation for file switching
@@ -48,6 +62,7 @@ namespace Miyuki::Common {
             assert( currFile && "no file opened" );
             currFile.reset();
             fileStack.pop();
+            currFile = fileStack.top();
         }
         const string &getCurrentFilename() const { return currFile->getFilename(); }
     };
