@@ -1,0 +1,24 @@
+id ICON "resources/icon.ico"
+1 VERSIONINFO
+FILEVERSION     1,0,0,0
+PRODUCTVERSION  1,0,0,0
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "080904E4"
+    BEGIN
+      VALUE "CompanyName", "Miyuki"
+      VALUE "FileDescription", "JACC - Java Code C"
+      VALUE "FileVersion", "1.0"
+      VALUE "InternalName", "jacc"
+      VALUE "LegalCopyright", "(c) 2017 Miyuki"
+      VALUE "OriginalFilename", "jacc.exe"
+      VALUE "ProductName", "JACC"
+      VALUE "ProductVersion", "1.0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x809, 1252
+  END
+END

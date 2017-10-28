@@ -18,5 +18,9 @@ add_subdirectory(common)
 
 # Main program
 aux_source_directory(. JACC_SOURCE)	
-add_executable("jacc" ${JACC_SOURCE})
+if (WIN32)
+	add_executable("jacc" "res.rc" ${JACC_SOURCE})
+else()
+	add_executable("jacc" ${JACC_SOURCE})
+endif()
 target_link_libraries("jacc" bytecode parse lex codeg common ${LINK_LIBS})
