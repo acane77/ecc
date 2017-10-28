@@ -33,23 +33,26 @@ namespace Miyuki::Lex {
     class Token {
     public:
         // information in source code
+        int startCol;
         int column;
         int row;
         int chrlen;
-        string filenam;
+        const char * filenam;
 
         // characteristic information
-        uint32_t tag;
+        int32_t tag;
 
         // use for getting know about more information
         static Common::SourceManagerPtr flread;
         static int startColumn;
 
-        explicit Token(uint32_t _tag) { tag = _tag;
+        explicit Token(int32_t _tag) { tag = _tag;
+            /// FIXME: BUG!!!  position and length of token
             if (flread) {
                 column = flread->getColumn(); row = flread->getRow();
-                filenam = flread->getCurrentFilename(); chrlen = column - startColumn;
-            }
+                filenam = flread->getCurrentFilename().c_str(); chrlen = column - startColumn;
+                startCol = startColumn;
+            } else filenam = "";
         }
         virtual string toString() {
             if (tag > 31 && tag < 127)  return "Sign: {0}"_format((char)tag);
@@ -58,12 +61,12 @@ namespace Miyuki::Lex {
         // generate string in source code (for preprocessor propose)
         virtual string toSourceLiteral();
         // test if this is _tag
-        bool is(uint32_t _tag) {
+        bool is(int32_t _tag) {
             // expected token is a punctuator or keyword or EOF - using literal value comparsion
             // Type comparsion - using bitwise-or
             return ((_tag >= Tag::Property::PunctuatorStart && _tag <= Tag::Property::KeywordEnd) || _tag == Tag::EndOfFile) ? (_tag == tag) : (_tag & tag);
         }
-        bool isNot(uint32_t _tag) { return !is(_tag); }
+        bool isNot(int32_t _tag) { return !is(_tag); }
     };
 
     // Identifier & Keyword & Enumration
@@ -76,8 +79,8 @@ namespace Miyuki::Lex {
         explicit WordToken(string& _name) :Token(Tag::ID) { name = move(_name); }
 
         // For keywords
-        WordToken(uint32_t _tag, string&& _name) :Token(_tag) { name = _name; }
-        WordToken(uint32_t _tag, string& _name) :Token(_tag) { name = move(_name); }
+        WordToken(int32_t _tag, string&& _name) :Token(_tag) { name = _name; }
+        WordToken(int32_t _tag, string& _name) :Token(_tag) { name = move(_name); }
 
         // For Enmeration
         void changeTypeToEnumeration() { tag = Tag::Enumeration; }
@@ -122,10 +125,10 @@ namespace Miyuki::Lex {
         Encoding encoding;
         string   charseq;
 
-        explicit CharToken(string&& _charseq, uint32_t enc) :Token(Tag::Character), encoding(enc), charseq(std::move(_charseq)) {
+        explicit CharToken(string&& _charseq, int32_t enc) :Token(Tag::Character), encoding(enc), charseq(std::move(_charseq)) {
             _setIntValue();
         }
-        explicit CharToken(string& _charseq, uint32_t enc) :Token(Tag::Character), encoding(enc), charseq(std::move(_charseq)) {
+        explicit CharToken(string& _charseq, int32_t enc) :Token(Tag::Character), encoding(enc), charseq(std::move(_charseq)) {
             _setIntValue();
         }
         string toString() override { return "Character({2}): '{0}', value={1}"_format((char)value, value, encoding.getEncodingString()); }
@@ -138,8 +141,8 @@ namespace Miyuki::Lex {
         string value;
         Encoding encoding;
 
-        explicit StringToken(string&& _value, uint32_t enc) : Token(Tag::StringLiteral), encoding(enc) { value = _value; }
-        explicit StringToken(string& _value, uint32_t enc) : Token(Tag::StringLiteral), encoding(enc) { value = move(_value); }
+        explicit StringToken(string&& _value, int32_t enc) : Token(Tag::StringLiteral), encoding(enc) { value = _value; }
+        explicit StringToken(string& _value, int32_t enc) : Token(Tag::StringLiteral), encoding(enc) { value = move(_value); }
         string toString() override { return "String literal({1}): \"{0}\""_format(value, encoding.getEncodingString()); }
         string toSourceLiteral() override { return "{0}\"{1}\""_format( encoding.getEncodingString(), value ); }
     };

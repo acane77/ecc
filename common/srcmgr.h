@@ -84,7 +84,7 @@ namespace Miyuki::Common {
                     return readFile[i]->getLine(line);
             }
             // not found
-            return "error: Cannot find source file {0}:{1}"_format( filename, line );
+            return "{2}: Cannot find source file {0}:{1}"_format( filename, line, __FUNCTION__ );
         }
     };
 

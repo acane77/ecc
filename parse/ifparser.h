@@ -26,10 +26,13 @@ namespace Miyuki::Parse {
         bool isWarning() { return warning; }
     };
 
-    class PasreCannotRecoveryException : public exception {  };
+    class PasreCannotRecoveryException : public exception {
+    public:
+        const char * what() const noexcept override { return "compilation failed due to errors."; }
+    };
 
     class IParser {
-
+    protected:
         LexerPtr M_lex;
         // lookahead token
         TokenPtr look;
@@ -81,14 +84,14 @@ namespace Miyuki::Parse {
         // if returns true means we've found tokens we need
         // skipUntil usage:  if next token isn't what we want, then specify tokens and skipping
         //    flags, if return true, then let's continue parsing, otherwise bail out
-        virtual bool skipUntil(deque<uint32_t> toks, uint32_t flag) = 0;
+        virtual bool skipUntil(const deque<int32_t>& toks, uint32_t flag);
 
         // add error statement prepare for output
-        inline void diagError( string&& errmsg, TokenPtr& ptr ) { errors.push_back(ParseError(errmsg, ptr, false)); }
+        inline void diagError( string&& errmsg, TokenPtr ptr ) { errors.push_back(ParseError(errmsg, ptr, false)); }
 
         // add warning statement prepare for output
         // warning information can be disabled by flag
-        inline void diagWarning( string&& errmsg, TokenPtr& ptr ) { errors.push_back(ParseError(errmsg, ptr, true)); }
+        inline void diagWarning( string&& errmsg, TokenPtr ptr ) { errors.push_back(ParseError(errmsg, ptr, true)); }
 
                               ////// parser state //////
         // called when parse done
@@ -98,7 +101,7 @@ namespace Miyuki::Parse {
         virtual void reportError(std::ostream& os);
 
     public:
-        explicit IParser(LexerPtr lex) { M_lex = std::move(lex); }
+        explicit IParser() { }
 
         // parse source file
         virtual void parse() = 0;

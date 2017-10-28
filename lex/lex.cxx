@@ -64,14 +64,14 @@ namespace Miyuki::Lex {
                 short hex = 0;
                 readch();
                 if (!(isdigit(peak) || (peak >= 'a' && peak <= 'f') || (peak >= 'A' && peak <= 'D')))
-                    throw SyntaxError("Invalid hexadecimal-escape-sequence");
+                    diagError("Invalid hexadecimal-escape-sequence");
                 for (; isdigit(peak) || (peak >= 'a' && peak <= 'f') || (peak >= 'A' && peak <= 'D'); readch()) {
                     hex = hex * 16 + peak - '0';
                 }
                 retract();
                 chr = hex;
             }
-            else throw SyntaxError("Invalid escape sequence");
+            else diagError("Invalid escape sequence");
         }
         else chr = peak;
         return chr;
@@ -92,7 +92,7 @@ namespace Miyuki::Lex {
                 else if (peak == '*') {
                     readch();
                     for (; ; readch()) {
-                        if (peak == Tag::EndOfFile)   throw SyntaxError("Comment not closed.");
+                        if (peak == Tag::EndOfFile)   diagError("Comment not closed.");
                         if (peak == '*') {
                             readch();
                             if (peak == '/') break;
@@ -166,7 +166,7 @@ namespace Miyuki::Lex {
 //maybe_an_ellipsis:
             if (peak == '.') {  readch();
                 if (peak == '.') return make_shared<Token>(Tag::Ellipsis);
-                retract(); throw SyntaxError("invalid token '..'");
+                retract(); diagError("invalid token '..'");
             }
         }
             // *=
@@ -184,7 +184,7 @@ namespace Miyuki::Lex {
             if (peak == ':' ) {  readch();
                 if (peak == '%') {
                     if ((readch(), peak == ':')) return make_shared<Token>(Tag::ModColonDouble);
-                    else throw SyntaxError("Invalid token");
+                    else diagError("Invalid token");
                 }
                 else return make_shared<Token>(Tag::ModColon);
             }
@@ -252,7 +252,7 @@ namespace Miyuki::Lex {
             string word = "";
             for (; isalnum(peak) || peak == '_' || peak == '\\'; readch()) {
                 if (peak == '\\') {
-                    throw SyntaxError("My implementation does not support universal character name.");
+                    diagError("My implementation does not support universal character name.");
                 }
                 word += peak;
             }
@@ -284,7 +284,8 @@ namespace Miyuki::Lex {
             readch();
             for (; ; readch()) {
                 if (peak == quotationMark) break;
-                else if (peak == '\r' || peak == '\n') throw SyntaxError("Unexpected new-line");
+                else if (peak == '\r' || peak == '\n') diagError("Unexpected new-line");
+                else if (peak == -1) diagError("Unexpected end-of-file");
                 else chrseq += _getCharFromSlash();
             }
 
@@ -351,7 +352,7 @@ add_exponment:
                 int exponment = 0;  //faction * 1/16
                 bool positive = true;
                 if (readch(); peak == '-' || peak == '+') { positive = peak == '+'; readch(); }
-                if (!isdigit(peak)) throw SyntaxError("exponent has no digits");
+                if (!isdigit(peak)) diagError("exponent has no digits");
                 for (; isdigit(peak); readch())
                     exponment = exponment * 10 + peak - '0';
                 for (int i=0; i<exponment; i++) {
@@ -378,9 +379,9 @@ add_exponment:
                     else suffixInvalid = true;
                 }
 
-                if (suffixInvalid) throw SyntaxError("Invalid integer suffix '{0}'."_format(suffix));
+                if (suffixInvalid) diagError("Invalid integer suffix '{0}'."_format(suffix));
                 if (hasFloatingSuffix) {
-                    if (hasUnsignedSuffix || hasLongLongSuffix || hasLongSuffix) throw SyntaxError("Invalid floating constant suffix '{0}'."_format(suffix));
+                    if (hasUnsignedSuffix || hasLongLongSuffix || hasLongSuffix) diagError("Invalid floating constant suffix '{0}'."_format(suffix));
                     floating = intValue;
                     goto convert_to_floating_here;
                 }
@@ -416,7 +417,7 @@ add_exponment:
             }
 
             if (intValue == 0 && ary == 8) ary = 10;
-            if (ary == 8)  throw SyntaxError("Invalid number.");
+            if (ary == 8)  diagError("Invalid number.");
             else if (ary == 10) {
                 FloatingType fraction = 0.0, factor = 0.1;
                 int exponment = 0;
@@ -424,7 +425,7 @@ add_exponment:
                     fraction = fraction + (peak - '0') * factor;
                     factor = factor / 10;
                 }
-                if (peak == '.') throw SyntaxError("too many decimal points in number");
+                if (peak == '.') diagError("too many decimal points in number");
                 if (peak == 'e' || peak == 'E')  { floating = intValue + fraction;  goto add_exponment; }
                 decimalPart = fraction;
             }
@@ -433,8 +434,8 @@ add_exponment:
                 bool positive = true;
                 for (; isdigit(peak) || (peak >= 'A' && peak <= 'F') || (peak >= 'a' && peak <= 'f'); readch() )
                     fraction = fraction * 16 + (isdigit(peak) ? peak - '0' : 10 + (peak >= 'A' && peak <= 'F' ? peak - 'A' : peak - 'a'));
-                if (peak == '.') throw SyntaxError("too many decimal points in number");
-                if (peak != 'p' && peak != 'P') throw SyntaxError("hexadecimal floating constants require an exponent");
+                if (peak == '.') diagError("too many decimal points in number");
+                if (peak != 'p' && peak != 'P') diagError("hexadecimal floating constants require an exponent");
                 if (readch(); peak == '-' || peak == '+') { positive = peak == '+'; readch(); }
                 for (; isdigit(peak); readch())
                     exponment = exponment * 10 + peak - '0';
@@ -454,19 +455,29 @@ add_floating_suffix:
                 else suffixInvalid = true;
             }
 convert_to_floating_here:
-            if (suffixInvalid) throw SyntaxError("Invalid floating constant suffix '{0}'."_format(suffix));
+            if (suffixInvalid) diagError("Invalid floating constant suffix '{0}'."_format(suffix));
 
             short bit;
             if (hasFloatingSuffix) bit = 32;
             else if (hasLongSuffix) bit = 64;
             else bit = (*((uint64_t *)(&floating)) >> 32) ? 32 : 64;
 
-            if (peak == '.') throw SyntaxError("too many decimal points in number");
+            if (peak == '.') diagError("too many decimal points in number");
 
             retract();
             return make_shared<FloatToken>(floating, bit);
         }
 
         assert( false && "this is neither integer nor floating token" );
+    }
+
+    void Lexer::eatAnyNonBlankChar() {
+        for (; peak != ' ' && peak != '\n' && peak != '\r' && peak != '\t' && peak != -1; readch());
+    }
+
+    TokenPtr Lexer::getLexedInvalidToken() {
+        assert( detectAnError && "invalid call of Lexer::getLexedInvalidToken()" );
+        detectAnError = false;
+        return make_shared<Token>(-1);
     }
 }

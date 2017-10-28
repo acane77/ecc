@@ -15,6 +15,10 @@ namespace Miyuki::Console {
     }\
     ConsoleStyle& color ( ) {  return color ( _default_msg );  }
 
+#define CONSOLE_ADD_COLOR_STYLE1(color, _style, _bg, _fg, _default_msg) \
+    ConsoleStyle& color ( const char * msg );\
+    ConsoleStyle& color ( );
+
     class ConsoleStyle {
         style Style;
         fg    Foreground;
@@ -34,20 +38,18 @@ namespace Miyuki::Console {
 
     };
 
-    CONSOLE_ADD_COLOR_STYLE(Warning, style::reset, bg::reset, fg::yellow, " Warning ")
-    CONSOLE_ADD_COLOR_STYLE(Info   , style::reset, bg::reset, fg::gray,   " Info    ")
-    CONSOLE_ADD_COLOR_STYLE(Debug  , style::reset, bg::gray , fg::black,  "  Debug  ")
-    CONSOLE_ADD_COLOR_STYLE(Error  , style::reset, bg::reset, fg::red  ,  "  Error  ")
+    CONSOLE_ADD_COLOR_STYLE1(Warning, style::reset, bg::reset, fg::yellow, " Warning ")
+    CONSOLE_ADD_COLOR_STYLE1(Info   , style::reset, bg::reset, fg::gray,   " Info    ")
+    CONSOLE_ADD_COLOR_STYLE1(Debug  , style::reset, bg::gray , fg::black,  "  Debug  ")
+    CONSOLE_ADD_COLOR_STYLE1(Error  , style::reset, bg::reset, fg::red  ,  "  Error  ")
 
-    CONSOLE_ADD_COLOR_STYLE(Red   , style::reset, bg::reset, fg::red,   " Info    ")
-    CONSOLE_ADD_COLOR_STYLE(Green , style::reset, bg::reset, fg::green,   " Info    ")
-    CONSOLE_ADD_COLOR_STYLE(Yellow, style::reset, bg::reset, fg::yellow,   " Info    ")
-    CONSOLE_ADD_COLOR_STYLE(Blue  , style::reset, bg::reset, fg::blue,   " Info    ")
-    CONSOLE_ADD_COLOR_STYLE(Magenta, style::reset, bg::reset, fg::magenta,   " Info    ")
-    CONSOLE_ADD_COLOR_STYLE(Cyan  , style::reset, bg::reset, fg::cyan,   " Info    ")
-    CONSOLE_ADD_COLOR_STYLE(Gray , style::reset, bg::reset, fg::gray,   " Info    ")
-
-#undef CONSOLE_ADD_COLOR_STYLE
+    CONSOLE_ADD_COLOR_STYLE1(Red   , style::reset, bg::reset, fg::red,   " Info    ")
+    CONSOLE_ADD_COLOR_STYLE1(Green , style::reset, bg::reset, fg::green,   " Info    ")
+    CONSOLE_ADD_COLOR_STYLE1(Yellow, style::reset, bg::reset, fg::yellow,   " Info    ")
+    CONSOLE_ADD_COLOR_STYLE1(Blue  , style::reset, bg::reset, fg::blue,   " Info    ")
+    CONSOLE_ADD_COLOR_STYLE1(Magenta, style::reset, bg::reset, fg::magenta,   " Info    ")
+    CONSOLE_ADD_COLOR_STYLE1(Cyan  , style::reset, bg::reset, fg::cyan,   " Info    ")
+    CONSOLE_ADD_COLOR_STYLE1(Gray , style::reset, bg::reset, fg::gray,   " Info    ")
 
 }
 

@@ -41,6 +41,10 @@ namespace Miyuki::Lex {
         virtual TokenPtr scanIdentifierAndStringCharacterLiteral();
         virtual TokenPtr scanStringCharacterLiteral(uint32_t encoding);
         virtual TokenPtr scanIntegerAndFloating();
+        // error recovery
+        bool  detectAnError = false;
+        void eatAnyNonBlankChar();
+        inline void diagError(string e) { detectAnError = true; eatAnyNonBlankChar(); throw SyntaxError(e); }
 
     public:
         explicit Lexer();
@@ -60,6 +64,9 @@ namespace Miyuki::Lex {
         SourceManagerPtr getSourceManager() { return M_sm; }
 
         virtual TokenPtr scan();
+
+        // returns invalid token, for error reporting, not for parsing
+        TokenPtr getLexedInvalidToken();
 
         ~Lexer();
     };
