@@ -26,6 +26,8 @@ namespace Miyuki::Parse {
         bool isWarning() { return warning; }
     };
 
+    class PasreCannotRecoveryException : public exception {  };
+
     class IParser {
 
         LexerPtr M_lex;
@@ -64,11 +66,11 @@ namespace Miyuki::Parse {
 
                               ///// error recovery //////
         // error-recovery flag
-        enum {
+        enum RecoveryFlag : uint32_t {
             SkipUntilSemi = 1 >> 0,  // Stop at ';'
             KeepSpecifiedToken = 1 >> 1,  // When find specified token ,keep it
             ConsumeSpecifiedToken = 1 >> 2, // When find specified token , consume it
-            SkipUntilEndOfFile = 1 >> 3 // Stop at EOF
+            SkipUntilEndOfFile = 1 >> 3 // Stop at EOF, if not found specified
         };
 
         // test recovery flag
@@ -88,15 +90,18 @@ namespace Miyuki::Parse {
         // warning information can be disabled by flag
         inline void diagWarning( string&& errmsg, TokenPtr& ptr ) { errors.push_back(ParseError(errmsg, ptr, true)); }
 
+                              ////// parser state //////
+        // called when parse done
+        virtual void parseDone();
+
+        // report error from exception
+        virtual void reportError(std::ostream& os);
+
     public:
         explicit IParser(LexerPtr lex) { M_lex = std::move(lex); }
 
         // parse source file
         virtual void parse() = 0;
-
-        // report error from exception
-        virtual void reportError(std::ostream& os);
-
     };
 
 };

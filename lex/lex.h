@@ -4,13 +4,26 @@
 #include "include.h"
 #include "common/ptrdef.h"
 #include "common/srcmgr.h"
+#include "common/flag.h"
 #include "lex/token.h"
-#include "interfaces.h"
 
 namespace Miyuki::Lex {
     using namespace Miyuki::Common;
 
     DEFINE_SHARED_PTR(Lexer)
+
+    class PragmaFlag : public Flag {
+    public:
+        enum {
+            STDC_FP_CONTRACT,      // ref. standard document (7.12.2)
+            STDC_FENV_ACCESS,      // ref. standard document (7.6.1)
+            STDC_CX_LIMITED_RANGE, // ref. standard document (7.3.4)
+
+            DEFAULT_FLAG = 0
+        };
+
+        PragmaFlag() { defaultFlag = 1; }
+    };
 
     class Lexer {
     protected:

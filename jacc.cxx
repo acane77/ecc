@@ -4,6 +4,7 @@
 #include "include.h"
 #include "common/flread.h"
 #include "common/exception.h"
+#include "common/console.h"
 
 using namespace std;
 int main(int argc, const char ** argv) {
@@ -34,7 +35,7 @@ int main(int argc, const char ** argv) {
             cout << " ";
         for (int i=Miyuki::Lex::Token::startColumn; i<lexer.getColumn(); i++)
             cout << "~";
-        cout << endl << "" << lexer.getRow() << ":" << lexer.getColumn() << ": ";
+        cout << Miyuki::Console::Error("error:") << endl << "" << lexer.getRow() << ":" << lexer.getColumn() << ": ";
         cout << e.what();
     }
 }

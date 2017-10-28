@@ -63,6 +63,7 @@ namespace Miyuki::Lex {
             // Type comparsion - using bitwise-or
             return ((_tag >= Tag::Property::PunctuatorStart && _tag <= Tag::Property::KeywordEnd) || _tag == Tag::EndOfFile) ? (_tag == tag) : (_tag & tag);
         }
+        bool isNot(uint32_t _tag) { return !is(_tag); }
     };
 
     // Identifier & Keyword & Enumration

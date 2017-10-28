@@ -3,7 +3,14 @@
 namespace Miyuki::Parse {
 
     void IParser::match(uint32_t term, string &&errmsg, TokenPtr &ptr) {
-
+        if (look->isNot(term)) {
+            diagError(std::move(errmsg), ptr);
+            if (look->is(-1))  parseDone();
+            if (!skipUntil({ ';' }, RecoveryFlag::KeepSpecifiedToken | RecoveryFlag::SkipUntilSemi))
+                parseDone();
+            return;
+        }
+        next();
     }
 
     TokenPtr IParser::next() {
@@ -17,7 +24,7 @@ namespace Miyuki::Parse {
             look = tokens[(++m_tsptr_r) % MaxRetractSize];
             //DEBUG_LEXER_PARSER(printf("Fetching from retract: tok->tag=%s\n",  m_look->toString().c_str());)
         }
-        else assert( false && "Internal error." );
+        else assert( false && "stack overflow." );
     }
 
     TokenPtr IParser::retract() {
@@ -40,5 +47,10 @@ namespace Miyuki::Parse {
                 os << "~";
             os << endl << ( e.isWarning() ? "warning" : "error" ) << ": " << e.what();
         }
+    }
+
+    void IParser::parseDone() {
+        reportError(cout);
+        if ( errors.size() != 0 )  throw PasreCannotRecoveryException();
     }
 }
