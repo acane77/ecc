@@ -7,6 +7,7 @@
 #include <format.h>
 #include "ptrdef.h"
 #include "flread.h"
+#include "observe.h"
 
 namespace Miyuki::Common {
     using namespace fmt;
@@ -15,7 +16,7 @@ namespace Miyuki::Common {
 
     DEFINE_SHARED_PTR(SourceManager)
 
-    class SourceManager {
+    class SourceManager : public IObservable {
         // File read stack, stack top is the file we're reading
         std::deque<FileReadPtr> fileStack;
         // File which has been read, then add here for futher use
@@ -43,6 +44,7 @@ namespace Miyuki::Common {
             if (ch == -1) {
                 // If reach current file's end,
                 // switch to last file
+                notifyAll(1); // notify observer that read EOF
                 if (getFileCount() > 1) {
                     closeCurrFile();
                     return nextChar();
@@ -61,6 +63,10 @@ namespace Miyuki::Common {
             if ( getFileCount() >= MaxStackSize )
                 throw IOException("file stack too deeply");
             FileReadPtr fr = make_shared<FileRead>(path);
+            if (currFile) {
+                fr->includeFrom = currFile;
+                fr->includeFromLine = getColumn();
+            }
             fileStack.push_back(fr);
             currFile = fr;
         }

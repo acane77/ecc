@@ -2,6 +2,7 @@
 #define _MIYUKI_IF_PARSER_H
 
 #include "lex/lex.h"
+#include "common/observe.h"
 #include <deque>
 #include <iostream>
 
@@ -13,9 +14,22 @@ namespace Miyuki::Parse {
     DEFINE_SHARED_PTR(IParser)
 
     class ParseError : public exception {
+        // normal error message
         string msg;
+        // more info string
+        string info;
+        // suggest replace for invaid token
+        string suggest;
+        // error token
         Lex::TokenPtr tok;
+        // show if this is a warning
         bool warning;
+
+    public:
+        const string &getInfo() const { return info; }
+        void setInfo(const string &info) {  ParseError::info = info; }
+        const string &getSuggest() const { return suggest; }
+        void setSuggest(const string &suggest) { ParseError::suggest = suggest; }
 
     public:
         ParseError(string&& _msg, Lex::TokenPtr _tok, bool _warning) { msg = std::move(_msg); tok = _tok; warning = _warning; }
@@ -31,13 +45,15 @@ namespace Miyuki::Parse {
         const char * what() const noexcept override { return "compilation failed due to errors."; }
     };
 
-    class IParser {
+    class IParser : public IObserver {
     protected:
         LexerPtr M_lex;
         // lookahead token
         TokenPtr look;
         // thrown exceptions
         deque<ParseError> errors;
+        // error count (Note: errorCount != length of error as warning items is also in errors)
+        size_t errorCount = 0;
 
         struct CommonParserState {
             // if compiler meet error
@@ -87,7 +103,7 @@ namespace Miyuki::Parse {
         virtual bool skipUntil(const deque<int32_t>& toks, uint32_t flag);
 
         // add error statement prepare for output
-        inline void diagError( string&& errmsg, TokenPtr ptr ) { errors.push_back(ParseError(errmsg, ptr, false)); }
+        inline void diagError( string&& errmsg, TokenPtr ptr ) { errors.push_back(ParseError(errmsg, ptr, false)); errorCount++; }
 
         // add warning statement prepare for output
         // warning information can be disabled by flag
@@ -105,6 +121,10 @@ namespace Miyuki::Parse {
 
         // parse source file
         virtual void parse() = 0;
+
+        // observable
+        void notify(uint32_t what) override;
+        void registerObserver() { M_lex->getSourceManager()->addObserver(static_cast<IObserver*>(this)); }
     };
 
 };

@@ -27,6 +27,10 @@ namespace Miyuki::Common {
         string  filename;
 
     public:
+        FileReadPtr includeFrom = nullptr;
+        int includeFromLine = 0;
+
+    public:
         bool nextLine();
         bool lastLine();
 

@@ -49,26 +49,33 @@ reget_token:
         for (ParseError& e : errors) {
             TokenPtr tok = e.getToken();
             string s = M_lex->getSourceManager()->getLine(tok->filenam, tok->row);
-            for (int i=0 ; i < s.length() ; i++)
-                    if (s[i] != '\n')  cout << s[i];
-            cout  << endl;
-            for (int i=0; i<s.length(); i++)
-                if (s[i] == '\t') cout << "\t";
-            for (int i=1; i<tok->startCol; i++)
-                os << " ";
+            for (int i=0 ; i < s.length() ; i++) {
+                if (s[i] == '\t') os << "    ";
+                else if (s[i] != '\n') os << s[i];
+            }
+            os << endl;
+            // output blank before token
+            for (int i=0; i<tok->startCol - 1; i++) {
+                if (s[i] == '\t') os <<"    ";
+                else os << ' ';
+            }
             os << "^";
-            for (int i=1; i<tok->chrlen; i++)
-                os << "~";
+            for (int i=tok->startCol; i<tok->column; i++) {
+                if (s[i] == '\t') os << "~~~~";
+                else os << '~';
+            }
             os << endl;
             if (e.isWarning())  os << Miyuki::Console::Warning();
             else os << Miyuki::Console::Error();
             os << tok->filenam << ":" << tok->row << ":" << tok->column << ": " << e.what() << endl << endl;
+
+            // TODO: print include from after include implemented
         }
     }
 
     void IParser::parseDone() {
         reportError(cout);
-        if ( errors.size() != 0 )  throw PasreCannotRecoveryException();
+        if ( errorCount != 0 )  throw PasreCannotRecoveryException();
     }
 
     bool IParser::skipUntil(const deque<int32_t>& toks, uint32_t flag) {
@@ -94,6 +101,12 @@ reget_token:
                 return false;
 
             // TODO: add_special_skip_rules
+        }
+    }
+
+    void IParser::notify(uint32_t what) {
+        if (what == 1) {
+            cout << Console::Green("   Info  ") << "Read Eod-Of-File.\n";
         }
     }
 }

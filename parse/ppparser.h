@@ -16,10 +16,11 @@ namespace Miyuki::Parse {
         explicit PreprocessorParser(const char * path) : M_pplex(make_shared<PreprocessorLexer>()) {
             M_pplex->openFile(path);
             M_lex = M_pplex;
+            registerObserver();
         }
 
+        void testLexer();
         void parse() final;
-
     };
 
 }
