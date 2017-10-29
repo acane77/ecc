@@ -3,6 +3,8 @@
 
 namespace Miyuki::Parse {
 
+    IParser * IParser::instance = nullptr;
+
     void IParser::match(uint32_t term, string &&errmsg, TokenPtr &ptr) {
         if (look->isNot(term)) {
             diagError(std::move(errmsg), ptr);
@@ -60,7 +62,7 @@ reget_token:
                 else os << ' ';
             }
             os << "^";
-            for (int i=tok->startCol; i<tok->column; i++) {
+            for (int i=tok->startCol + 1; i<tok->column; i++) {
                 if (s[i] == '\t') os << "~~~~";
                 else os << '~';
             }

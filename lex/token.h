@@ -96,7 +96,7 @@ namespace Miyuki::Lex {
         uint64_t value;
         bool  isSigned;
 
-        IntToken(uint64_t _value, bool _isSigned, short _bit) :Token(Tag::Integer) { value = _value; isSigned = _isSigned; bit = _bit; }
+        IntToken(uint64_t _value, bool _isSigned = true, short _bit = 32) :Token(Tag::Integer) { value = _value; isSigned = _isSigned; bit = _bit; }
         string toString() override { return "Integer: {0}"_format(value); }
         string toSourceLiteral() override { return "{0}"_format(value); }
     };

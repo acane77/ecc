@@ -47,7 +47,7 @@ namespace Miyuki::Common {
                 notifyAll(1); // notify observer that read EOF
                 if (getFileCount() > 1) {
                     closeCurrFile();
-                    return nextChar();
+                    return '\n'; // if meet eof, then return new-line
                 }
                 // this is the only file , and reach end
                 return -1;

@@ -82,6 +82,7 @@ namespace Miyuki::Parse {
         // Note: retract is 'put back' 1 token , not read the value of
         //       previous token.
         TokenPtr retract();
+    public:
 
                               ///// error recovery //////
         // error-recovery flag
@@ -116,8 +117,7 @@ namespace Miyuki::Parse {
         // report error from exception
         virtual void reportError(std::ostream& os);
 
-    public:
-        explicit IParser() { }
+        explicit IParser() { instance = this; }
 
         // parse source file
         virtual void parse() = 0;
@@ -125,6 +125,9 @@ namespace Miyuki::Parse {
         // observable
         void notify(uint32_t what) override;
         void registerObserver() { M_lex->getSourceManager()->addObserver(static_cast<IObserver*>(this)); }
+
+        // static instance
+        static IParser * instance;
     };
 
 };
