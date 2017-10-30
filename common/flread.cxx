@@ -1,3 +1,4 @@
+#include <iostream>
 #include "flread.h"
 
 namespace Miyuki::Common {
@@ -27,7 +28,6 @@ namespace Miyuki::Common {
     bool FileRead::nextLine() {
         char p;
         string line_save = line;
-        line = "";
 
         if (max_row != row) {
             // Current row is not the last row
@@ -39,32 +39,30 @@ namespace Miyuki::Common {
 
         // Current row is last row
         bool enc_eof = false;
+
+        line = "";
+
+        if (M_File.eof())  return false;
+
+        // Read and append char to string until new_line or EOF
         while (1) {
-            // Read and append char to string until new_line or EOF
-            while (1) {
-                M_File.get(p);
-                if (M_File.eof()) { enc_eof = true; break; }
-                if (p != '\r') line += p;  // ignore CR
-                if (p == '\n') break;
-            }
-
-            if (line.length()) {
-                column = 0;
-                row++;
-                max_row++;
-                lines.push_back(line_save);
-                return true;
-            }
-            if (enc_eof) {
-                // For convince of retract, here still column add 1
-                column++;
-                break;
-            }
+            M_File.get(p);
+            if (M_File.eof()) { enc_eof = true; break; }
+            if (p != '\r') line += p;  // ignore CR
+            if (p == '\n') break;
         }
+        column = 0;
+        row++;
+        max_row++;
+        lines.push_back(line);
 
-        // Restore saved line.
-        line = line_save;
-        return false;
+        if (enc_eof) {
+            // For convince of retract, here still column add 1
+            column++;
+            return true;
+        }
+        //if (line.length())
+        return true;
     }
 
     bool FileRead::lastLine() {

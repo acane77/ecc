@@ -55,7 +55,7 @@ namespace Miyuki::Common {
                 // switch to last file
                 if (getFileCount() > 1) {
                     closeCurrFile();
-                    return '\n'; // if meet eof, then return new-line
+                    return nextChar(); // if meet eof, then return new-line
                 }
                 // this is the only file , and reach end
                 return -1;
@@ -90,7 +90,7 @@ namespace Miyuki::Common {
             FileReadPtr fr = make_shared<FileRead>(path);
             if (currFile) {
                 fr->includeFrom = currFile;
-                fr->includeFromLine = getColumn();
+                fr->includeFromLine = getRow();
             }
             fileStack.push_back(fr);
             currFile = fr;

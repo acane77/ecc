@@ -80,6 +80,7 @@ namespace Miyuki::Parse {
     // group-part (ref A.2.4)
     class GroupPart {
     public:
+        TokenPtr directiveTok = nullptr;
         uint32_t kind;
 
         enum : uint32_t {
@@ -151,7 +152,6 @@ namespace Miyuki::Parse {
         GroupPartPtr groupPart;
 
         // Process group-parts
-        void processInclude();
         void processIf();
         void processIfndef();
         void processElif();

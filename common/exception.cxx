@@ -3,7 +3,7 @@
 namespace Miyuki::Common {
 
     const char * IOException::what() const noexcept {
-       return "no such file or directory.";
+       return msg.c_str();
     }
 
     const char * InvalidToken::what() const noexcept {

@@ -263,7 +263,7 @@ recache:
                 cachedLine->push_back(look);
             }
             // if is empty line, or this line is invalid, need recache
-            int needRecache =  cachedLine->size() == 0 || skipThisLine;
+            int needRecache = skipThisLine;
             // if reach EOF
             if ( look->is(EOF) )  {
                 // maybe last line, but this line is invalid
@@ -358,6 +358,7 @@ recache:
             return false;
         }
         groupPart = make_shared<GroupPart>(kind);
+        groupPart->directiveTok = op;
         return true;
     }
 
@@ -389,12 +390,20 @@ recache:
                     //// CELEBRATE !! FOUND THE BUG !!!!!
                     M_pplex->setLexingContent(PreprocessorLexer::LexingContent::DefaultContent);
 
-                    M_lex->openFile(name.c_str());
-                    // TODO: undate line number
+                    try {
+                        M_lex->openFile(name.c_str());
+                        // TODO: undate line number
+                    }
+                    catch  (IOException& e) {
+                        IParser::instance->diagError(e.what(), (*cachedLine)[0]); //filename token
+                    }
                 }
+                else IParser::instance->diagError("file name expected.", groupPart->directiveTok);
             }
             else if (kind == GroupPart::Define) {
-                assert(false && "not implemented");
+                // CHECK FORMAT
+                //   #define name ( param
+                //if (cachedLine)
             }
             else if (kind == GroupPart::TextLine) {
                 evaledToks = make_shared<TokenSequence>();

@@ -49,7 +49,7 @@ namespace Miyuki::Lex {
         explicit Token(int32_t _tag) { tag = _tag;
             /// FIXME: BUG!!!  position and length of token
             if (flread) {
-                column = flread->getColumn(); row = flread->getRow();
+                column = flread->getColumn(); row = flread->getRow() - 1; //row returned by lexer is next row nuber so minus 1
                 filenam = flread->getCurrentFilename().c_str(); chrlen = column - startColumn;
                 startCol = startColumn;
             } else filenam = "";
