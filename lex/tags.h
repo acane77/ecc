@@ -37,7 +37,8 @@ namespace Miyuki::Lex::Tag {
         PPLiteral       = 1 << 16,
         Number = Integer | Floating,
         Constant = Integer | Floating | Enumeration,
-        Identifier = ID | Enumeration
+        Identifier = ID | Enumeration,
+        Punctuator = -2
     };
 
     enum Property : uint32_t {

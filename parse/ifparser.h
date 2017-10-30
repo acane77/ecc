@@ -83,7 +83,6 @@ namespace Miyuki::Parse {
         //       previous token.
         TokenPtr retract();
     public:
-
                               ///// error recovery //////
         // error-recovery flag
         enum RecoveryFlag : uint32_t {

@@ -8,6 +8,7 @@
 #include "ptrdef.h"
 #include "flread.h"
 #include "observe.h"
+#include "obsevent.h"
 
 namespace Miyuki::Common {
     using namespace fmt;
@@ -23,6 +24,8 @@ namespace Miyuki::Common {
         std::deque<FileReadPtr> readFile;
         // Current file
         FileReadPtr  currFile;
+        // flag that if gile reach end-of-file
+        bool  reachEndOfFile = false;
         enum {
             MaxStackSize = 300
         };
@@ -39,12 +42,17 @@ namespace Miyuki::Common {
         string getLine() { return currFile->getLine(); }
         int to(int r, int c = 0) { return currFile->to(r, c); }
 
-        int nextChar() {
+        inline int _nextChar() {
             int ch = currFile->nextChar();
             if (ch == -1) {
+                if ( reachEndOfFile )  {
+                    notifyAll(ObserverEvent::SM_SWITCHING_FILE); // notify observer that switching event happened
+                    reachEndOfFile = false;   //because we do not support retract from removed file, so just
+                                               // set it to false after reach it
+                }
+                else reachEndOfFile = true;
                 // If reach current file's end,
                 // switch to last file
-                notifyAll(1); // notify observer that read EOF
                 if (getFileCount() > 1) {
                     closeCurrFile();
                     return '\n'; // if meet eof, then return new-line
@@ -55,7 +63,24 @@ namespace Miyuki::Common {
             // normally return character
             return ch;
         }
-        int lastChar() { return currFile->lastChar(); }
+        int nextChar() {
+            int ch = _nextChar();
+            // eat \r
+            if (ch == '\r') return nextChar();
+            // eat \\\n
+            if (ch == '\\') {
+                ch = _nextChar();
+                if (ch == '\n') return nextChar();
+
+                lastChar(); return '\\';
+            }
+            return ch;
+        }
+        int lastChar() {
+            //because we do not support retract from removed file, so just set it to false
+            if (reachEndOfFile)  reachEndOfFile = false;
+            return currFile->lastChar();
+        }
 
         // Operation for file switching
         inline int getFileCount() { return fileStack.size(); }

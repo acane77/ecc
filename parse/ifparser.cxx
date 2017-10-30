@@ -1,5 +1,6 @@
 #include "ifparser.h"
 #include "common/console.h"
+#include "common/obsevent.h"
 
 namespace Miyuki::Parse {
 
@@ -107,8 +108,8 @@ reget_token:
     }
 
     void IParser::notify(uint32_t what) {
-        if (what == 1) {
-            cout << Console::Green("   Info  ") << "Read Eod-Of-File.\n";
+        if (what == ObserverEvent::SM_SWITCHING_FILE) {
+            cout << Console::Green("   Info  ") << MSG_SM_SWOTCHING_FILE <<"\n";
         }
     }
 }

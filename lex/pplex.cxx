@@ -30,13 +30,15 @@ namespace Miyuki::Lex {
 
         // Other literal tokens
         if ( (lexingContent & LexingContent ::DefaultContent) && (isdigit(peak) || peak == '.') ) {
-            string charseq;
+            int prevChar = peak; readch();
+            if (!isdigit(peak)) {  retract(); peak = prevChar; goto it_is_a_punctuator; }
+            string charseq = "" + prevChar;
             for (; isalnum(peak) || peak == '.' ; readch() )
                 charseq += peak;
             retract();
             return make_shared<PPLiteralToken>(charseq);
         }
-
+it_is_a_punctuator:
         // Punctuators
         TokenPtr puncTok = scanPunctuators();
         if (puncTok->is('#')) lexingContent = LexingContent ::Preprocessing;

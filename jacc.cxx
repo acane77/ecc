@@ -21,7 +21,7 @@ int main(int argc, const char ** argv) {
 
     try {
         PreprocessorParser parser(file_name);
-        parser.testLexer();
+        parser.parse();
     }
     catch (exception& e) {
         cout << Miyuki::Console::Error("fatal:") << e.what() << endl << endl;

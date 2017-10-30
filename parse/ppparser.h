@@ -15,14 +15,16 @@ namespace Miyuki::Parse {
     DEFINE_SHARED_PTR(MacroDefine)
     DEFINE_SHARED_PTR(MacroPack)
     DEFINE_SHARED_PTR(Macro)
-    DEFINE_SHARED_PTR(FunctionLinkMacro)
+    DEFINE_SHARED_PTR(FunctionLikeMacro)
+    DEFINE_SHARED_PTR(GroupPart)
 
+    // macro defination.
     class MacroDefine {
     public:
         string macroName;
         bool   isFunctionLike;
         // for function-like macros
-        bool   isParamVaribleLengh;
+        bool   isParamVarible;
         deque<WordTokenPtr> lparlen;
         TokenSequence replacement;
 
@@ -34,23 +36,30 @@ namespace Miyuki::Parse {
         }
     };
 
+    // store a pack of macro
     class MacroPack {
         static MacroPack instance;
     public:
         unordered_map<string, MacroDefinePtr> macros;
 
         static MacroPack &getInstance() { return instance; }
-        MacroDefinePtr getMacroDef(string name, bool isFunctionLike) {
+        MacroDefinePtr getMacroDef(string name, bool isFunctionLike) { // FIXME: remove? maybe useless
             auto it = macros.find(name);
             if (it != macros.end() && it->second->isFunctionLike == isFunctionLike) return it->second;
             return nullptr;
         }
+        MacroDefinePtr getMacroDef(string name) {
+            auto it = macros.find(name);
+            if (it != macros.end()) return it->second;
+            return nullptr;
+        }
     };
 
+    // use macro (directly use or call)
     class Macro {
     public:
         MacroDefinePtr defination;
-        bool isDunctionLike;
+        bool isFunctionLike;
 
         explicit Macro(MacroDefinePtr def) {
             defination = def;
@@ -65,6 +74,21 @@ namespace Miyuki::Parse {
             }
             return 1;
         }
+    };
+
+    // group-part (ref A.2.4)
+    class GroupPart {
+    public:
+        uint32_t kind;
+
+        enum : uint32_t {
+            Include = 0, If, Ifndef, Ifdef, Elif, Else, Endif, Define, Undef, Line, Error, Pragma, Empty, TextLine
+        };
+
+        GroupPart(uint32_t _kind) : kind(_kind) {  }
+
+        bool is(uint32_t _tag) { return kind == _tag; }
+        void process();
     };
 
     class FunctionLikeMacro : public Macro {
@@ -112,19 +136,38 @@ namespace Miyuki::Parse {
         //    no matter it is or function or a function-like macro.
         TokenSequencePtr cachedLine;
 
+        // macro defined.
+        MacroPack macros;
+
+        // group part type info
+        GroupPartPtr groupPart;
+
     public:
         explicit PreprocessorParser(const char * path) : M_pplex(make_shared<PreprocessorLexer>()) {
             M_pplex->openFile(path);
             M_lex = M_pplex;
-            registerObserver();  next();
+            registerObserver();
         }
 
         void testLexer();
         void parse() final;
+
         void parseControlLine();
 
-        // cache a line from lexer
+        // get group-part kind from opTok
+        // return value: true if is a valid group part,
+        //               false if invalid
+        bool setGroupPart(TokenPtr op);
+
+        // cache a line with full syntax meaning from lexer
+        // return value: true: there're lines did not read
+        //               false: there's no line did not read
+        // dide effect:  set cachedLine, if the value is nullptr,
+        //               means the value is invalid, and no more line to read
         bool getCache();
+
+        // calculate values
+        TokenSequencePtr eval(TokenSequencePtr seq);
     };
 
 }

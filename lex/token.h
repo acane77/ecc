@@ -62,6 +62,8 @@ namespace Miyuki::Lex {
         virtual string toSourceLiteral();
         // test if this is _tag
         bool is(int32_t _tag) {
+            // if _tag passes special kind, then compare
+            if (_tag == Tag::Punctuator)  return tag >= Tag::Property::PunctuatorStart && tag <= Tag::Property::PunctuatorEnd;
             // expected token is a punctuator or keyword or EOF - using literal value comparsion
             // Type comparsion - using bitwise-or
             return ((_tag >= Tag::Property::PunctuatorStart && _tag <= Tag::Property::KeywordEnd) || _tag == Tag::EndOfFile) ? (_tag == tag) : (_tag & tag);
