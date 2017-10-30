@@ -119,11 +119,13 @@ namespace Miyuki::Lex {
             if (peak == '>') return make_shared<Token>(Tag::PointerAccess);
             if (peak == '-') return make_shared<Token>(Tag::Decrease);
             if (peak == '=') return make_shared<Token>(Tag::SubAssign);
+            retract();
         }
             // ++
         else if (peak == '+'){  readch();
             if (peak == '+') return make_shared<Token>(Tag::Increase);
             if (peak == '=') return make_shared<Token>(Tag::AddAssign);
+            retract();
         }
             // << <<= <= <:
         else if (peak == '<') {  readch();
@@ -134,6 +136,7 @@ namespace Miyuki::Lex {
             else if (peak == '=') return make_shared<Token>(Tag::LessThanEqual);
             else if (peak == ':') return make_shared<Token>(Tag::LessThanColon);
             else if (peak == '%') return make_shared<Token>(Tag::LessThanMod);
+            retract();
         }
             // >> >>= >=
         else if (peak == '>') {  readch();
@@ -142,24 +145,29 @@ namespace Miyuki::Lex {
                 retract(); return make_shared<Token>(Tag::RightShift);
             }
             else if (peak == '=') return make_shared<Token>(Tag::GreaterThanEqual);
+            retract();
         }
             // ==
         else if (peak == '=') {  readch();
             if (peak == '=') return make_shared<Token>(Tag::Equal);
+            retract();
         }
             // !=
         else if (peak == '!') {  readch();
             if (peak == '=') return make_shared<Token>(Tag::NotEqual);
+            retract();
         }
             // &&
         else if (peak == '&') {  readch();
             if (peak == '&') return make_shared<Token>(Tag::And);
             if (peak == '=') return make_shared<Token>(Tag::BitwiseAndAssign);
+            retract();
         }
             // ||
         else if (peak == '|') {  readch();
             if (peak == '|') return make_shared<Token>(Tag::Or);
             if (peak == '=') return make_shared<Token>(Tag::BitwiseOrAssign);
+            retract();
         }
             // ...
         else if (peak == '.') {  readch();
@@ -168,14 +176,17 @@ namespace Miyuki::Lex {
                 if (peak == '.') return make_shared<Token>(Tag::Ellipsis);
                 retract(); diagError("invalid token '..'");
             }
+            retract();
         }
             // *=
         else if (peak == '*') {  readch();
             if (peak == '=') return make_shared<Token>(Tag::MulpileAssign);
+            retract();
         }
             // /=
         else if (peak == '/') {  readch();
             if (peak == '=') return make_shared<Token>(Tag::DivideAssign);
+            retract();
         }
             // %=  %: %:%: %>
         else if (peak == '%') {  readch();
@@ -188,20 +199,19 @@ namespace Miyuki::Lex {
                 }
                 else return make_shared<Token>(Tag::ModColon);
             }
+            retract();
         }
             // ##
         else if (peak == '#') {  readch();
             if (peak == '#') return make_shared<Token>(Tag::DoubleSharp);
+            retract();
         }
             // ^=
         else if (peak == '^') {  readch();
             if (peak == '=') return make_shared<Token>(Tag::XorAssign);
+            retract();
         }
             // other single-character punctuators
-        // singlePunc == peak means directly goes here, never enterred any if-statement
-        // why should I retract? because any branch in if-statement read one more character
-        // but did not retract.
-        if (singelPunc != peak) retract();
         return make_shared<Token>(singelPunc);
     }
 

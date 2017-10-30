@@ -14,13 +14,25 @@ namespace Miyuki::Parse {
     }
 
     void PreprocessorParser::parse() {
-        while (getCache()) {
-            cout << "Cache Got **************\n";
+        /*while (getCache()) {
+            cachedLine = eval(cachedLine);
+            cout << Console::Yellow("Cache Got **************") << endl;
             for (int i=0; i<cachedLine->size(); i++) {
                 cout << "Test:  " << (*cachedLine)[i]->toString() << endl;
             }
             cout << endl;
+        }*/
+        Lex::Token::flread = M_pplex->getSourceManager();
+        while (1) {
+            evalCachedLine();
+            if (!evaledToks || evaledToks->size() == 0)  break;
+            cout << Console::Yellow("Cache Got **************") << endl;
+            for (int i=0; i<evaledToks->size(); i++) {
+                cout << "Test:  " << (*evaledToks)[i]->toString() << endl;
+            }
+            cout << endl;
         }
+        parseDone();
     }
 
     int FunctionLikeMacro::replace(TokenSequence &toksResult) {
@@ -264,10 +276,12 @@ recache:
 
         else if (look->is(EOF)) {
             cachedLine = nullptr;
+            groupPart = nullptr;
             return false;
         }
 
         // else is plain text-line
+        groupPart = make_shared<GroupPart>(GroupPart::TextLine);
         int leftBracketCount = 0;
         bool isInFunction = true;
         for ( ; ; next() ) {
@@ -345,6 +359,53 @@ recache:
         }
         groupPart = make_shared<GroupPart>(kind);
         return true;
+    }
+
+    void PreprocessorParser::evalCachedLine() {
+        do {
+            cachedLine = nullptr;
+            evaledToks = nullptr;
+            getCache();
+            if (!cachedLine)
+                break;
+
+            // is an empty sentense or invalid, who knows?
+            if (!groupPart)
+                continue;
+
+            int kind = groupPart->kind;
+            if (kind == GroupPart::Include) {
+                cachedLine = eval(cachedLine);
+                // check format
+                //   headerName or stringLiteral
+                if (cachedLine->size() == 1 && ((*cachedLine)[0]->is(Tag::StringLiteral) || (*cachedLine)[0]->is(Tag::HeaderName))) {
+                    string name = dynamic_pointer_cast<HeaderToken>((*cachedLine)[0]) ? dynamic_pointer_cast<HeaderToken>((*cachedLine)[0])->name :
+                                  ( dynamic_pointer_cast<StringToken>((*cachedLine)[0]) ? dynamic_pointer_cast<StringToken>((*cachedLine)[0])->value : "<file not avaible>" );
+                    // here set to defaultContent is import
+                    // I set this default value when I meet a new line,
+                    // but If an #include was not end with \n, lexingContent will not be set to default
+                    // and the lexer will lex defauleContent as Preprocess line, even a include groupPart
+                    // so this line is very important
+                    //// CELEBRATE !! FOUND THE BUG !!!!!
+                    M_pplex->setLexingContent(PreprocessorLexer::LexingContent::DefaultContent);
+
+                    M_lex->openFile(name.c_str());
+                    // TODO: undate line number
+                }
+            }
+            else if (kind == GroupPart::Define) {
+                assert(false && "not implemented");
+            }
+            else if (kind == GroupPart::TextLine) {
+                evaledToks = make_shared<TokenSequence>();
+                for (TokenPtr tok : *cachedLine) {
+                    evaledToks->push_back(tok);
+                }
+            }
+
+            if (evaledToks && evaledToks->size()) evaledToksIter = evaledToks->begin();
+        }
+        while (!evaledToks || !evaledToks->size());
     }
 }
 

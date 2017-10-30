@@ -11,6 +11,7 @@ namespace Miyuki::Parse {
 
     typedef deque<TokenPtr> TokenSequence;
     typedef shared_ptr<TokenSequence> TokenSequencePtr;
+    typedef TokenSequence::iterator TokenSequenceIter;
 
     DEFINE_SHARED_PTR(MacroDefine)
     DEFINE_SHARED_PTR(MacroPack)
@@ -88,7 +89,6 @@ namespace Miyuki::Parse {
         GroupPart(uint32_t _kind) : kind(_kind) {  }
 
         bool is(uint32_t _tag) { return kind == _tag; }
-        void process();
     };
 
     class FunctionLikeMacro : public Macro {
@@ -136,11 +136,33 @@ namespace Miyuki::Parse {
         //    no matter it is or function or a function-like macro.
         TokenSequencePtr cachedLine;
 
+        // we store calculated value (calulated by evalCache from cacheLine)
+        // and the value will be return to parser
+        TokenSequencePtr evaledToks;
+
+        // iterator to evaledToks,
+        // used to point to the next token that should be returned in evaledToks
+        TokenSequenceIter evaledToksIter;
+
         // macro defined.
         MacroPack macros;
 
         // group part type info
         GroupPartPtr groupPart;
+
+        // Process group-parts
+        void processInclude();
+        void processIf();
+        void processIfndef();
+        void processElif();
+        void processElse();
+        void processEndif();
+        void processDefine();
+        void processUndef();
+        void processLine();
+        void processError();
+        void processPragma();
+        void processTextline();
 
     public:
         explicit PreprocessorParser(const char * path) : M_pplex(make_shared<PreprocessorLexer>()) {
@@ -168,6 +190,10 @@ namespace Miyuki::Parse {
 
         // calculate values
         TokenSequencePtr eval(TokenSequencePtr seq);
+
+        // from cache, eval value or execute, replace any macros
+        void evalCachedLine();
+
     };
 
 }
