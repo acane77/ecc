@@ -404,19 +404,36 @@ recache:
 
             int kind = groupPart->kind;
             if (kind == GroupPart::Include) {
+                if (!getCondition())  continue;
                 processInclude();
             }
             else if (kind == GroupPart::Define) {
+                if (!getCondition())  continue;
                 processDefine();
             }
             else if (kind == GroupPart::Undef) {
+                if (!getCondition())  continue;
                 processUndef();
             }
             else if (kind == GroupPart::TextLine) {
+                if (!getCondition())  continue;
                 processTextline();
             }
             else if (kind == GroupPart::Error) {
+                if (!getCondition())  continue;
                 processError();
+            }
+            else if (kind == GroupPart::Ifdef) {
+                processIfdef();
+            }
+            else if (kind == GroupPart::Ifndef) {
+                processIfndef();
+            }
+            else if (kind == GroupPart::Else) {
+                processElse();
+            }
+            else if (kind == GroupPart::Endif) {
+                processEndif();
             }
 
             if (evaledToks && evaledToks->size()) evaledToksIter = evaledToks->begin();
@@ -551,11 +568,92 @@ recache:
     }
 
     void PreprocessorParser::processError() {
-        cachedLine = eval(cachedLine);
         string errmsg;
         for (TokenPtr ptr : *cachedLine)
             errmsg += ptr->toSourceLiteral() + " ";
         diagError(std::move(errmsg), groupPart->directiveTok);
+    }
+
+    void PreprocessorParser::processIfdef() {
+        // check format
+        if (cachedLine->size() < 1 ) {
+            diagError("identifier name expected", groupPart->directiveTok);
+            return;
+        }
+        if ((*cachedLine)[0]->isNot(Tag::Identifier)) {
+            diagError("identifier name expected", (*cachedLine)[0] );
+            return;
+        }
+        // check if macro is defined
+        bool hasDefined = getCondition() && macros.getMacroDef( static_pointer_cast<WordToken>((*cachedLine)[0])->name ) != nullptr;
+        addNewCondition(hasDefined);
+    }
+
+    void PreprocessorParser::processIfndef() {
+    // check format
+        if (cachedLine->size() < 1 ) {
+            diagError("identifier name expected", groupPart->directiveTok);
+            return;
+        }
+        if ((*cachedLine)[0]->isNot(Tag::Identifier)) {
+            diagError("identifier name expected", (*cachedLine)[0] );
+            return;
+        }
+        // check if macro is defined
+        bool hasDefined = getCondition() && macros.getMacroDef( static_pointer_cast<WordToken>((*cachedLine)[0])->name ) == nullptr;
+        addNewCondition(hasDefined);
+    }
+
+    void PreprocessorParser::processElse() {
+        if (cachedLine->size() != 0) {
+            diagWarning("extra tokens at end of #{0} directive"_format(groupPart->directiveTok->toSourceLiteral()), groupPart->directiveTok);
+        }
+        if (condHierarchy.size() == 0) {
+            diagError("#else without #if", groupPart->directiveTok);
+            return;
+        }
+        // negitive condition value
+        // if parent is true,
+        if (condHierarchy.back()->parentIsTrue) {
+            negateCondition();
+        }
+    }
+
+    void PreprocessorParser::processEndif() {
+        if (cachedLine->size() != 0) {
+            diagWarning("extra tokens at end of #{0} directive"_format(groupPart->directiveTok->toSourceLiteral()), groupPart->directiveTok);
+        }
+        if (condHierarchy.size() == 0) {
+            diagError("#endif without #if", groupPart->directiveTok);
+            return;
+        }
+        // pop up top
+        endCurrentCondition();
+    }
+
+    bool PreprocessorParser::getCondition() {
+        if (condHierarchy.size() == 0)  return true;
+        return condHierarchy.back()->isTrue();
+    }
+
+    bool PreprocessorParser::setCondition(bool c) {
+        if (condHierarchy.size() == 0)  return false;
+        condHierarchy.back()->set(c);
+    }
+
+    bool PreprocessorParser::endCurrentCondition() {
+        if (condHierarchy.size() == 0)  return false;
+        condHierarchy.pop_back();
+        return true;
+    }
+
+    bool PreprocessorParser::negateCondition() {
+        if (condHierarchy.size() == 0)  return false;
+        condHierarchy.back()->set( !condHierarchy.back()->isTrue() );
+    }
+
+    void PreprocessorParser::addNewCondition(bool c) {
+        condHierarchy.push_back(make_shared<PreprocCondition>(c, groupPart->directiveTok, getCondition() ));
     }
 }
 

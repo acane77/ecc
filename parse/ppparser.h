@@ -3,6 +3,7 @@
 
 #include "ifparser.h"
 #include "lex/pplex.h"
+#include "ppcond.h"
 #include <unordered_map>
 
 namespace Miyuki::Parse {
@@ -168,8 +169,19 @@ namespace Miyuki::Parse {
         // group part type info
         GroupPartPtr groupPart;
 
+        // condition stack for #if #ifdef and #ifndef hierarchy
+        ConditionHierarchy condHierarchy;
+
+        // condition operations
+        bool getCondition();
+        bool setCondition(bool c);
+        bool negateCondition();
+        bool endCurrentCondition();
+        void addNewCondition(bool c);
+
         // Process group-parts
         void processIf();
+        void processIfdef();
         void processIfndef();
         void processElif();
         void processElse();
