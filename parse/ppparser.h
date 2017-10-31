@@ -116,6 +116,8 @@ namespace Miyuki::Parse {
         }
 
         bool isParameter(string name) {
+            if (name == "__VA_ARGS__")
+                return true;
             for (WordTokenPtr tok : defination->lparlen) {
                 if (tok->name == name)
                     return true;

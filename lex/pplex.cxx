@@ -24,6 +24,8 @@ namespace Miyuki::Lex {
 
         // PPNumber
         if ( (lexingContent & LexingContent ::Preprocessing) && ( isdigit(peak) || peak == '.' ) ) {
+            int peakSav = peak;  readch(); int nextChr = peak; retract(); peak = peakSav;
+            if (nextChr == '.') goto it_is_a_punctuator;
             TokenPtr ptr = scanPPNumber();
             if (ptr) return ptr;
         }

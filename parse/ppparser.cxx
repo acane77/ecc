@@ -37,8 +37,8 @@ namespace Miyuki::Parse {
 
     int FunctionLikeMacro::replace(TokenSequence &toksResult) {
         int replacementCount = 0;
-        if ((!defination->isParamVarible && defination->lparlen.size() != params.size()) || (defination->isParamVarible && defination->lparlen.size() < params.size())) {
-            IParser::instance->diagError("'{0}' required {1}{2} parameters, and {3} provided."_format( macroName->toSourceLiteral(), defination->isParamVarible ? "at least ":"", defination->lparlen.size() , params.size() ), macroName);
+        if (((!defination->isParamVarible) && defination->lparlen.size() != params.size()) || (defination->isParamVarible && defination->lparlen.size() > params.size())) {
+            IParser::instance->diagError("'{0}' requires {1}{2} parameters, and {3} provided."_format( macroName->toSourceLiteral(), defination->isParamVarible ? "at least ":"", defination->lparlen.size() , params.size() ), macroName);
             return 0;
         }
         size_t replen = defination->replacement.size();
@@ -136,13 +136,15 @@ namespace Miyuki::Parse {
         if (name == "__VA_ARGS__") {
             // defination->lparlen.size() = named size
             // params.size() = call size
-            for (int i=defination->lparlen.size(); i<params.size(); i++)
+            for (int i=defination->lparlen.size(); i<params.size(); i++) {
                 for (TokenPtr ptr : *(params[i])) {
                     tokSeq->push_back(ptr);
-                    tokSeq->push_back(ptr);
                 }
+                tokSeq->push_back(make_shared<Token>(','));
+            }
             if (tokSeq->size())
                 tokSeq->pop_back(); //remove last comma token
+            return tokSeq;
         }
         int index = defination->getParamIndex(name);
         if (index == -1)   return nullptr;
@@ -480,6 +482,7 @@ recache:
                         diagError("missing ')' after {0} token"_format( tok->toSourceLiteral() ), tok);
                         return;
                     }
+                    paramListClosed = true;
                     break;
                 }
                 if (tok->isNot(Tag::Identifier)) {
@@ -541,7 +544,7 @@ recache:
     }
 
     void PreprocessorParser::processTextline() {
-        evaledToks = (cachedLine);
+        evaledToks = eval(cachedLine);
 
         /*for (TokenPtr tok : *cachedLine) {
             evaledToks->push_back(tok);
