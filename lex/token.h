@@ -167,7 +167,7 @@ namespace Miyuki::Lex {
 
         explicit PPNumberToken(FloatingType _value) : Token(Tag::PPNumber) { value = _value; }
         string toString() override { return "PP Number: {0}"_format(value); }
-        string toSourceLiteral() override { assert(false && "PPNumber cannot reprint to source"); }
+        string toSourceLiteral() override { return "{0}"_format(value); }
     };
 
     // Prepressor other as-is tokens

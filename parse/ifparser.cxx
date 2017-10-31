@@ -63,7 +63,7 @@ reget_token:
                 else os << ' ';
             }
             os << "^";
-            for (int i=tok->startCol + 1; i<tok->column; i++) {
+            for (int i=tok->startCol ; i<tok->column; i++) {
                 if (s[i] == '\t') os << "~~~~";
                 else os << '~';
             }

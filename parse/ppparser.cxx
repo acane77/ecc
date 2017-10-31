@@ -415,6 +415,9 @@ recache:
             else if (kind == GroupPart::TextLine) {
                 processTextline();
             }
+            else if (kind == GroupPart::Error) {
+                processError();
+            }
 
             if (evaledToks && evaledToks->size()) evaledToksIter = evaledToks->begin();
         }
@@ -545,10 +548,14 @@ recache:
 
     void PreprocessorParser::processTextline() {
         evaledToks = eval(cachedLine);
+    }
 
-        /*for (TokenPtr tok : *cachedLine) {
-            evaledToks->push_back(tok);
-        }*/
+    void PreprocessorParser::processError() {
+        cachedLine = eval(cachedLine);
+        string errmsg;
+        for (TokenPtr ptr : *cachedLine)
+            errmsg += ptr->toSourceLiteral() + " ";
+        diagError(std::move(errmsg), groupPart->directiveTok);
     }
 }
 
