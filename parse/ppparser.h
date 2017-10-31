@@ -54,11 +54,26 @@ namespace Miyuki::Parse {
             if (it != macros.end()) return it->second;
             return nullptr;
         }
+        bool removeMacroDef(string name) {
+            auto it = macros.find(name);
+            if (it != macros.end()) {
+                macros.erase(it);
+                return true;
+            }
+            return false;
+        }
+        bool addMacro(const string& name, MacroDefinePtr def) {
+            // if macro is exist
+            if ( getMacroDef(name) )  return false;
+            macros.insert(make_pair<string, MacroDefinePtr>( string(name) , std::move(def) ));
+            return true;
+        }
     };
 
     // use macro (directly use or call)
     class Macro {
     public:
+        TokenPtr macroName;
         MacroDefinePtr defination;
         bool isFunctionLike;
 
@@ -163,6 +178,7 @@ namespace Miyuki::Parse {
         void processError();
         void processPragma();
         void processTextline();
+        void processInclude();
 
     public:
         explicit PreprocessorParser(const char * path) : M_pplex(make_shared<PreprocessorLexer>()) {

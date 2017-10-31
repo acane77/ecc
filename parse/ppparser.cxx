@@ -37,6 +37,10 @@ namespace Miyuki::Parse {
 
     int FunctionLikeMacro::replace(TokenSequence &toksResult) {
         int replacementCount = 0;
+        if ((!defination->isParamVarible && defination->lparlen.size() != params.size()) || (defination->isParamVarible && defination->lparlen.size() < params.size())) {
+            IParser::instance->diagError("'{0}' required {1}{2} parameters, and {3} provided."_format( macroName->toSourceLiteral(), defination->isParamVarible ? "at least ":"", defination->lparlen.size() , params.size() ), macroName);
+            return 0;
+        }
         size_t replen = defination->replacement.size();
         for (int i=0; i<replen; i++) {
             TokenPtr tok = defination->replacement[i];
@@ -57,8 +61,9 @@ namespace Miyuki::Parse {
                 TokenSequencePtr tokSeq = getParameterValue(paramName);
                 // if is # just convert to string directly, do not do any other convertion
                 string strRet;
-                for (TokenPtr& tok : *tokSeq) {
-                    strRet += tok->toSourceLiteral() + " ";
+                for (int k=0; k<tokSeq->size(); k++) {
+                    strRet += (*tokSeq)[k]->toSourceLiteral();
+                    if (k != tokSeq->size() - 1) strRet += " ";
                 }
                 toksResult.push_back(make_shared<StringToken>( strRet,  Encoding::ASCII ));
                 replacementCount++;
@@ -113,7 +118,7 @@ namespace Miyuki::Parse {
             WordTokenPtr tokW = dynamic_pointer_cast<WordToken>(tok);
             if ( tokW && isParameter( tokW->name ) ) {
                 TokenSequencePtr tokSeq = getParameterValue(tokW->name);
-                for (int i=1; i<tokSeq->size(); i++)
+                for (int i=0; i<tokSeq->size(); i++)
                     toksResult.push_back((*tokSeq)[i]);
                 replacementCount++;
                 continue;
@@ -127,21 +132,17 @@ namespace Miyuki::Parse {
 
     TokenSequencePtr FunctionLikeMacro::getParameterValue(string &name) {
         TokenSequencePtr tokSeq = make_shared<TokenSequence>();
-        assert( name != "__VA_ARGS__" && "invalid use of getParameterValue" );
 
-        // return line number (int)
-        if (name == "__LINE__")   { tokSeq->push_back(make_shared<IntToken>( Token::flread->getRow(), false ));  return tokSeq; }
-            // return file name (string-literal)
-        else if (name == "__FILE__")  { tokSeq->push_back(make_shared<StringToken>( Token::flread->getCurrentFilename().c_str(), Encoding::ASCII ));  return tokSeq; }
-            // return function name (string literal) //FIXME: after implement parser, write here
-        else if (name == "__FUNC__")  { tokSeq->push_back(make_shared<StringToken>( "to be implemented.", Encoding::ASCII )); return tokSeq; }
-            // return args list
-        else if (name == "__VA_ARGS__") {
+        if (name == "__VA_ARGS__") {
             // defination->lparlen.size() = named size
             // params.size() = call size
             for (int i=defination->lparlen.size(); i<params.size(); i++)
-                for (TokenPtr ptr : *(params[i]))
+                for (TokenPtr ptr : *(params[i])) {
                     tokSeq->push_back(ptr);
+                    tokSeq->push_back(ptr);
+                }
+            if (tokSeq->size())
+                tokSeq->pop_back(); //remove last comma token
         }
         int index = defination->getParamIndex(name);
         if (index == -1)   return nullptr;
@@ -149,12 +150,13 @@ namespace Miyuki::Parse {
     }
 
     TokenSequencePtr PreprocessorParser::eval(TokenSequencePtr original) {
-        TokenSequencePtr seqNew = make_shared<TokenSequence>();
+        TokenSequencePtr seqNew;
 
         // first, we relace macros
         int replaceCount;
         do {
             replaceCount = 0;
+            seqNew = make_shared<TokenSequence>();
             for (int i=0; i<original->size(); i++) {
                 TokenPtr tok = (*original)[i];
                 if (tok->isNot(Tag::Identifier)) {
@@ -166,6 +168,14 @@ namespace Miyuki::Parse {
                 //   forst we should get to kow if this identifier is which one of the follow
                 //   all possible types are:  macro,  function-like macro,  norml identifier(will be nnot reolaced)
                 WordTokenPtr tokW = dynamic_pointer_cast<WordToken>(tok);
+                // zero, we check if it is a predefined macro
+                // replace line number (int)
+                if (tokW->name == "__LINE__")   { seqNew->push_back(make_shared<IntToken>( Token::flread->getRow(), false ));  replaceCount++; goto replace_done; }
+                    // replace file name (string-literal)
+                else if (tokW->name == "__FILE__")  { seqNew->push_back(make_shared<StringToken>( Token::flread->getCurrentFilename().c_str(), Encoding::ASCII ));   replaceCount++; goto replace_done; }
+                    // replace function name (string literal) //FIXME: after implement parser, write here
+                else if (tokW->name == "__FUNC__")  { seqNew->push_back(make_shared<StringToken>( "to be implemented.", Encoding::ASCII ));  replaceCount++; goto replace_done; }
+
                 // first we check if it is a macro
                 MacroDefinePtr macroDef = macros.getMacroDef(tokW->name);
                 if (!macroDef) {
@@ -179,8 +189,10 @@ namespace Miyuki::Parse {
                     // first we check if next token is '('
                     if (i != original->size() - 1   // has next item
                         && (*original)[i + 1]->is('(')) { // is a '('
+                        i++; // skip '('
                         // fetch all tokens
                         FunctionLikeMacroPtr macro = make_shared<FunctionLikeMacro>(macroDef);
+                        macro->macroName = tokW;
                         int leftBracketCount = 1;
                         TokenSequencePtr param = make_shared<TokenSequence>();  // store first param (if there is)
                         while (leftBracketCount) {
@@ -201,7 +213,7 @@ namespace Miyuki::Parse {
                             else if (i >= original->size()) {
                                 // token runs out
                                 // should not runs here
-                                IParser::instance->diagError("unexpected new-line or eof", tok);
+                                diagError("unexpected new-line or eof", tok);
                                 assert(false && "you should not run here");
                             }
                             else {
@@ -221,19 +233,14 @@ namespace Miyuki::Parse {
                 }
                 // is not a function-like macro
                 else {
-                    if (i != original->size() - 1   // has next item
-                        && (*original)[i + 1]->is('(')) { // is a '('
-                        IParser::instance->diagError("use a normal macro like a functon-like macro", tok);
-                        // error recovery
-                        // directly add this token to sequence
-                        seqNew->push_back(tok);
-                        continue;
-                    }
                     // replace it
                     MacroPtr macro = make_shared<Macro>(macroDef);
+                    macro->macroName = tokW;
                     replaceCount += macro->replace(*seqNew);
                 }
             }
+replace_done:
+            original = seqNew;
         }
         while (replaceCount);
 
@@ -376,45 +383,150 @@ recache:
 
             int kind = groupPart->kind;
             if (kind == GroupPart::Include) {
-                cachedLine = eval(cachedLine);
-                // check format
-                //   headerName or stringLiteral
-                if (cachedLine->size() == 1 && ((*cachedLine)[0]->is(Tag::StringLiteral) || (*cachedLine)[0]->is(Tag::HeaderName))) {
-                    string name = dynamic_pointer_cast<HeaderToken>((*cachedLine)[0]) ? dynamic_pointer_cast<HeaderToken>((*cachedLine)[0])->name :
-                                  ( dynamic_pointer_cast<StringToken>((*cachedLine)[0]) ? dynamic_pointer_cast<StringToken>((*cachedLine)[0])->value : "<file not avaible>" );
-                    // here set to defaultContent is import
-                    // I set this default value when I meet a new line,
-                    // but If an #include was not end with \n, lexingContent will not be set to default
-                    // and the lexer will lex defauleContent as Preprocess line, even a include groupPart
-                    // so this line is very important
-                    //// CELEBRATE !! FOUND THE BUG !!!!!
-                    M_pplex->setLexingContent(PreprocessorLexer::LexingContent::DefaultContent);
-
-                    try {
-                        M_lex->openFile(name.c_str());
-                        // TODO: undate line number
-                    }
-                    catch  (IOException& e) {
-                        IParser::instance->diagError(e.what(), (*cachedLine)[0]); //filename token
-                    }
-                }
-                else IParser::instance->diagError("file name expected.", groupPart->directiveTok);
+                processInclude();
             }
             else if (kind == GroupPart::Define) {
-                // CHECK FORMAT
-                //   #define name ( param
-                //if (cachedLine)
+                processDefine();
+            }
+            else if (kind == GroupPart::Undef) {
+                processUndef();
             }
             else if (kind == GroupPart::TextLine) {
-                evaledToks = make_shared<TokenSequence>();
-                for (TokenPtr tok : *cachedLine) {
-                    evaledToks->push_back(tok);
-                }
+                processTextline();
             }
 
             if (evaledToks && evaledToks->size()) evaledToksIter = evaledToks->begin();
         }
         while (!evaledToks || !evaledToks->size());
+    }
+
+#define nextTok() ( tok = (*cachedLine)[++i] )
+#define currTok() ( tok = (*cachedLine)[i] )
+#define noMoreTok() ( i+1 >= cachedLine->size() )
+#define hasMoreToken() ( i+1 < cachedLine->size() )
+#define getTok(i) ( (*cachedLine)[i] )
+#define errorNoMoreToken() if (noMoreTok()) { diagError("unexpected new-line", tok); return; }
+    void PreprocessorParser::processInclude() {
+        cachedLine = eval(cachedLine);
+        // check format
+        //   headerName or stringLiteral
+        if (cachedLine->size() == 1 && ((*cachedLine)[0]->is(Tag::StringLiteral) || (*cachedLine)[0]->is(Tag::HeaderName))) {
+            string name = dynamic_pointer_cast<HeaderToken>((*cachedLine)[0]) ? dynamic_pointer_cast<HeaderToken>((*cachedLine)[0])->name :
+                          ( dynamic_pointer_cast<StringToken>((*cachedLine)[0]) ? dynamic_pointer_cast<StringToken>((*cachedLine)[0])->value : "<file not avaible>" );
+            // here set to defaultContent is import
+            // I set this default value when I meet a new line,
+            // but If an #include was not end with \n, lexingContent will not be set to default
+            // and the lexer will lex defauleContent as Preprocess line, even a include groupPart
+            // so this line is very important
+            //// CELEBRATE !! FOUND THE BUG !!!!!
+            M_pplex->setLexingContent(PreprocessorLexer::LexingContent::DefaultContent);
+
+            try {
+                M_lex->openFile(name.c_str());
+                // TODO: undate line number
+            }
+            catch  (IOException& e) {
+                diagError(e.what(), (*cachedLine)[0]); //filename token
+            }
+        }
+        else diagError("file name expected.", groupPart->directiveTok);
+    }
+
+    void PreprocessorParser::processDefine() {
+        TokenPtr tok;
+        // CHECK FORMAT
+        //   #define name [ ( param , ...
+        if (cachedLine->size() < 1) {
+            diagError("no macro name given in #define directive", groupPart->directiveTok);
+            return;
+        }
+        if ((*cachedLine)[0]->isNot(Tag::Identifier)) {
+            diagError("macro names must be identifiers", groupPart->directiveTok);
+            return;
+        }
+        bool isAFunctionLikeMacro = cachedLine->size() >= 2 && (*cachedLine)[1]->is('(');
+        MacroDefinePtr macroDef = make_shared<MacroDefine>();
+        macroDef->isFunctionLike = isAFunctionLikeMacro;
+        macroDef->isParamVarible = false;
+        bool paramListClosed = false;
+        if (isAFunctionLikeMacro) {
+            int i = 2;
+            // parse paramter list
+            for ( ; i < cachedLine->size(); i++ ) {
+                currTok();
+                if (tok->is(Tag::Ellipsis)) {
+                    macroDef->isParamVarible = true;
+                    errorNoMoreToken();
+                    if (nextTok()->isNot(')')) {
+                        diagError("missing ')' after {0} token"_format( tok->toSourceLiteral() ), tok);
+                        return;
+                    }
+                    break;
+                }
+                if (tok->isNot(Tag::Identifier)) {
+                    diagError("{0} may not appear in macro parameter list"_format( tok->toSourceLiteral() ), tok);
+                    return; // give up this line, similarly hereinafter
+                }
+                // add to parameter list
+                macroDef->lparlen.push_back(dynamic_pointer_cast<WordToken>(tok));
+                errorNoMoreToken();
+                if (nextTok()->is(')')) {
+                    paramListClosed = true;
+                    break;
+                }
+                if (tok->isNot(',') ) {
+                    diagError("macro parameters must be comma-separated", tok);
+                    return;
+                }
+            }
+            // if param list is not closed
+            if (!paramListClosed) {
+                tok = getTok(i-1);
+                diagError("')' required after {0} token"_format(tok->toSourceLiteral()), tok);
+                return;
+            }
+            // parse replacement-list
+            for ( i++ ; i < cachedLine->size(); i++ ) {
+                currTok();
+                macroDef->replacement.push_back(tok);
+            }
+        }
+        else { // isAFunctionLikeMacro
+            int i = 1;
+            for ( ; i < cachedLine->size(); i++ ) {
+                currTok();
+                macroDef->replacement.push_back(tok);
+            }
+        }
+        // add to macro pack
+        if (!macros.addMacro(static_pointer_cast<WordToken>(getTok(0))->name, macroDef)) {
+            diagError("'{0}' redefined"_format(tok->toSourceLiteral()), getTok(1));
+            return;
+        }
+    }
+
+    void PreprocessorParser::processUndef() {
+        TokenPtr tok;
+        // CHECK FORMAT
+        //   #undef name
+        if (cachedLine->size() < 1) {
+            diagError(" no macro name given in #undef directive", groupPart->directiveTok);
+            return;
+        }
+        tok = getTok(0);
+        if (tok->isNot(Tag::Identifier)) {
+            diagError("macro names must be identifiers", tok);
+            return;
+        }
+        macros.removeMacroDef(tok->toSourceLiteral()); // same as cast to WordTokenPtr and access name
+    }
+
+    void PreprocessorParser::processTextline() {
+        evaledToks = eval(cachedLine);
+
+        /*for (TokenPtr tok : *cachedLine) {
+            evaledToks->push_back(tok);
+        }*/
     }
 }
 
