@@ -93,7 +93,7 @@ add_exponment:
                 readch();
                 if (peak == '/') {
                     for (; ; readch()) {
-                        if (peak == '\n')  break;
+                        if (peak == '\n') { retract();  break; }
                         if (peak == Tag::EndOfFile)   return true;
                     }
                 }

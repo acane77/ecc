@@ -14,14 +14,6 @@ namespace Miyuki::Parse {
     }
 
     void PreprocessorParser::parse() {
-        /*while (getCache()) {
-            cachedLine = eval(cachedLine);
-            cout << Console::Yellow("Cache Got **************") << endl;
-            for (int i=0; i<cachedLine->size(); i++) {
-                cout << "Test:  " << (*cachedLine)[i]->toString() << endl;
-            }
-            cout << endl;
-        }*/
         Lex::Token::flread = M_pplex->getSourceManager();
         while (1) {
             evalCachedLine();
@@ -33,6 +25,17 @@ namespace Miyuki::Parse {
             cout << endl;
         }
         parseDone();
+        return;
+        /*
+         while (getCache()) {
+            cachedLine = (cachedLine);
+            cout << Console::Yellow("Cache Got **************") << endl;
+            for (int i=0; i<cachedLine->size(); i++) {
+                cout << "Test:  " << (*cachedLine)[i]->toString() << endl;
+            }
+            cout << endl;
+        }
+        return;*/
     }
 
     int FunctionLikeMacro::replace(TokenSequence &toksResult) {
@@ -542,7 +545,7 @@ recache:
         }
         // add to macro pack
         if (!macros.addMacro(static_pointer_cast<WordToken>(getTok(0))->name, macroDef)) {
-            diagError("'{0}' redefined"_format(tok->toSourceLiteral()), getTok(1));
+            diagWarning("'{0}' redefined"_format(getTok(0)->toSourceLiteral()), getTok(0));
             return;
         }
     }

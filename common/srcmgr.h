@@ -55,7 +55,7 @@ namespace Miyuki::Common {
                 // switch to last file
                 if (getFileCount() > 1) {
                     closeCurrFile();
-                    return nextChar(); // if meet eof, then return new-line
+                    return '\n'; // if meet eof, then return new-line
                 }
                 // this is the only file , and reach end
                 return -1;
