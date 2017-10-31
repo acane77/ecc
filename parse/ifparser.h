@@ -73,6 +73,9 @@ namespace Miyuki::Parse {
         // Pointer to write token
         int     m_tsptr_w = -1;
 
+        // Cache token
+        void    cacheToken(TokenPtr tok);
+
                              /////  token matching //////
         // test match, if not, throw exception with msg
         void match(uint32_t term, string&& errmsg, TokenPtr& ptr);

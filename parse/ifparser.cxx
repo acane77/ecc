@@ -112,5 +112,11 @@ reget_token:
             cout << Console::Green("   Info  ") << MSG_SM_SWOTCHING_FILE <<"\n";
         }
     }
+
+    void IParser::cacheToken(TokenPtr tok) {
+        assert( m_tsptr_r == m_tsptr_w && "read pointer is not at top of stack" );
+        tokens[(++m_tsptr_w) % MaxRetractSize] = tok;
+        m_tsptr_r++;
+    }
 }
 

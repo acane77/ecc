@@ -302,11 +302,30 @@ recache:
             else if (look->is(EOF)) break;  // FIXME: add an addition 0
             cachedLine->push_back(look);
             if (look->is(Tag::Identifier)) {
+                // we should not only read one more one token
+                // if we found the next token is bew-lien new-line we should continue read
+                // and get real meanningful token we want
+                TokenPtr tok = next(), tokN = tok;
+                if (tok->is('\n')) {
+                    while (tok->is('\n')) {
+                        // skip all new-line tokens
+                        // get these token with no-caching
+                        tok = M_lex->scan();
+                    }
+                    // find first non-new-line token
+                    if (tok->is('('))  ;  // if itis s left-bracket, do nothing, fall
+                    else {
+                        // put this token to cache, and retract
+                        //    for we read 2 more tokens ( new-line and the 'tok' ) then needed
+                        cacheToken(tokN); cacheToken(tok);  retract(); retract();
+                        continue;
+                    }
+                }
                 // is in function
-                if (next()->is('(')) {
+                if (tok->is('(')) {
                     isInFunction = true;
                     leftBracketCount++;
-                    cachedLine->push_back(look);
+                    cachedLine->push_back(tok);
                     continue;
                 }
                 retract();
@@ -522,7 +541,7 @@ recache:
     }
 
     void PreprocessorParser::processTextline() {
-        evaledToks = eval(cachedLine);
+        evaledToks = (cachedLine);
 
         /*for (TokenPtr tok : *cachedLine) {
             evaledToks->push_back(tok);
