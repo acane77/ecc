@@ -213,7 +213,7 @@ namespace Miyuki::Parse {
                             if (i+1 >= original->size()) {
                                 // token runs out
                                 // should not runs here
-                                diagError("unexpected new-line or eof", tok);
+                                diagError("bracket does not match. \n  note:  (maybe you can add {0} ')' at the end to solve this problem)"_format( leftBracketCount + otherFunctionRemainingBracket ), tok);
                                 return seqNew;
                             }
 
@@ -329,10 +329,23 @@ recache:
         groupPart = make_shared<GroupPart>(GroupPart::TextLine);
         int leftBracketCount = 0;
         bool isInFunction = true;
+        // tell if a new-line has just ignored, be used to parsing 'new-line #'
+        bool aNewLineJustIgnored = false;
         for ( ; ; next() ) {
+            if (aNewLineJustIgnored) {
+                aNewLineJustIgnored = false;
+                if (look->is('#')) {
+                    // is a preprocessing directive
+                    retract(); // read more '#' so retract
+                    break;
+                }
+            }
             if (look->is('\n')) {
                 // for Multi-line function call, ignore this new-line
-                if (isInFunction && leftBracketCount > 0) continue;
+                if (isInFunction && leftBracketCount > 0) {
+                    aNewLineJustIgnored = true;
+                    continue;
+                }
                 // FIXME: add an addition 0
                 break;
             }
