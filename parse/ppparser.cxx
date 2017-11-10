@@ -200,28 +200,61 @@ namespace Miyuki::Parse {
                         macro->macroName = tokW;
                         int leftBracketCount = 1;
                         TokenSequencePtr param = make_shared<TokenSequence>();  // store first param (if there is)
+                        // to resolve expression like 'F(F(1, 2), F(3, 4))'
+                        bool prevTokenMaybeAFunctionName = false;
+                        bool isInOtherFunctionParamList = false;
+                        int  otherFunctionRemainingBracket = 0;
+
                         while (leftBracketCount) {
                             // when ( is more than )
                             // get next token
+                            //cout << endl << i << ".";
+
+                            if (i+1 >= original->size()) {
+                                // token runs out
+                                // should not runs here
+                                diagError("unexpected new-line or eof", tok);
+                                return seqNew;
+                            }
+
                             tok = (*original)[++i];
 
+                            //cout << tok->toSourceLiteral() << "  prevToken=" << prevTokenMaybeAFunctionName << "  isInOtherFunc=" << isInOtherFunctionParamList << "  otherFunctionRem=" << otherFunctionRemainingBracket ;
+                            if (prevTokenMaybeAFunctionName) {
+                                prevTokenMaybeAFunctionName = false;
+                                if (tok->is('(')) {
+                                    isInOtherFunctionParamList = true;
+                                }
+                            }
+
                             if (tok->is(')')) {
-                                // if meet a '(', left count -1
-                                --leftBracketCount;
+                                // if meet a ')', left count -1
+                                if (isInOtherFunctionParamList)  {
+                                    if (!--otherFunctionRemainingBracket)
+                                        isInOtherFunctionParamList = false;
+                                    goto add_tok;
+                                }
+                                else --leftBracketCount;
+                            }
+                            else if (tok->is('(')) {
+                                // if meet a '(', left count +1
+                                if (isInOtherFunctionParamList)  { ++otherFunctionRemainingBracket; goto add_tok; }
+                                else ++leftBracketCount;
                             }
                             else if (tok->is(',')) {
+                                // belongs to other function, add
+                                if (isInOtherFunctionParamList)
+                                    goto add_tok;
                                 // if meet a  comma, add last to parameter list
                                 macro->params.push_back(param);
                                 param = make_shared<TokenSequence>();
                                 continue;
                             }
-                            else if (i >= original->size()) {
-                                // token runs out
-                                // should not runs here
-                                diagError("unexpected new-line or eof", tok);
-                                assert(false && "you should not run here");
-                            }
                             else {
+                                if (!isInOtherFunctionParamList && tok->is(Tag::Identifier)) {
+                                    prevTokenMaybeAFunctionName = true;
+                                }
+                                add_tok:
                                 // add to param's token list
                                 param->push_back(tok);
                             }
