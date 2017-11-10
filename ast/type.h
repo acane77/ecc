@@ -21,6 +21,7 @@ namespace Miyuki::AST {
     class Type {
     public:
         uint64_t hash_code;
+        string   name;
         string   raw_name;
         size_t   type_size;
         size_t   alignment;
@@ -34,16 +35,18 @@ namespace Miyuki::AST {
                 bool isPointer : 1;
                 bool isArray : 1;
                 bool isFunction : 1;
+                bool isUnion : 1;
+                bool isStruct : 1;
+                bool : 1;
 
                 // for every object
                 bool isStatic : 1;
                 bool isRegister : 1;
                 bool isAuto : 1;
-                bool : 0;
                 bool isConst : 1;
-                bool : 7;
+                bool : 4;
             } info;
-            uint16_t flag = 0b100000000;
+            uint16_t flag = 0x8000;
         } typeinfo;
 
         static uint64_t getHashCodeFromRawName(const string& raw) { return md5(raw.c_str()); }
@@ -53,7 +56,8 @@ namespace Miyuki::AST {
             return type_size;
         }
 
-        Type(const string& _raw_name, size_t _type_size) {
+        Type(const string& _raw_name, const string& _name, size_t _type_size) {
+            name = _name;
             raw_name = _raw_name;
             type_size = _type_size;
             alignment = getAlignment();
@@ -64,20 +68,40 @@ namespace Miyuki::AST {
         bool operator != (const Type& t) { return t.hash_code != hash_code; }
 
         bool isConvertable(uint64_t type) {
+            if (type == hash_code) return true;
             for (int i = 0; cvtList[i]; i++) {
                 if (cvtList[i] == type)
                     return true;
             }
             return false;
         }
+
+        uint64_t getHashCode() const {
+            return hash_code;
+        }
+
     };
 
     class TypeFactory {
     public:
         static map<uint64_t, TypePtr> types;
 
+        enum BasicTypeHashCode : uint64_t {
+            INT = 0x4b63bf90eccfd37fLLU,
+            LONG = 0xf0dad76870d7ede6LLU,
+            LONGLONG = 0xca56850d4cd6b331LLU,
+            VOID = 0x306a2e085a437fd2LLU,
+            SHORT = 0x86825a1a2302ec24LLU,
+            FLOAT = 0xc983a70728bd082dLLU,
+            DOUBLE = 0xf30e62bbd73d6df5LLU,
+            LONGDOUBLE = 0x1b03839d46af9fb4LLU,
+            CHAR = 0x0cad1d412f80b84dLLU
+        };
+
+        // build type for symbols (use in factor)
         static TypePtr build(Token tok);
 
+        static void initBasicTypes();
         static void addType(TypePtr t) { types.insert(make_pair<uint64_t, TypePtr>( (uint64_t)t->hash_code, move(t) )); }
         static TypePtr getType(uint64_t hash_code) {
             auto it = types.find(hash_code);
@@ -87,14 +111,16 @@ namespace Miyuki::AST {
         static TypePtr getType(const string& rawName) {
             return getType(md5(rawName.c_str()));
         }
+
     };
 
     class StructType : public Type {
     public:
         StructDefPtr    structDef;
 
-        StructType(const string& _raw_name, size_t _type_size, StructDefPtr _structDef) : Type(_raw_name, _type_size) {
-            structDef = _structDef;
+        StructType(const string& _raw_name, const string& _name, size_t _type_size, StructDefPtr _structDef) : Type(_raw_name, _name, _type_size) {
+            structDef = move(_structDef);
+            typeinfo.info.isStruct = true;
         }
 
         size_t getAlignment() final {
@@ -106,8 +132,9 @@ namespace Miyuki::AST {
     public:
         UnionDefPtr    unionDef;
 
-        UnionType(const string& _raw_name, size_t _type_size, UnionDefPtr _unionDef) : Type(_raw_name, _type_size) {
-            unionDef = _unionDef;
+        UnionType(const string& _raw_name, const string& _name, size_t _type_size, UnionDefPtr _unionDef) : Type(_raw_name, _name, _type_size) {
+            unionDef = move(_unionDef);
+            typeinfo.info.isUnion = true;
         }
 
         size_t getAlignment() final {
@@ -121,8 +148,9 @@ namespace Miyuki::AST {
         // type pointed to or stored in
         TypePtr   baseType = nullptr;
 
-        PointerType(const string& _raw_name, size_t _type_size, TypePtr _base) : Type(_raw_name, _type_size) {
-            baseType = _base;
+        PointerType(const string& _raw_name, const string& _name, size_t _type_size, TypePtr _base) : Type(_raw_name, _name, _type_size) {
+            baseType = move(_base);
+            typeinfo.info.isPointer = true;
         }
     };
 
@@ -130,8 +158,9 @@ namespace Miyuki::AST {
     public:
         size_t    elementCount;
 
-        ArrayType(const string& _raw_name, size_t _type_size, TypePtr _base, size_t _eleCount) : PointerType(_raw_name, _type_size, _base) {
+        ArrayType(const string& _raw_name, const string& _name, size_t _type_size, TypePtr _base, size_t _eleCount) : PointerType(_raw_name, _name, _type_size, move(_base)) {
             elementCount = _eleCount;
+            typeinfo.info.isArray = true;
         }
     };
 
@@ -139,8 +168,8 @@ namespace Miyuki::AST {
     class ICheckType {
         TypePtr  _obj_type;
     public:
-        bool checkType(ICheckTypePtr type);
-        bool checkType(TypePtr type);
+        bool checkType(const ICheckTypePtr& type) { return checkType(type->_obj_type); }
+        bool checkType(const TypePtr& type) { return type->isConvertable( _obj_type->getHashCode() ); }
     };
 }
 

@@ -145,7 +145,8 @@ namespace Miyuki::Common {
 
         md5((uint8_t *) msg, strlen(msg), result);
 
-        for (int i = 0; i < 8; i++)
+        // get 3 groups in middle
+        for (int i = 4; i < 12; i++)
             ret = (ret << 8) | result[i];
 
         return ret;
