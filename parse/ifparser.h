@@ -13,6 +13,10 @@ namespace Miyuki::Parse {
 
     DEFINE_SHARED_PTR(IParser)
 
+    typedef deque<TokenPtr> TokenSequence;
+    typedef shared_ptr<TokenSequence> TokenSequencePtr;
+    typedef TokenSequence::iterator TokenSequenceIter;
+
     class ParseError : public exception {
         // normal error message
         string msg;
@@ -81,10 +85,10 @@ namespace Miyuki::Parse {
         void match(uint32_t term, string&& errmsg, TokenPtr& ptr);
 
         // get next token from lexer
-        TokenPtr next();
+        virtual TokenPtr next();
         // Note: retract is 'put back' 1 token , not read the value of
         //       previous token.
-        TokenPtr retract();
+        virtual TokenPtr retract();
     public:
                               ///// error recovery //////
         // error-recovery flag
@@ -120,6 +124,7 @@ namespace Miyuki::Parse {
         virtual void reportError(std::ostream& os);
 
         explicit IParser() { instance = this; }
+        explicit IParser(int doNotSetInstance) { }
 
         // parse source file
         virtual void parse() = 0;

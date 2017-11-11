@@ -10,10 +10,6 @@ namespace Miyuki::Parse {
 
     using namespace Lex;
 
-    typedef deque<TokenPtr> TokenSequence;
-    typedef shared_ptr<TokenSequence> TokenSequencePtr;
-    typedef TokenSequence::iterator TokenSequenceIter;
-
     DEFINE_SHARED_PTR(MacroDefine)
     DEFINE_SHARED_PTR(MacroPack)
     DEFINE_SHARED_PTR(Macro)
