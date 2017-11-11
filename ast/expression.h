@@ -34,6 +34,12 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::Expression; }
         virtual void gen() = 0;
+        virtual void eval() { assert( false && "unimplemented" ); }
+    };
+
+    class ExpressionBuilder {
+    public:
+        static ExpressionPtr getSymbol(TypePtr typ, TokenPtr tok);
     };
 
     class AssignmentExpression : public Expression {

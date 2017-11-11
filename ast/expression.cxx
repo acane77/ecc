@@ -50,4 +50,11 @@ namespace Miyuki::AST {
     PrimaryExpression::PrimaryExpression(const TokenPtr &factor) : factor(factor) {}
 
     PrimaryExpression::PrimaryExpression(const ExpressionPtr &exp) : exp(exp) {}
+
+    ExpressionPtr ExpressionBuilder::getSymbol(TypePtr typ, TokenPtr tok) {
+        // this function is for calculated value, so only return calculatable primary-expressions
+        PrimaryExpressionPtr expr = make_shared<PrimaryExpression>(tok);
+        expr->setSymbolType(typ);
+        return expr;
+    }
 }

@@ -14,15 +14,17 @@ namespace Miyuki::AST {
     public:
         // specify if expression is calculated
         bool isCalculated;
+        // type of this symbol (expression)
         TypePtr symbolType;
+        // token after calculated (after calc)
+        TokenPtr calculatedToken;
 
-        const TypePtr &getSymbolType() const {
-            return symbolType;
-        }
-
-        void setSymbolType(const TypePtr &symbolType) {
-            IEvaluatable::symbolType = symbolType;
-        }
+        bool IsCalculated() const;
+        void setIsCalculated(bool isCalculated);
+        const TypePtr &getSymbolType() const;
+        void setSymbolType(const TypePtr &symbolType);
+        const TokenPtr &getCalculatedToken() const;
+        void setCalculatedToken(const TokenPtr &calculatedToken);
 
         virtual void eval() = 0;
     };
