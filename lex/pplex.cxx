@@ -33,8 +33,9 @@ namespace Miyuki::Lex {
         // Other literal tokens
         if ( (lexingContent & LexingContent ::DefaultContent) && (isdigit(peak) || peak == '.') ) {
             int prevChar = peak; readch();
-            if (!isdigit(peak)) {  retract(); peak = prevChar; goto it_is_a_punctuator; }
-            string charseq = "" + prevChar;
+            if (prevChar == '.' && !isdigit(peak)) {  retract(); peak = prevChar; goto it_is_a_punctuator; }
+            string charseq = "";
+            charseq += (char)prevChar;
             for (; isalnum(peak) || peak == '.' ; readch() )
                 charseq += peak;
             retract();
