@@ -33,8 +33,8 @@ namespace Miyuki::AST {
             SYMBOL = 0,
 
             Expression,
-            AssignmentExpression, LogicalOrExpression, ConditionalExpression, LogicalAndExpression, Arith, Unary, LogicalNot, CastExpression,
-            PostfixExpression, StructAccess, ArrayAccess, FunctionCall, ArgumentExpressionList, AnonymousArray, PrimaryExpression
+            AssignmentExpression, LogicalOrExpression, ConditionalExpression, LogicalAndExpression, Arith, UNARY, LogicalNot, CastExpression,
+            postfixExpression, StructAccess, ArrayAccess, FunctionCall, ArgumentExpressionList, AnonymousArray, PrimaryExpression
         };
 
         virtual int getKind() { return Kind::SYMBOL; }

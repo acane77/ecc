@@ -24,12 +24,14 @@ namespace Miyuki::AST {
     DEFINE_SHARED_PTR(AnonymousArray)
     DEFINE_SHARED_PTR(PrimaryExpression)
 
-    // NON-EXPRESSION
+    // NON-EXPRESSION (move to other place after implement)
     DEFINE_SHARED_PTR(TypeName)
     DEFINE_SHARED_PTR(InitializerList)
 
     class Expression : public Symbol, public IEvaluatable {
     public:
+        Expression() {}
+
         virtual int getKind() { return Kind::Expression; }
         virtual void gen() = 0;
     };
@@ -42,6 +44,10 @@ namespace Miyuki::AST {
         // OR
         ConditionalExpressionPtr condExp;
 
+        AssignmentExpression(const TokenPtr &assignOp, const UnaryPtr &unaryExp,
+                             const AssignmentExpressionPtr &assignExp);
+        AssignmentExpression(const ConditionalExpressionPtr &condExp);
+
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::AssignmentExpression; }
     };
@@ -52,6 +58,9 @@ namespace Miyuki::AST {
         ExpressionPtr            exp;
         ConditionalExpressionPtr condExpr;
 
+        ConditionalExpression(const LogicalORExpressionPtr &logicalOrExp, const ExpressionPtr &exp,
+                              const ConditionalExpressionPtr &condExpr);
+
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::ConditionalExpression; }
     };
@@ -61,6 +70,8 @@ namespace Miyuki::AST {
         LogicalANDExpressionPtr logicalAndExp;
         LogicalORExpressionPtr logicalOrExp;
 
+        LogicalORExpression(const LogicalANDExpressionPtr &logicalAndExp, const LogicalORExpressionPtr &logicalOrExp);
+
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::LogicalOrExpression; }
     };
@@ -69,6 +80,9 @@ namespace Miyuki::AST {
     public:
         ArithmeticPtr exclusiveOrExpression;
         LogicalANDExpressionPtr logicalAndExpression;
+
+        LogicalANDExpression(const ArithmeticPtr &exclusiveOrExpression,
+                             const LogicalANDExpressionPtr &logicalAndExpression);
 
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::LogicalAndExpression; }
@@ -80,6 +94,8 @@ namespace Miyuki::AST {
         ExpressionPtr expr1;
         ExpressionPtr expr2;
 
+        Arithmetic(const TokenPtr &op, const ExpressionPtr &expr1, const ExpressionPtr &expr2);
+
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::Arith; }
     };
@@ -89,13 +105,17 @@ namespace Miyuki::AST {
         TokenPtr      op;
         ExpressionPtr expr;
 
+        Unary(const TokenPtr &op, const ExpressionPtr &expr);
+
         virtual void gen() { assert( false && "unimplemented" ); }
-        int getKind() { return Kind::Unary; }
+        int getKind() { return Kind::UNARY; }
     };
 
     class CastExpression : public Unary {
     public:
         TypeNamePtr  typeName;
+
+        CastExpression(const TokenPtr &op, const ExpressionPtr &expr, const TypeNamePtr &typeName);
 
         virtual void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::CastExpression; }
@@ -103,6 +123,10 @@ namespace Miyuki::AST {
 
     class LogicalNot : public Unary {
     public:
+        // we use original token because original token contains more information
+        // eg token position
+        LogicalNot(const TokenPtr &op, const ExpressionPtr &expr) : Unary(op, expr) {}
+
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::LogicalNot; }
     };
@@ -115,13 +139,19 @@ namespace Miyuki::AST {
         TokenPtr op;
         PostfixExpressionPtr postfixExp;
 
+        PostfixExpression(const TokenPtr &op, const ExpressionPtr &expr, const TokenPtr &op1,
+                          const PostfixExpressionPtr &postfixExp) : Unary(op, expr), op(op1), postfixExp(postfixExp) {}
+
         void gen() { assert( false && "unimplemented" ); }
-        int getKind() { return Kind::PostfixExpression; }
+        int getKind() { return Kind::postfixExpression; }
     };
 
     class StructAccess : public PostfixExpression {
     public:
         WordTokenPtr identifier;
+
+        StructAccess(const TokenPtr &op, const ExpressionPtr &expr, const TokenPtr &op1,
+                     const PostfixExpressionPtr &postfixExp, const WordTokenPtr &identifier);
 
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::StructAccess; }
@@ -131,6 +161,9 @@ namespace Miyuki::AST {
     public:
         ExpressionPtr exp;
 
+        ArrayAccess(const TokenPtr &op, const ExpressionPtr &expr, const TokenPtr &op1,
+                    const PostfixExpressionPtr &postfixExp, const ExpressionPtr &exp);
+
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::ArrayAccess; }
     };
@@ -138,6 +171,9 @@ namespace Miyuki::AST {
     class FunctionCall : public PostfixExpression {
     public:
         ArgumentExpressionListPtr argExprLst;
+
+        FunctionCall(const TokenPtr &op, const ExpressionPtr &expr, const TokenPtr &op1,
+                     const PostfixExpressionPtr &postfixExp, const ArgumentExpressionListPtr &argExprLst);
 
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::FunctionCall; }
@@ -148,12 +184,18 @@ namespace Miyuki::AST {
         ArgumentExpressionListPtr argExprLst;
         AssignmentExpressionPtr assignExpr;
 
+        ArgumentExpressionList(const ArgumentExpressionListPtr &argExprLst, const AssignmentExpressionPtr &assignExpr);
+
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::ArgumentExpressionList; }
     };
 
     class AnonymousArray : public Expression {
         TypeNamePtr typeName;
+    public:
+        AnonymousArray(const TypeNamePtr &typeName, const InitializerListPtr &initList);
+
+    private:
         InitializerListPtr initList;
         // TODO: implement this after implement Statement (if there are repeat code, try def)
         void gen() { assert( false && "unimplemented" ); }
@@ -165,6 +207,9 @@ namespace Miyuki::AST {
         TokenPtr factor;
         // OR
         ExpressionPtr exp;
+
+        PrimaryExpression(const ExpressionPtr &exp);
+        PrimaryExpression(const TokenPtr &factor);
 
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::PrimaryExpression; }
