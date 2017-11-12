@@ -8,6 +8,7 @@
 namespace Miyuki::AST {
 
     DEFINE_SHARED_PTR(Expression)
+    DEFINE_SHARED_PTR(CommaExpression)
     DEFINE_SHARED_PTR(AssignmentExpression)
     DEFINE_SHARED_PTR(ConditionalExpression)
     DEFINE_SHARED_PTR(LogicalORExpression)
@@ -23,6 +24,7 @@ namespace Miyuki::AST {
     DEFINE_SHARED_PTR(ArgumentExpressionList)
     DEFINE_SHARED_PTR(AnonymousArray)
     DEFINE_SHARED_PTR(PrimaryExpression)
+    DEFINE_SHARED_PTR(TypeInfoExpression)
 
     // NON-EXPRESSION (move to other place after implement)
     DEFINE_SHARED_PTR(TypeName)
@@ -42,15 +44,24 @@ namespace Miyuki::AST {
         static ExpressionPtr getSymbol(TypePtr typ, TokenPtr tok);
     };
 
+    class CommaExpression : public Expression {
+    public:
+        CommaExpressionPtr commaExp;
+        AssignmentExpressionPtr assignExp;
+
+        CommaExpression(const CommaExpressionPtr &commaExp, const AssignmentExpressionPtr &assignExp);
+
+        void gen() { assert( false && "unimplemented" ); }
+        int getKind() { return Kind::commaExpression; }
+    };
+
     class AssignmentExpression : public Expression {
     public:
         TokenPtr assignOp;
-        UnaryPtr unaryExp;
-        AssignmentExpressionPtr assignExp;
-        // OR
         ConditionalExpressionPtr condExp;
+        AssignmentExpressionPtr assignExp;
 
-        AssignmentExpression(const TokenPtr &assignOp, const UnaryPtr &unaryExp,
+        AssignmentExpression(const TokenPtr &assignOp, const ConditionalExpressionPtr &condExp,
                              const AssignmentExpressionPtr &assignExp);
         AssignmentExpression(const ConditionalExpressionPtr &condExp);
 
@@ -64,8 +75,8 @@ namespace Miyuki::AST {
         ExpressionPtr            exp;
         ConditionalExpressionPtr condExpr;
 
-        ConditionalExpression(const LogicalORExpressionPtr &logicalOrExp, const ExpressionPtr &exp,
-                              const ConditionalExpressionPtr &condExpr);
+        ConditionalExpression(const LogicalORExpressionPtr &logicalOrExp, const ExpressionPtr &exp = nullptr,
+                              const ConditionalExpressionPtr &condExpr = nullptr);
 
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::ConditionalExpression; }
@@ -117,11 +128,15 @@ namespace Miyuki::AST {
         int getKind() { return Kind::UNARY; }
     };
 
-    class CastExpression : public Unary {
+    class CastExpression : public Expression {
     public:
         TypeNamePtr  typeName;
+        CastExpressionPtr castExpr;
+        // OR
+        UnaryPtr     unaryExpr;
 
-        CastExpression(const TokenPtr &op, const ExpressionPtr &expr, const TypeNamePtr &typeName);
+        CastExpression(const UnaryPtr &unaryExpr);
+        CastExpression(const TypeNamePtr &typeName, const CastExpressionPtr &castExpr);
 
         virtual void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::CastExpression; }
@@ -137,16 +152,24 @@ namespace Miyuki::AST {
         int getKind() { return Kind::LogicalNot; }
     };
 
+    class TypeInfoExpression : public Unary {
+    public:
+        TypeNamePtr typeName;
+
+        TypeInfoExpression(const TokenPtr &op, const TypeNamePtr &typeName);
+        void gen() { assert( false && "unimplemented" ); }
+        int getKind() { return Kind::typeInfoExpression; }
+    };
+
     typedef ConditionalExpression ConstantExpression;
     typedef shared_ptr<ConstantExpression> ConstantExpressionPtr;
 
     class PostfixExpression : public Unary {
     public:
-        TokenPtr op;
         PostfixExpressionPtr postfixExp;
 
-        PostfixExpression(const TokenPtr &op, const ExpressionPtr &expr, const TokenPtr &op1,
-                          const PostfixExpressionPtr &postfixExp) : Unary(op, expr), op(op1), postfixExp(postfixExp) {}
+        PostfixExpression(const TokenPtr &op, const ExpressionPtr &expr, const PostfixExpressionPtr &postfixExp)
+                : Unary(op, expr), postfixExp(postfixExp) {}
 
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::postfixExpression; }
@@ -156,7 +179,7 @@ namespace Miyuki::AST {
     public:
         WordTokenPtr identifier;
 
-        StructAccess(const TokenPtr &op, const ExpressionPtr &expr, const TokenPtr &op1,
+        StructAccess(const TokenPtr &op, const ExpressionPtr &expr,
                      const PostfixExpressionPtr &postfixExp, const WordTokenPtr &identifier);
 
         void gen() { assert( false && "unimplemented" ); }
@@ -167,7 +190,7 @@ namespace Miyuki::AST {
     public:
         ExpressionPtr exp;
 
-        ArrayAccess(const TokenPtr &op, const ExpressionPtr &expr, const TokenPtr &op1,
+        ArrayAccess(const TokenPtr &op, const ExpressionPtr &expr,
                     const PostfixExpressionPtr &postfixExp, const ExpressionPtr &exp);
 
         void gen() { assert( false && "unimplemented" ); }
@@ -178,7 +201,7 @@ namespace Miyuki::AST {
     public:
         ArgumentExpressionListPtr argExprLst;
 
-        FunctionCall(const TokenPtr &op, const ExpressionPtr &expr, const TokenPtr &op1,
+        FunctionCall(const TokenPtr &op, const ExpressionPtr &expr,
                      const PostfixExpressionPtr &postfixExp, const ArgumentExpressionListPtr &argExprLst);
 
         void gen() { assert( false && "unimplemented" ); }
@@ -196,19 +219,18 @@ namespace Miyuki::AST {
         int getKind() { return Kind::ArgumentExpressionList; }
     };
 
-    class AnonymousArray : public Expression {
-        TypeNamePtr typeName;
+    class AnonymousArray : public PostfixExpression {
     public:
+        TypeNamePtr typeName;
         AnonymousArray(const TypeNamePtr &typeName, const InitializerListPtr &initList);
 
-    private:
         InitializerListPtr initList;
         // TODO: implement this after implement Statement (if there are repeat code, try def)
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::AnonymousArray; }
     };
 
-    class PrimaryExpression : public Expression {
+    class PrimaryExpression : public PostfixExpression {
     public:
         TokenPtr factor;
         // OR

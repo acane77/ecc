@@ -3,9 +3,9 @@
 namespace Miyuki::AST {
 
     // constructors
-    AssignmentExpression::AssignmentExpression(const TokenPtr &assignOp, const UnaryPtr &unaryExp,
+    AssignmentExpression::AssignmentExpression(const TokenPtr &assignOp, const ConditionalExpressionPtr &condExp,
                                                const AssignmentExpressionPtr &assignExp) : assignOp(assignOp),
-                                                                                           unaryExp(unaryExp),
+                                                                                           condExp(condExp),
                                                                                            assignExp(assignExp) {}
 
     AssignmentExpression::AssignmentExpression(const ConditionalExpressionPtr &condExp) : condExp(condExp) {}
@@ -27,29 +27,28 @@ namespace Miyuki::AST {
 
     Unary::Unary(const TokenPtr &op, const ExpressionPtr &expr) : op(op), expr(expr) {}
 
-    CastExpression::CastExpression(const TokenPtr &op, const ExpressionPtr &expr, const TypeNamePtr &typeName) : Unary(op, expr), typeName(typeName) {}
-
-    StructAccess::StructAccess(const TokenPtr &op, const ExpressionPtr &expr, const TokenPtr &op1,
+    StructAccess::StructAccess(const TokenPtr &op, const ExpressionPtr &expr,
                                const PostfixExpressionPtr &postfixExp, const WordTokenPtr &identifier)
-            : PostfixExpression(op, expr, op1, postfixExp), identifier(identifier) {}
+            : PostfixExpression(op, expr, postfixExp), identifier(identifier) {}
 
-    ArrayAccess::ArrayAccess(const TokenPtr &op, const ExpressionPtr &expr, const TokenPtr &op1,
-                             const PostfixExpressionPtr &postfixExp, const ExpressionPtr &exp) : PostfixExpression(op, expr, op1, postfixExp),
+    ArrayAccess::ArrayAccess(const TokenPtr &op, const ExpressionPtr &expr,
+                             const PostfixExpressionPtr &postfixExp, const ExpressionPtr &exp) : PostfixExpression(op, expr, postfixExp),
                                                                                                  exp(exp) {}
 
-    FunctionCall::FunctionCall(const TokenPtr &op, const ExpressionPtr &expr, const TokenPtr &op1,
+    FunctionCall::FunctionCall(const TokenPtr &op, const ExpressionPtr &expr,
                                const PostfixExpressionPtr &postfixExp, const ArgumentExpressionListPtr &argExprLst)
-            : PostfixExpression(op, expr, op1, postfixExp), argExprLst(argExprLst) {}
+            : PostfixExpression(op, expr, postfixExp), argExprLst(argExprLst) {}
 
     ArgumentExpressionList::ArgumentExpressionList(const ArgumentExpressionListPtr &argExprLst,
                                                    const AssignmentExpressionPtr &assignExpr)
             : argExprLst(argExprLst), assignExpr(assignExpr) {}
 
-    AnonymousArray::AnonymousArray(const TypeNamePtr &typeName, const InitializerListPtr &initList) : typeName(typeName), initList(initList) {}
+    AnonymousArray::AnonymousArray(const TypeNamePtr &typeName, const InitializerListPtr &initList)
+            : typeName(typeName), initList(initList), PostfixExpression(nullptr, nullptr, nullptr) {}
 
-    PrimaryExpression::PrimaryExpression(const TokenPtr &factor) : factor(factor) {}
+    PrimaryExpression::PrimaryExpression(const TokenPtr &factor) : factor(factor), PostfixExpression(nullptr, nullptr, nullptr) {}
 
-    PrimaryExpression::PrimaryExpression(const ExpressionPtr &exp) : exp(exp) {}
+    PrimaryExpression::PrimaryExpression(const ExpressionPtr &exp) : exp(exp), PostfixExpression(nullptr, nullptr, nullptr) {}
 
     ExpressionPtr ExpressionBuilder::getSymbol(TypePtr typ, TokenPtr tok) {
         // this function is for calculated value, so only return calculatable primary-expressions
@@ -57,4 +56,15 @@ namespace Miyuki::AST {
         expr->setSymbolType(typ);
         return expr;
     }
+
+    CommaExpression::CommaExpression(const CommaExpressionPtr &commaExp, const AssignmentExpressionPtr &assignExp)
+            : commaExp(commaExp), assignExp(assignExp) {}
+
+    CastExpression::CastExpression(const TypeNamePtr &typeName, const CastExpressionPtr &castExpr)
+            : typeName(typeName), castExpr(castExpr) {}
+
+    CastExpression::CastExpression(const UnaryPtr &unaryExpr) : unaryExpr(unaryExpr) {}
+
+    TypeInfoExpression::TypeInfoExpression(const TokenPtr &op, const TypeNamePtr &typeName)
+            : Unary(op, nullptr), typeName(typeName) {}
 }

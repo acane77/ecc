@@ -16,6 +16,8 @@ namespace Miyuki::Lex::Tag {
         Comma, DoubleSharp,
         LessThanColon, ColonGreaterThan, LessThanMod, ModGreaterThan,
         ModColon, ModColonDouble,
+        // Use in sumbols only
+        Cast,
 
         // Keywords
         Alignof = 192, Auto, Asm, Break, Case, Char, Const, Continue, Default,

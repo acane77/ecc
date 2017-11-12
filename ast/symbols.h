@@ -34,7 +34,7 @@ namespace Miyuki::AST {
         enum Kind {
             SYMBOL = 0,
 
-            Expression,
+            Expression, commaExpression, typeInfoExpression,
             AssignmentExpression, LogicalOrExpression, ConditionalExpression, LogicalAndExpression, Arith, UNARY, LogicalNot, CastExpression,
             postfixExpression, StructAccess, ArrayAccess, FunctionCall, ArgumentExpressionList, AnonymousArray, PrimaryExpression
         };
