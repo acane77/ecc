@@ -8,7 +8,7 @@ namespace Miyuki::AST {
 
 #define SKIP_TO_SEMI_AND_END_THIS_SYMBOL  { skipUntil({ ';' }, SkipUntilSemi); return nullptr; }
 #define match(x)  { if ( look->isNot(x) ) {\
-        diagError(#x " expected.", look);\
+        diagError(#x " expected. at {1} line: {0}"_format( __LINE__ , __FUNCTION__ ), look);\
         SKIP_TO_SEMI_AND_END_THIS_SYMBOL\
     } else next(); }
 
@@ -286,6 +286,12 @@ namespace Miyuki::AST {
         PostfixExpressionPtr exp = nullptr;
         if ( look->is('(') ) {
             next();
+            // TODO: uncomment here after implement
+            //if ( ! FIRST_TYPE_NAME() )
+            { // this is a primary-expression instead
+                retract();
+                goto this_is_a_primary_expression;
+            }
             // TODO: complete this after implement typeName and initializerList
             assert( false && "unimplemented" );
             TypeNamePtr typeNam = nullptr;
@@ -295,6 +301,7 @@ namespace Miyuki::AST {
             exp = make_shared<AnonymousArray>(typeNam, initList);
         }
         else if ( FIRST_PRIMARY_EXPRESSION() ) {
+this_is_a_primary_expression:
             exp = primaryExpression();
         }
         else {

@@ -693,7 +693,7 @@ recache:
 
         if ( !evaledToks )  return;
         PreprocessorASTBuilder ast(evaledToks);
-
+        ExpressionPtr astRoot = ast.constantExpression();
     }
 
     bool PreprocessorParser::getCondition() {

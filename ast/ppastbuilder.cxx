@@ -8,9 +8,10 @@ namespace Miyuki::AST {
             if ( tokIndex >= src->size() )
                 look = make_shared<Token>(Tag::EndOfFile);
             else
-                look = (*src)[ tokIndex ];
+                look = (*src)[ tokIndex++ ];
             tokens[(++m_tsptr_w) % MaxRetractSize] = look;
             m_tsptr_r++;
+            cout << "Next()     " << look->toString() << endl;
             return look;
         }
         else if (m_tsptr_r < m_tsptr_w) {
