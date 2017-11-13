@@ -1,5 +1,6 @@
 #include "ppparser.h"
 #include "common/console.h"
+#include "ast/ppastbuilder.h"
 
 namespace Miyuki::Parse {
     void PreprocessorParser::testLexer() {
@@ -452,6 +453,8 @@ recache:
                 continue;
 
             int kind = groupPart->kind;
+
+            // consider change here condition judgement to array access to optmise
             if (kind == GroupPart::Include) {
                 if (!getCondition())  continue;
                 processInclude();
@@ -483,6 +486,9 @@ recache:
             }
             else if (kind == GroupPart::Endif) {
                 processEndif();
+            }
+            else if (kind == GroupPart::If) {
+                processIf();
             }
 
             if (evaledToks && evaledToks->size()) evaledToksIter = evaledToks->begin();
@@ -680,6 +686,16 @@ recache:
         endCurrentCondition();
     }
 
+    void PreprocessorParser::processIf() {
+        using namespace Miyuki::AST;
+
+        evaledToks = eval(cachedLine);
+        if ( !evaledToks )  return;
+        PreprocessorASTBuilder ast(evaledToks);
+
+
+    }
+
     bool PreprocessorParser::getCondition() {
         if (condHierarchy.size() == 0)  return true;
         return condHierarchy.back()->isTrue();
@@ -703,6 +719,10 @@ recache:
 
     void PreprocessorParser::addNewCondition(bool c) {
         condHierarchy.push_back(make_shared<PreprocCondition>(c, groupPart->directiveTok, getCondition() ));
+    }
+
+    void PreprocessorParser::convertToken() {
+        // TODO: back to here
     }
 }
 

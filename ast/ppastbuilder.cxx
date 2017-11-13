@@ -19,4 +19,8 @@ namespace Miyuki::AST {
         }
         else assert( false && "stack overflow." );
     }
+
+    void PreprocessorASTBuilder::parse() {
+
+    }
 }

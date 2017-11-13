@@ -87,15 +87,15 @@ namespace Miyuki::AST {
         static map<uint64_t, TypePtr> types;
 
         enum BasicTypeHashCode : uint64_t {
-            INT = 0x4b63bf90eccfd37fLLU,
-            LONG = 0xf0dad76870d7ede6LLU,
-            LONGLONG = 0xca56850d4cd6b331LLU,
-            VOID = 0x306a2e085a437fd2LLU,
-            SHORT = 0x86825a1a2302ec24LLU,
-            FLOAT = 0xc983a70728bd082dLLU,
-            DOUBLE = 0xf30e62bbd73d6df5LLU,
-            LONGDOUBLE = 0x1b03839d46af9fb4LLU,
-            CHAR = 0x0cad1d412f80b84dLLU
+            Int = 0x4b63bf90eccfd37fLLU,
+            Long = 0xf0dad76870d7ede6LLU,
+            LongLong = 0xca56850d4cd6b331LLU,
+            Void = 0x306a2e085a437fd2LLU,
+            Short = 0x86825a1a2302ec24LLU,
+            Float = 0xc983a70728bd082dLLU,
+            Double = 0xf30e62bbd73d6df5LLU,
+            LongDouble = 0x1b03839d46af9fb4LLU,
+            Char = 0x0cad1d412f80b84dLLU
         };
 
         // build type for symbols (use in factor)

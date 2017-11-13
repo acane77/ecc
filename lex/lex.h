@@ -48,13 +48,14 @@ namespace Miyuki::Lex {
 
     public:
         explicit Lexer();
+        explicit Lexer(bool doNotInitSM) { }
 
         void openFile(const char * path) { M_sm->openFile(path); }
         void closeFile(const char * path) { M_sm->closeCurrFile(); }
         const string& getFileName() { M_sm->getCurrentFilename(); }
 
-        void readch() { peak = M_sm->nextChar(); }
-        void retract() { peak = M_sm->lastChar(); }
+        virtual void readch() { peak = M_sm->nextChar(); }
+        virtual void retract() { peak = M_sm->lastChar(); }
         string getLine(int i) { return M_sm->getLine(i); }
         string getLine() { return M_sm->getLine(); }
         string getCurrentLine() { return M_sm->getLine(); }

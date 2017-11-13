@@ -56,7 +56,9 @@ namespace Miyuki::Lex {
                     if (peak >= '0' && peak <= '7') {
                         x = x * 8 + peak - '0';
                     }
+                    else retract();
                 }
+                else retract();
                 chr = x;
             }
             else if (peak == 'x') {

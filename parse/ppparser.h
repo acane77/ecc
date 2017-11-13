@@ -220,6 +220,10 @@ namespace Miyuki::Parse {
         // from cache, eval value or execute, replace any macros
         void evalCachedLine();
 
+        // convert preprocessor tokens to parser token (from cachedLine)
+        //   convert PPLiterial to corresponding token
+        void convertToken();
+
     };
 
 }

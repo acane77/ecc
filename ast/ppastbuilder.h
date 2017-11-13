@@ -19,13 +19,14 @@ namespace Miyuki::AST {
 
     public:
 
-        explicit PreprocessorASTBuilder(const TokenSequence& _src) {
+        explicit PreprocessorASTBuilder(const TokenSequencePtr& _src) : src(move(_src)) { }
 
-        }
         // NOTE: here we rewrite because we need to parse AST for #if statement
         //       we get token from cache
         // get next token from cache
         TokenPtr next() override;
+
+        void parse() override;
 
     };
 
