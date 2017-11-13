@@ -69,6 +69,18 @@ namespace Miyuki::Lex {
             return ((_tag >= Tag::Property::PunctuatorStart && _tag <= Tag::Property::KeywordEnd) || _tag == Tag::EndOfFile) ? (_tag == tag) : (_tag & tag);
         }
         bool isNot(int32_t _tag) { return !is(_tag); }
+        bool isRelationshipOperators() {
+            return is(Tag::LessThanEqual) || is(Tag::GreaterThanEqual) || is(Tag::Equal) || is(Tag::NotEqual) || is('>') || is('<') || is('!');
+        }
+
+        // type conversion (used by AST eval)
+        virtual FloatingType toFloat() { assert( false && "this token cannot convert to floating point" ); }
+        virtual IntegerType toInt() { assert( false && "this token cannot convert to integer" ); }
+        virtual void setValue(FloatingType f) { assert( false && "this token cannot set value of floating point" ); }
+        virtual void setValue(IntegerType i) { assert( false && "this token cannotset value of integer" ); }
+
+        // other
+        void copyAdditionalInfo(const TokenPtr& otherToken);
     };
 
     // Identifier & Keyword & Enumration
@@ -97,10 +109,14 @@ namespace Miyuki::Lex {
         short bit;
         uint64_t value;
         bool  isSigned;
+        IntegerType signedValue;
 
-        IntToken(uint64_t _value, bool _isSigned = true, short _bit = 32) :Token(Tag::Integer) { value = _value; isSigned = _isSigned; bit = _bit; }
+        IntToken(uint64_t _value, bool _isSigned = true, short _bit = 32) :Token(Tag::Integer) { value = _value; isSigned = _isSigned; bit = _bit; signedValue = value; }
         string toString() override { return "Integer: {0}"_format(value); }
         string toSourceLiteral() override { return "{0}"_format(value); }
+        IntegerType toInt() override { return signedValue; }
+        FloatingType toFloat() override { return (FloatingType)signedValue; }
+        void setValue(IntegerType v) override { value = (uint64_t)v; signedValue = v; }
     };
 
     // Floating Constant
@@ -112,6 +128,11 @@ namespace Miyuki::Lex {
         FloatToken(FloatingType _value, short _bit) :Token(Tag::Floating) { value = _value; bit = _bit; }
         string toString() override { return "Floating: {0}"_format(value); }
         string toSourceLiteral() override { return "{0}"_format(value); }
+
+        FloatingType toFloat() override { return value; }
+        IntegerType toInt() { return (IntegerType)value; }
+        void setValue(FloatingType f) { value = f; }
+        void setValue(IntegerType i) { value = (FloatingType)i; }
     };
 
     // Charater Constant
@@ -135,6 +156,9 @@ namespace Miyuki::Lex {
         }
         string toString() override { return "Character({2}): '{0}', value={1}"_format((char)value, value, encoding.getEncodingString()); }
         string toSourceLiteral() override { return "{0}'{1}'"_format( encoding.getEncodingString(), charseq ); }
+
+        IntegerType toInt() override { return (IntegerType)value; }
+        FloatingType toFloat() override { return (FloatingType)value; }
     };
 
     // String Literals

@@ -40,7 +40,8 @@ namespace Miyuki::Lex::Tag {
         Number = Integer | Floating,
         Constant = Integer | Floating | Enumeration,
         Identifier = ID | Enumeration,
-        Punctuator = -2
+        Punctuator = -2,
+        RelationshipOperator = -3
     };
 
     enum Property : uint32_t {

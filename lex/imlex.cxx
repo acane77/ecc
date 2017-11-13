@@ -7,10 +7,7 @@ namespace Miyuki::Lex {
         ppLitTok = tok;
         literalString = tok->toSourceLiteral();
         TokenPtr ret = scan();
-        ret->startCol = tok->startCol;
-        ret->row = tok->row;
-        ret->column = tok->column;
-        ret->filenam = tok->filenam;
+        ret->copyAdditionalInfo(tok);
         return ret;
     }
 }

@@ -9,5 +9,6 @@
 #define isoctdigit(x) ( x >= '0' && x <= '8' )
 
 typedef long double FloatingType;
+typedef int64_t     IntegerType;
 
 #endif

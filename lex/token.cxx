@@ -16,4 +16,11 @@ namespace Miyuki::Lex {
             return "{0}"_format(PunctuatorString[ tag - Tag::Property::OtherPunctuatorStart ]);
         return "Tag";
     }
+
+    void Token::copyAdditionalInfo(const TokenPtr &tok) {
+        startCol = tok->startCol;
+        row = tok->row;
+        column = tok->column;
+        filenam = tok->filenam;
+    }
 }

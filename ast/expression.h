@@ -37,6 +37,27 @@ namespace Miyuki::AST {
         virtual int getKind() { return Kind::Expression; }
         virtual void gen() = 0;
         virtual void eval() { assert( false && "unimplemented" ); }
+
+        // for evaled child tokens replace them, by every subclass itself
+        //   first test if child token is calculated, and if calculated, replace it by modifying pointer
+        //   get symbol from token using ExpressionBuilder
+        // this function is called by eval(), AFTER eval, try replace
+        // replace all token into primary-expression
+        virtual void replaceCalculatedChild() { assert( false && "unimplemented" ); }
+
+        // for arithmetic
+        TokenPtr calculateConstant(TokenPtr tok1, TokenPtr tok2, TokenPtr op);
+        FloatingType calculateConstantValue(FloatingType a, FloatingType b, int op);
+        IntegerType  calculateConstantValue(IntegerType  a, IntegerType b, int op);
+        IntegerType  calculateCompare(FloatingType a, FloatingType b, int op);
+        IntegerType  calculateCompare(IntegerType a, IntegerType b, int op);
+        bool isCalculatable(TokenPtr tok1, TokenPtr tok2, int op, bool calculateRelationship);
+
+        // for unary
+        TokenPtr calculateConstant(TokenPtr tok, TokenPtr op);
+        FloatingType calculateConstantValue(FloatingType a, int op);
+        IntegerType  calculateConstantValue(IntegerType a, int op);
+        bool isCalculatable(TokenPtr tok, int op, bool calculateRelationship);
     };
 
     class ExpressionBuilder {
