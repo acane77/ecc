@@ -17,6 +17,8 @@ namespace Miyuki::Parse {
     typedef shared_ptr<TokenSequence> TokenSequencePtr;
     typedef TokenSequence::iterator TokenSequenceIter;
 
+    extern std::ostream& operator << (std::ostream& os, const TokenSequence& tokenSeq);
+
     class ParseError : public exception {
         // normal error message
         string msg;

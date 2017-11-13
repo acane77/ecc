@@ -7,9 +7,11 @@
 
 namespace Miyuki::Lex {
 
+    DEFINE_SHARED_PTR(IntermediateLexer)
+
     class IntermediateLexer : public Lexer {
     public:
-        PPLiteralTokenPtr ppLitTok;
+        TokenPtr ppLitTok;
         string literalString;
         int index;
 
@@ -17,10 +19,15 @@ namespace Miyuki::Lex {
 
         // Initialize ppLitTok and Index, and then scan using function
         // in parent class.
-        TokenPtr getRealToken(PPLiteralTokenPtr tok);
+        TokenPtr getRealToken(TokenPtr tok);
 
-        void readch() override { peak = literalString[index++]; }
+        void readch() override {
+            if ( index == literalString.size() ) { peak = -1; return; }
+            peak = literalString[index++];
+        }
         void retract() override { peak = literalString[--index]; }
+        virtual int getColumn() { return ppLitTok->startCol; }
+        virtual int getRow() { return ppLitTok->row; }
     };
 
 }

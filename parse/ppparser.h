@@ -3,6 +3,7 @@
 
 #include "ifparser.h"
 #include "lex/pplex.h"
+#include "lex/imlex.h"
 #include "ppcond.h"
 #include <unordered_map>
 
@@ -140,7 +141,11 @@ namespace Miyuki::Parse {
 
     // This file defined preprocessor parser
     class PreprocessorParser : public IParser {
+        // Preprocessor lexer: get preprocessor token from it
         PreprocessorLexerPtr M_pplex;
+
+        // Intermediate lexer: replace token from pptoken to normal token to parse
+        IntermediateLexerPtr M_imlex;
 
         // Save a line of Token, read token until new-line or EOF (*), and try replace on
         // this line of tokens, until no replacement being taken, write to file and start
@@ -191,7 +196,7 @@ namespace Miyuki::Parse {
         void processInclude();
 
     public:
-        explicit PreprocessorParser(const char * path) : M_pplex(make_shared<PreprocessorLexer>()) {
+        explicit PreprocessorParser(const char * path) : M_pplex(make_shared<PreprocessorLexer>()), M_imlex(make_shared<IntermediateLexer>()) {
             M_pplex->openFile(path);
             M_lex = M_pplex;
             registerObserver();

@@ -20,9 +20,7 @@ namespace Miyuki::Parse {
             evalCachedLine();
             if (!evaledToks || evaledToks->size() == 0)  break;
             cout << Console::Yellow("Cache Got **************") << endl;
-            for (int i=0; i<evaledToks->size(); i++) {
-                cout << "Test:  " << (*evaledToks)[i]->toString() << endl;
-            }
+            cout << *evaledToks;
             cout << endl;
         }
         parseDone();
@@ -620,6 +618,7 @@ recache:
 
     void PreprocessorParser::processTextline() {
         evaledToks = eval(cachedLine);
+        convertToken();
     }
 
     void PreprocessorParser::processError() {
@@ -690,9 +689,10 @@ recache:
         using namespace Miyuki::AST;
 
         evaledToks = eval(cachedLine);
+        convertToken();
+
         if ( !evaledToks )  return;
         PreprocessorASTBuilder ast(evaledToks);
-
 
     }
 
@@ -722,7 +722,13 @@ recache:
     }
 
     void PreprocessorParser::convertToken() {
-        // TODO: back to here
+        size_t seqSize = evaledToks->size();
+        // cout << "**** Tokens before convert\n" << *evaledToks << endl;
+        for (size_t i=0; i < seqSize; i++ ) {
+            TokenPtr tok = (*evaledToks)[i];
+            if ( tok->is(Tag::PPLiteral) || tok->is(Tag::PPNumber) || tok->is(Tag::Identifier) )
+                (*evaledToks)[i] = M_imlex->getRealToken( static_pointer_cast<PPLiteralToken>(tok) );
+        }
     }
 }
 

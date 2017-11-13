@@ -120,5 +120,12 @@ reget_token:
         tokens[(++m_tsptr_w) % MaxRetractSize] = tok;
         m_tsptr_r++;
     }
+
+    std::ostream &operator<<(std::ostream &os, const TokenSequence &tokenSeq) {
+        for (int i=0; i<tokenSeq.size(); i++) {
+            os << "TokenSequence: " << tokenSeq[i]->toString() << endl;
+        }
+        return os;
+    }
 }
 

@@ -2,8 +2,10 @@
 
 namespace Miyuki::Lex {
 
-
-    TokenPtr IntermediateLexer::getRealToken(PPLiteralTokenPtr tok) {
-        return Miyuki::Lex::TokenPtr();
+    TokenPtr IntermediateLexer::getRealToken(TokenPtr tok) {
+        index = 0;
+        ppLitTok = tok;
+        literalString = tok->toSourceLiteral();
+        return scan();
     }
 }

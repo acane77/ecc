@@ -60,8 +60,8 @@ namespace Miyuki::Lex {
         string getLine() { return M_sm->getLine(); }
         string getCurrentLine() { return M_sm->getLine(); }
         void backToPos(int row, int col) { M_sm->to(row, col); }
-        int getColumn() { return M_sm->getColumn(); }
-        int getRow() { return M_sm->getRow(); }
+        virtual int getColumn() { return M_sm->getColumn(); }
+        virtual int getRow() { return M_sm->getRow(); }
         SourceManagerPtr getSourceManager() { return M_sm; }
 
         virtual TokenPtr scan();

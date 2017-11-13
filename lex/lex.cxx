@@ -16,7 +16,7 @@ namespace Miyuki::Lex {
         // Eat comments and wite spaces
         if (eatCommentAndSpaces()) return make_shared<Token>(Tag::EndOfFile);
 
-        Token::startColumn = M_sm->getColumn();
+        Token::startColumn = getColumn();
 
         /// Integer & Floating constant
         if (isdigit(peak) || peak == '.') {
