@@ -54,10 +54,10 @@ namespace Miyuki::Parse {
         LexerPtr M_lex;
         // lookahead token
         TokenPtr look;
-        // thrown exceptions
-        deque<ParseError> errors;
+        // thrown exceptions (common used by all instance)
+        static deque<ParseError> errors;
         // error count (Note: errorCount != length of error as warning items is also in errors)
-        size_t errorCount = 0;
+        static size_t errorCount;
 
         struct CommonParserState {
             // if compiler meet error

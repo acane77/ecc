@@ -5,6 +5,8 @@
 namespace Miyuki::Parse {
 
     IParser * IParser::instance = nullptr;
+    deque<ParseError> IParser::errors;
+    size_t IParser::errorCount = 0;
 
     void IParser::match(uint32_t term, string &&errmsg, TokenPtr &ptr) {
         if (look->isNot(term)) {
