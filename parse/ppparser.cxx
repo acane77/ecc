@@ -694,6 +694,8 @@ recache:
         if ( !evaledToks )  return;
         PreprocessorASTBuilder ast(evaledToks);
         ExpressionPtr astRoot = ast.constantExpression();
+        astRoot->eval();
+        Console::Info(astRoot->IsCalculated() ? "astRoot is calculated" : "astRoot is not calculated");
     }
 
     bool PreprocessorParser::getCondition() {

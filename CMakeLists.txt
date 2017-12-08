@@ -20,6 +20,7 @@ add_subdirectory(lex)
 add_subdirectory(codeg)
 add_subdirectory(common)
 add_subdirectory(ast)
+add_subdirectory(test)
 
 # Main program
 aux_source_directory(. JACC_SOURCE)	
@@ -29,3 +30,5 @@ else()
 	add_executable("jacc" ${JACC_SOURCE})
 endif()
 target_link_libraries("jacc" bytecode parse lex codeg common ast ${LINK_LIBS})
+
+message("libs:${LINK_INTERFACE_LIBRARIES}")

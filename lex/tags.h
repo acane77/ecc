@@ -44,7 +44,7 @@ namespace Miyuki::Lex::Tag {
         RelationshipOperator = -3
     };
 
-    enum Property : uint32_t {
+    enum Property : int32_t {
         PunctuatorStart = 0,
         OtherPunctuatorStart = 128,
         PunctuatorEnd = 191,

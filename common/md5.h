@@ -6,8 +6,8 @@
 #include <cstdint>
 
 namespace Miyuki::Common {
-    extern void md5(const uint8_t *initial_msg, size_t initial_len, uint8_t *digest);
-    extern uint64_t md5(const char *msg);
+    void md5(const uint8_t *initial_msg, size_t initial_len, uint8_t *digest);
+    uint64_t md5(const char *msg);
 }
 
 #endif

@@ -2,6 +2,7 @@
 #define _MIYUKI_EXPRESSION_H
 
 #include "symbols.h"
+#include "common/md5.h"
 
 // ISO/IEC 9899:201x §A.2.1
 
@@ -62,7 +63,7 @@ namespace Miyuki::AST {
 
     class ExpressionBuilder {
     public:
-        static ExpressionPtr getSymbol(TypePtr typ, TokenPtr tok);
+        static ExpressionPtr getSymbol(const TypePtr &typ, TokenPtr tok);
     };
 
     class CommaExpression : public Expression {
@@ -74,6 +75,8 @@ namespace Miyuki::AST {
 
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::commaExpression; }
+
+        virtual void eval();
     };
 
     class AssignmentExpression : public Expression {
@@ -88,6 +91,8 @@ namespace Miyuki::AST {
 
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::AssignmentExpression; }
+
+        virtual void eval();
     };
 
     class ConditionalExpression : public Expression {
@@ -101,6 +106,8 @@ namespace Miyuki::AST {
 
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::ConditionalExpression; }
+
+        virtual void eval();
     };
 
     class LogicalORExpression : public Expression {
@@ -112,6 +119,8 @@ namespace Miyuki::AST {
 
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::LogicalOrExpression; }
+
+        virtual void eval();
     };
 
     class LogicalANDExpression : public Expression {
@@ -124,6 +133,8 @@ namespace Miyuki::AST {
 
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::LogicalAndExpression; }
+
+        virtual void eval();
     };
 
     class Arithmetic : public Expression {
@@ -136,6 +147,8 @@ namespace Miyuki::AST {
 
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::Arith; }
+
+        virtual void eval() override;
     };
 
     class Unary : public Expression {
@@ -147,6 +160,8 @@ namespace Miyuki::AST {
 
         virtual void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::UNARY; }
+
+        virtual void eval() override;
     };
 
     class CastExpression : public Expression {
@@ -161,6 +176,8 @@ namespace Miyuki::AST {
 
         virtual void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::CastExpression; }
+
+        virtual void eval() override { /* not evaluatable*/ }
     };
 
     class LogicalNot : public Unary {
@@ -180,6 +197,7 @@ namespace Miyuki::AST {
         TypeInfoExpression(const TokenPtr &op, const TypeNamePtr &typeName);
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::typeInfoExpression; }
+        virtual void eval() override { /* not evaluatable*/ }
     };
 
     typedef ConditionalExpression ConstantExpression;
@@ -194,6 +212,7 @@ namespace Miyuki::AST {
 
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::postfixExpression; }
+        virtual void eval() override { /* not evaluatable*/ }
     };
 
     class StructAccess : public PostfixExpression {
@@ -238,6 +257,7 @@ namespace Miyuki::AST {
 
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::ArgumentExpressionList; }
+        virtual void eval() override { /* not evaluatable*/ }
     };
 
     class AnonymousArray : public PostfixExpression {
@@ -262,6 +282,7 @@ namespace Miyuki::AST {
 
         void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::PrimaryExpression; }
+        virtual void eval() override;
     };
 
 }

@@ -2,6 +2,8 @@
 
 namespace Miyuki::AST {
 
+    bool Symbol::isPreprocessorSymbol = false;
+
     bool IEvaluatable::IsCalculated() const {
         return isCalculated;
     }
@@ -23,6 +25,13 @@ namespace Miyuki::AST {
     }
 
     void IEvaluatable::setCalculatedToken(const TokenPtr &calculatedToken) {
+        setIsCalculated(true);
         IEvaluatable::calculatedToken = calculatedToken;
+    }
+
+    void IEvaluatable::copyEvalPerproty(IEvaluatablePtr another) {
+        assert(another && "another is nullptr");
+        setIsCalculated( another->isCalculated );
+        setCalculatedToken( another->getCalculatedToken() );
     }
 }

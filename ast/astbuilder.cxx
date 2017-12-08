@@ -205,17 +205,21 @@ namespace Miyuki::AST {
             return make_shared<CastExpression>( unaryExpression() );
         }
         CastExpressionPtr castExp = nullptr;
-        while ( look->is('(') ) {
-            // TODO: complete this after implement typeName
-            assert( false && "unimplemented" );
-            next();
-            TypeNamePtr typeNam = nullptr;
-            if ( look->isNot(')') ) {
-                diagError("')' expected.", look);
-                SKIP_TO_SEMI_AND_END_THIS_SYMBOL
+        if ( look->is('(') ) {
+            while ( look->is('(') ) {
+                // TODO: complete this after implement typeName
+                assert( false && "unimplemented" );
+                next();
+                TypeNamePtr typeNam = nullptr;
+                if ( look->isNot(')') ) {
+                    diagError("')' expected.", look);
+                    SKIP_TO_SEMI_AND_END_THIS_SYMBOL
+                }
+                castExp = make_shared<CastExpression>(typeNam, castExp);
             }
-            castExp = make_shared<CastExpression>(typeNam, castExp);
         }
+        else  // PRIBLEM: it seems catch any error here.
+            diagError("unexpected '{0}' token."_format(look->toSourceLiteral()), look);
         return castExp;
     }
 
@@ -267,7 +271,7 @@ namespace Miyuki::AST {
             return postfixExpression();
         }
         else {
-            diagError("invalid '{0}' token."_format( look->toSourceLiteral() ), look);
+            diagError("unexpected '{0}' token."_format( look->toSourceLiteral() ), look);
             SKIP_TO_SEMI_AND_END_THIS_SYMBOL;
         }
     }
@@ -305,7 +309,7 @@ this_is_a_primary_expression:
             exp = primaryExpression();
         }
         else {
-            diagError("invalid '{0}' token."_format( look->toSourceLiteral() ), look);
+            diagError("unexpected '{0}' token."_format( look->toSourceLiteral() ), look);
             SKIP_TO_SEMI_AND_END_THIS_SYMBOL;
         }
         while ( look->is('.') || look->is(Tag::PointerAccess) || look->is(Tag::Increase) || look->is(Tag::Decrease) || look->is('[') || look->is('(') ) {

@@ -2,6 +2,24 @@
 
 namespace Miyuki::AST {
 
+#define EVAL_EXPRESSION(siblingLevel, nextLevel, op) \
+    /* if this symbol has already been calculated */\
+    if (IsCalculated()) return;\
+    if (nextLevel) nextLevel->eval(); /* if next level is exist */ \
+    /*  if no same level, directly return */\
+    if (!siblingLevel) {\
+        /* if no sibling level, copy property of next level. */\
+        if (nextLevel) copyEvalPerproty(nextLevel);\
+        return;\
+    }/* else has same level, eval and try calculate */ \
+    siblingLevel->eval();\
+    if ( isCalculatable( siblingLevel->getCalculatedToken(), nextLevel->getCalculatedToken() , op->tag , isPreprocessorSymbol) ) {\
+        setCalculatedToken( calculateConstant( siblingLevel->getCalculatedToken(), nextLevel->getCalculatedToken(), op ) );\
+    }
+
+#define RETURN_IF_CALCULATED() if (IsCalculated()) return
+#define TRY_EVAL(expr) if (expr) expr->eval()
+
     // constructors
     AssignmentExpression::AssignmentExpression(const TokenPtr &assignOp, const ConditionalExpressionPtr &condExp,
                                                const AssignmentExpressionPtr &assignExp) : assignOp(assignOp),
@@ -10,22 +28,79 @@ namespace Miyuki::AST {
 
     AssignmentExpression::AssignmentExpression(const ConditionalExpressionPtr &condExp) : condExp(condExp) {}
 
+    void AssignmentExpression::eval() {
+        EVAL_EXPRESSION(assignExp, condExp, assignOp);
+    }
+
     ConditionalExpression::ConditionalExpression(const LogicalORExpressionPtr &logicalOrExp, const ExpressionPtr &exp,
                                                  const ConditionalExpressionPtr &condExpr) : logicalOrExp(logicalOrExp),
                                                                                              exp(exp),
                                                                                              condExpr(condExpr) {}
 
+    void ConditionalExpression::eval() {
+        RETURN_IF_CALCULATED();
+        TRY_EVAL(condExpr);
+        TRY_EVAL(exp);
+        TRY_EVAL(logicalOrExp);
+        
+        if ( condExpr && exp && logicalOrExp && condExpr->IsCalculated() && exp->IsCalculated() && logicalOrExp->IsCalculated() ) {
+            // test condition
+            if (logicalOrExp->getCalculatedToken()->toInt())
+                // if condition is true
+                setCalculatedToken(exp->getCalculatedToken());
+            else
+                // condition is false
+                setCalculatedToken(condExpr->getCalculatedToken());
+        }
+        
+    }
+
     LogicalORExpression::LogicalORExpression(const LogicalANDExpressionPtr &logicalAndExp,
                                              const LogicalORExpressionPtr &logicalOrExp) : logicalAndExp(logicalAndExp),
                                                                                            logicalOrExp(logicalOrExp) {}
+
+    void LogicalORExpression::eval() {
+        EVAL_EXPRESSION(logicalOrExp, logicalAndExp, make_shared<Token>(Tag::Or));
+    }
 
     LogicalANDExpression::LogicalANDExpression(const ArithmeticPtr &exclusiveOrExpression,
                                                const LogicalANDExpressionPtr &logicalAndExpression)
             : exclusiveOrExpression(exclusiveOrExpression), logicalAndExpression(logicalAndExpression) {}
 
+    void LogicalANDExpression::eval() {
+        EVAL_EXPRESSION(logicalAndExpression, exclusiveOrExpression, make_shared<Token>(Tag::And));
+    }
+
     Arithmetic::Arithmetic(const TokenPtr &op, const ExpressionPtr &expr1, const ExpressionPtr &expr2) : op(op), expr1(expr1), expr2(expr2) {}
 
+    void Arithmetic::eval() {
+        //EVAL_EXPRESSION(expr1, expr2, op);
+        /* if this symbol has already been calculated */
+        ExpressionPtr nextLevel = expr1, siblingLevel = expr2;
+        if (IsCalculated()) return;
+        if (nextLevel) nextLevel->eval(); /* if next level is exist */
+                                          /*  if no same level, directly return */
+        if (!siblingLevel) {
+            /* if no sibling level, copy property of next level. */
+            if (nextLevel) copyEvalPerproty(nextLevel);
+            return;
+        }/* else has same level, eval and try calculate */
+        siblingLevel->eval();
+        if (isCalculatable(siblingLevel->getCalculatedToken(), nextLevel->getCalculatedToken(), op->tag, isPreprocessorSymbol)) {
+            setCalculatedToken(calculateConstant(siblingLevel->getCalculatedToken(), nextLevel->getCalculatedToken(), op));
+        }
+    }
+
     Unary::Unary(const TokenPtr &op, const ExpressionPtr &expr) : op(op), expr(expr) {}
+
+    void Unary::eval() {
+        RETURN_IF_CALCULATED();
+        TRY_EVAL(expr);
+        if (expr && expr->IsCalculated()) {
+            // if is calculated
+            setCalculatedToken(calculateConstant(expr->getCalculatedToken(), op));
+        }
+    }
 
     StructAccess::StructAccess(const TokenPtr &op, const ExpressionPtr &expr,
                                const PostfixExpressionPtr &postfixExp, const WordTokenPtr &identifier)
@@ -46,11 +121,30 @@ namespace Miyuki::AST {
     AnonymousArray::AnonymousArray(const TypeNamePtr &typeName, const InitializerListPtr &initList)
             : typeName(typeName), initList(initList), PostfixExpression(nullptr, nullptr, nullptr) {}
 
-    PrimaryExpression::PrimaryExpression(const TokenPtr &factor) : factor(factor), PostfixExpression(nullptr, nullptr, nullptr) {}
+    PrimaryExpression::PrimaryExpression(const TokenPtr &factor) : factor(factor), PostfixExpression(nullptr, nullptr, nullptr) {
+        //setSymbolType( TypeFactory::build(factor) );
+        // 上面这句话如果注释掉， 就不报错，否则报错
+        // BUG: link failed here
+    }
 
-    PrimaryExpression::PrimaryExpression(const ExpressionPtr &exp) : exp(exp), PostfixExpression(nullptr, nullptr, nullptr) {}
+    PrimaryExpression::PrimaryExpression(const ExpressionPtr &exp) : exp(exp), PostfixExpression(nullptr, nullptr, nullptr) {
+        setSymbolType( exp->getSymbolType() );
+    }
 
-    ExpressionPtr ExpressionBuilder::getSymbol(TypePtr typ, TokenPtr tok) {
+    void PrimaryExpression::eval() {
+        // if is factor
+        if (factor) {
+            setCalculatedToken(factor);
+        }
+        // else is ( expression )
+        else {
+            TRY_EVAL(exp);
+            if (exp && exp->IsCalculated())
+                setCalculatedToken(exp->getCalculatedToken());
+        }
+    }
+
+    ExpressionPtr ExpressionBuilder::getSymbol(const TypePtr &typ, TokenPtr tok) {
         // this function is for calculated value, so only return calculatable primary-expressions
         assert( ( tok->is(Tag::Number) || tok->is(Tag::Identifier) || tok->is(Tag::Constant) ) && "tok is not a primary expression" );
         PrimaryExpressionPtr expr = make_shared<PrimaryExpression>(tok);
@@ -60,6 +154,10 @@ namespace Miyuki::AST {
 
     CommaExpression::CommaExpression(const CommaExpressionPtr &commaExp, const AssignmentExpressionPtr &assignExp)
             : commaExp(commaExp), assignExp(assignExp) {}
+
+    void CommaExpression::eval() {
+        EVAL_EXPRESSION(commaExp, assignExp, make_shared<Token>(','));
+    }
 
     CastExpression::CastExpression(const TypeNamePtr &typeName, const CastExpressionPtr &castExpr)
             : typeName(typeName), castExpr(castExpr) {}
@@ -104,6 +202,7 @@ namespace Miyuki::AST {
     // TODO:  and replace tree node
 
     bool Expression::isCalculatable(TokenPtr tok1, TokenPtr tok2, int op, bool calculateRelationship) {
+        if ( tok1 == nullptr || tok2 == nullptr ) return false;
         if ( ( tok2->is(Tag::Floating) && ( tok1->is(Tag::Number) || tok1->is(Tag::Character) ) ) ||
                 ( tok1->is(Tag::Floating) && ( tok2->is(Tag::Number) || tok2->is(Tag::Character) ) ) ) {
             if ( op == '*' || op == '/' || op == '+' || op == '-' || op == ',' )
@@ -228,6 +327,7 @@ namespace Miyuki::AST {
     }
 
     bool Expression::isCalculatable(TokenPtr tok, int op, bool calculateRelationship) {
+        if ( tok == nullptr ) return false;
         if ( tok->is(Tag::Integer) || tok->is(Tag::Character) ) {
             if ( tok->is('~') || tok->is('+') || tok->is('-') ) {
                 return false;

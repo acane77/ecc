@@ -13,11 +13,11 @@ namespace Miyuki::AST {
     class IEvaluatable {
     public:
         // specify if expression is calculated
-        bool isCalculated;
+        bool isCalculated = false;
         // type of this symbol (expression)
-        TypePtr symbolType;
+        TypePtr symbolType = nullptr;
         // token after calculated (after calc)
-        TokenPtr calculatedToken;
+        TokenPtr calculatedToken = nullptr;
 
         bool IsCalculated() const;
         void setIsCalculated(bool isCalculated);
@@ -25,6 +25,8 @@ namespace Miyuki::AST {
         void setSymbolType(const TypePtr &symbolType);
         const TokenPtr &getCalculatedToken() const;
         void setCalculatedToken(const TokenPtr &calculatedToken);
+
+        void copyEvalPerproty(IEvaluatablePtr another);
 
         virtual void eval() = 0;
     };
@@ -40,6 +42,8 @@ namespace Miyuki::AST {
         };
 
         virtual int getKind() { return Kind::SYMBOL; }
+
+        static bool isPreprocessorSymbol;
     };
 
 }

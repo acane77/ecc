@@ -49,7 +49,9 @@ namespace Miyuki::AST {
             uint16_t flag = 0x8000;
         } typeinfo;
 
-        static uint64_t getHashCodeFromRawName(const string& raw) { return md5(raw.c_str()); }
+        static uint64_t getHashCodeFromRawName(const string& raw) {
+            return md5( raw.c_str() );
+        }
 
         virtual size_t getAlignment() {
             // data structure override this function
@@ -87,19 +89,25 @@ namespace Miyuki::AST {
         static map<uint64_t, TypePtr> types;
 
         enum BasicTypeHashCode : uint64_t {
-            Int = 0x4b63bf90eccfd37fLLU,
-            Long = 0xf0dad76870d7ede6LLU,
-            LongLong = 0xca56850d4cd6b331LLU,
-            Void = 0x306a2e085a437fd2LLU,
-            Short = 0x86825a1a2302ec24LLU,
-            Float = 0xc983a70728bd082dLLU,
-            Double = 0xf30e62bbd73d6df5LLU,
-            LongDouble = 0x1b03839d46af9fb4LLU,
-            Char = 0x0cad1d412f80b84dLLU
+            Void = 0x9b675bd57058fd46LLU,
+            Int = 0x4ab0e063e5caa338LLU,
+            UnsignedInt = 0x528f54df4a0446b6LLU,
+            Long = 0x1a9267b7a1188556,
+            UnsignedLong = 0x5090da2632453988LLU,
+            LongLong = 0x268c8034f5c8564eLLU,
+            UnsignedLongLong = 0x9594460e2e485922LLU,
+            Short = 0xe395d80182db07aeLLU,
+            UnsignedShort = 0x89f58062f10dd731LLU,
+            Float = 0x754f91cc6554c9e7LLU,
+            Double = 0xd750195b4487976LLU,
+            LongDouble = 0xc52e15f763380b45LLU,
+            Char = 0x9d37b73795649038LLU,
+            ConstCharPtr = 0x7e4efdc972cc1e4dLLU
         };
 
         // build type for symbols (use in factor)
-        static TypePtr build(Token tok);
+        //static TypePtr build(TokenPtr tok);
+        static TypePtr build(TokenPtr tok);
 
         static void initBasicTypes();
         static void addType(TypePtr t) { types.insert(make_pair<uint64_t, TypePtr>( (uint64_t)t->hash_code, move(t) )); }
