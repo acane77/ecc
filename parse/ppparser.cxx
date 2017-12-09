@@ -488,6 +488,15 @@ recache:
             else if (kind == GroupPart::If) {
                 processIf();
             }
+            else if (kind == GroupPart::Elif) {
+                processElif();
+            }
+            else if (kind == GroupPart::Pragma) {
+                processPragma();
+            }
+            else if (kind == GroupPart::Line) {
+                processLine();
+            }
 
             if (evaledToks && evaledToks->size()) evaledToksIter = evaledToks->begin();
         }
@@ -524,6 +533,16 @@ recache:
             }
         }
         else diagError("file name expected.", groupPart->directiveTok);
+    }
+
+    void PreprocessorParser::processPragma() {
+        // My implemetation does not implement #pragma
+        return;
+    }
+
+    void PreprocessorParser::processLine() {
+        // My implemetation does not implement #line
+        return;
     }
 
     void PreprocessorParser::processDefine() {
@@ -673,6 +692,42 @@ recache:
         }
     }
 
+    void PreprocessorParser::processElif() {
+        using namespace Miyuki::AST;
+
+        if (cachedLine->size() == 0) {
+            diagError("conditional expression expected.", groupPart->directiveTok);
+            return;
+        }
+        if (condHierarchy.size() == 0) {
+            diagError("#else without #if", groupPart->directiveTok);
+            return;
+        }
+
+        evaledToks = eval(cachedLine);
+        convertToken();
+
+        if (!evaledToks)  return;
+        PreprocessorASTBuilder ast(evaledToks);
+        ExpressionPtr astRoot = ast.constantExpression();
+        astRoot->eval();
+        cout << Console::Green("processIf()  ");
+        if (astRoot->IsCalculated())
+            cout << "expression is calculated, value is " << astRoot->getCalculatedToken()->toInt() << endl;
+        else {
+            cout << "expression is not calculated\n";
+            diagError("conditional expression is not evalulatable.", groupPart->directiveTok);
+            addNewCondition(0);
+            return;
+        }
+
+        // negitive condition value
+        // if parent is true, and condition is true
+        if (astRoot->getCalculatedToken()->toInt() != 0 && condHierarchy.back()->parentIsTrue) {
+            negateCondition();
+        }
+    }
+
     void PreprocessorParser::processEndif() {
         if (cachedLine->size() != 0) {
             diagWarning("extra tokens at end of #{0} directive"_format(groupPart->directiveTok->toSourceLiteral()), groupPart->directiveTok);
@@ -688,6 +743,11 @@ recache:
     void PreprocessorParser::processIf() {
         using namespace Miyuki::AST;
 
+        if (cachedLine->size() == 0) {
+            diagError("conditional expression expected.", groupPart->directiveTok);
+            return;
+        }
+
         evaledToks = eval(cachedLine);
         convertToken();
 
@@ -698,11 +758,14 @@ recache:
         cout << Console::Green("processIf()  ");
         if (astRoot->IsCalculated())
             cout << "expression is calculated, value is " << astRoot->getCalculatedToken()->toInt() << endl;
-        else
+        else {
             cout << "expression is not calculated\n";
+            diagError("conditional expression is not evalulatable.", groupPart->directiveTok);
+            addNewCondition(0);
+            return;
+        }
 
-
-
+        addNewCondition(astRoot->getCalculatedToken()->toInt() != 0);
     }
 
     bool PreprocessorParser::getCondition() {

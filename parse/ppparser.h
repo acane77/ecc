@@ -205,8 +205,6 @@ namespace Miyuki::Parse {
         void testLexer();
         void parse() final;
 
-        void parseControlLine();
-
         // get group-part kind from opTok
         // return value: true if is a valid group part,
         //               false if invalid

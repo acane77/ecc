@@ -97,8 +97,8 @@ namespace Miyuki::AST {
             return;
         }/* else has same level, eval and try calculate */
         siblingLevel->eval();
-        if (isCalculatable(siblingLevel->getCalculatedToken(), nextLevel->getCalculatedToken(), op->tag, isPreprocessorSymbol)) {
-            setCalculatedToken(calculateConstant(siblingLevel->getCalculatedToken(), nextLevel->getCalculatedToken(), op));
+        if (isCalculatable(nextLevel->getCalculatedToken(), siblingLevel->getCalculatedToken(), op->tag, isPreprocessorSymbol)) {
+            setCalculatedToken(calculateConstant(nextLevel->getCalculatedToken(), siblingLevel->getCalculatedToken(), op));
         }
     }
 
