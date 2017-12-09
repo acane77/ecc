@@ -285,7 +285,11 @@ namespace Miyuki::Parse {
                     // if this is a defined operator (non-bracket format)
                     else if (tokW->name == "defined"
                         &&  i != original->size() - 1   // has next item
-                        && (*original)[i + 1]->is(Tag::Identifier)) {
+                        && (*original)[i + 1]->is(Tag::Identifier) ) {
+                        if (static_pointer_cast<WordToken>((*original)[i + 1])->name == "defined" /* exclude defined operator */) {
+                            diagError("'defined' operator cannot use as an identifier.", (*original)[++i]);
+                            continue; // replace other
+                        }
                         FunctionLikeMacroPtr macro = make_shared<FunctionLikeMacro>(macroDef);
                         macro->macroName = tokW;
                         TokenSequencePtr param = make_shared<TokenSequence>();

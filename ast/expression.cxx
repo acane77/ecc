@@ -112,7 +112,8 @@ namespace Miyuki::AST {
             // if is calculated
             setCalculatedToken(calculateConstant(expr->getCalculatedToken(), op));
         }
-        assert(false && "invalid unary (no expression)");
+        else if (!expr)
+            assert(false && "invalid unary (no expression)");
     }
 
     StructAccess::StructAccess(const TokenPtr &op, const ExpressionPtr &expr,
