@@ -23,6 +23,7 @@ namespace Miyuki::Parse {
             cout << *evaledToks;
             cout << endl;
         }
+        finish();
         parseDone();
         return;
         /*
@@ -800,6 +801,13 @@ recache:
             TokenPtr tok = (*evaledToks)[i];
             if ( tok->is(Tag::PPLiteral) || tok->is(Tag::PPNumber) || tok->is(Tag::Identifier) )
                 (*evaledToks)[i] = M_imlex->getRealToken( static_pointer_cast<PPLiteralToken>(tok) );
+        }
+    }
+
+    void PreprocessorParser::finish() {
+        // check if all #if or #ifdef are closed
+        if (condHierarchy.size()) {
+            diagError("expected {0} more #endif at the end"_format(condHierarchy.size()), make_shared<Token>(Tag::EndOfFile));
         }
     }
 }

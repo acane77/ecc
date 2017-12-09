@@ -195,6 +195,9 @@ namespace Miyuki::Parse {
         void processTextline();
         void processInclude();
 
+        // finishing work
+        void finish();
+
     public:
         explicit PreprocessorParser(const char * path) : M_pplex(make_shared<PreprocessorLexer>()), M_imlex(make_shared<IntermediateLexer>()) {
             M_pplex->openFile(path);
