@@ -695,7 +695,14 @@ recache:
         PreprocessorASTBuilder ast(evaledToks);
         ExpressionPtr astRoot = ast.constantExpression();
         astRoot->eval();
-        Console::Info(astRoot->IsCalculated() ? "astRoot is calculated" : "astRoot is not calculated");
+        cout << Console::Green("processIf()  ");
+        if (astRoot->IsCalculated())
+            cout << "expression is calculated, value is " << astRoot->getCalculatedToken()->toInt() << endl;
+        else
+            cout << "expression is not calculated\n";
+
+
+
     }
 
     bool PreprocessorParser::getCondition() {

@@ -19,6 +19,7 @@ namespace Miyuki::AST {
 
 #define RETURN_IF_CALCULATED() if (IsCalculated()) return
 #define TRY_EVAL(expr) if (expr) expr->eval()
+#define PRINT_FUNCTION_NAME() cout << "Function:   " << typeid(this).name() << "::" << __FUNCTION__ << "(), at line: " << __FILE__ << ":" << __LINE__ << endl
 
     // constructors
     AssignmentExpression::AssignmentExpression(const TokenPtr &assignOp, const ConditionalExpressionPtr &condExp,
@@ -29,6 +30,7 @@ namespace Miyuki::AST {
     AssignmentExpression::AssignmentExpression(const ConditionalExpressionPtr &condExp) : condExp(condExp) {}
 
     void AssignmentExpression::eval() {
+        PRINT_FUNCTION_NAME();
         EVAL_EXPRESSION(assignExp, condExp, assignOp);
     }
 
@@ -38,11 +40,18 @@ namespace Miyuki::AST {
                                                                                              condExpr(condExpr) {}
 
     void ConditionalExpression::eval() {
+        PRINT_FUNCTION_NAME();
         RETURN_IF_CALCULATED();
         TRY_EVAL(condExpr);
         TRY_EVAL(exp);
         TRY_EVAL(logicalOrExp);
         
+        // if only has next level
+        if (!condExpr || !exp) {
+            if (logicalOrExp) copyEvalPerproty(logicalOrExp);
+            return;
+        }
+
         if ( condExpr && exp && logicalOrExp && condExpr->IsCalculated() && exp->IsCalculated() && logicalOrExp->IsCalculated() ) {
             // test condition
             if (logicalOrExp->getCalculatedToken()->toInt())
@@ -52,7 +61,6 @@ namespace Miyuki::AST {
                 // condition is false
                 setCalculatedToken(condExpr->getCalculatedToken());
         }
-        
     }
 
     LogicalORExpression::LogicalORExpression(const LogicalANDExpressionPtr &logicalAndExp,
@@ -60,6 +68,7 @@ namespace Miyuki::AST {
                                                                                            logicalOrExp(logicalOrExp) {}
 
     void LogicalORExpression::eval() {
+        PRINT_FUNCTION_NAME();
         EVAL_EXPRESSION(logicalOrExp, logicalAndExp, make_shared<Token>(Tag::Or));
     }
 
@@ -68,12 +77,14 @@ namespace Miyuki::AST {
             : exclusiveOrExpression(exclusiveOrExpression), logicalAndExpression(logicalAndExpression) {}
 
     void LogicalANDExpression::eval() {
+        PRINT_FUNCTION_NAME();
         EVAL_EXPRESSION(logicalAndExpression, exclusiveOrExpression, make_shared<Token>(Tag::And));
     }
 
     Arithmetic::Arithmetic(const TokenPtr &op, const ExpressionPtr &expr1, const ExpressionPtr &expr2) : op(op), expr1(expr1), expr2(expr2) {}
 
     void Arithmetic::eval() {
+        PRINT_FUNCTION_NAME();
         //EVAL_EXPRESSION(expr1, expr2, op);
         /* if this symbol has already been calculated */
         ExpressionPtr nextLevel = expr1, siblingLevel = expr2;
@@ -94,12 +105,14 @@ namespace Miyuki::AST {
     Unary::Unary(const TokenPtr &op, const ExpressionPtr &expr) : op(op), expr(expr) {}
 
     void Unary::eval() {
+        PRINT_FUNCTION_NAME();
         RETURN_IF_CALCULATED();
         TRY_EVAL(expr);
         if (expr && expr->IsCalculated()) {
             // if is calculated
             setCalculatedToken(calculateConstant(expr->getCalculatedToken(), op));
         }
+        assert(false && "invalid unary (no expression)");
     }
 
     StructAccess::StructAccess(const TokenPtr &op, const ExpressionPtr &expr,
@@ -132,11 +145,13 @@ namespace Miyuki::AST {
     }
 
     void PrimaryExpression::eval() {
-        // if is factor
-        if (factor) {
+        PRINT_FUNCTION_NAME();
+        // if is factor, and is number or character
+        // not all factor is calculated
+        if (factor && ( factor->is(Tag::Number) || factor->is(Tag::Character) ) ) {
             setCalculatedToken(factor);
         }
-        // else is ( expression )
+        // else is ( expression ) or other factors
         else {
             TRY_EVAL(exp);
             if (exp && exp->IsCalculated())
@@ -161,6 +176,14 @@ namespace Miyuki::AST {
 
     CastExpression::CastExpression(const TypeNamePtr &typeName, const CastExpressionPtr &castExpr)
             : typeName(typeName), castExpr(castExpr) {}
+
+    void CastExpression::eval() {
+        PRINT_FUNCTION_NAME();
+        if (unaryExpr) {
+            unaryExpr->eval();
+            copyEvalPerproty(unaryExpr);
+        }
+    }
 
     CastExpression::CastExpression(const UnaryPtr &unaryExpr) : unaryExpr(unaryExpr) {}
 
@@ -203,15 +226,18 @@ namespace Miyuki::AST {
 
     bool Expression::isCalculatable(TokenPtr tok1, TokenPtr tok2, int op, bool calculateRelationship) {
         if ( tok1 == nullptr || tok2 == nullptr ) return false;
+
+        // if any token is float
         if ( ( tok2->is(Tag::Floating) && ( tok1->is(Tag::Number) || tok1->is(Tag::Character) ) ) ||
                 ( tok1->is(Tag::Floating) && ( tok2->is(Tag::Number) || tok2->is(Tag::Character) ) ) ) {
-            if ( op == '*' || op == '/' || op == '+' || op == '-' || op == ',' )
+            if ( op == '*' || op == '/' || op == '+' || op == '-' || op == ',' || op == '>' || op == '<' || op == Tag::GreaterThanEqual || op == Tag::LessThanEqual || op == Tag::Equal || op == Tag::NotEqual)
                 return true;
             else if ( calculateRelationship && ( op == Tag::And || op == Tag::Or ) )
                 return true;
         }
+        // if any token is integer
         else if ( (tok1->is(Tag::Integer) || tok1->is(Tag::Character) ) && ( tok2->is(Tag::Integer) || tok2->is(Tag::Character) ) ) {
-            if ( op == '*' || op == '/' || op == '+' || op == '-' || op == '%' || op == Tag::LeftShift || op == Tag::RightShift || op == ',' )
+            if ( op == '*' || op == '/' || op == '+' || op == '-' || op == '%' || op == Tag::LeftShift || op == Tag::RightShift || op == ',' || op == '>' || op == '<' || op == Tag::GreaterThanEqual || op == Tag::LessThanEqual || op == Tag::Equal || op == Tag::NotEqual)
                 return true;
             else if ( calculateRelationship && ( op == Tag::And || op == Tag::Or ) )
                 return true;

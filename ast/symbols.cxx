@@ -31,7 +31,7 @@ namespace Miyuki::AST {
 
     void IEvaluatable::copyEvalPerproty(IEvaluatablePtr another) {
         assert(another && "another is nullptr");
-        setIsCalculated( another->isCalculated );
         setCalculatedToken( another->getCalculatedToken() );
+        setIsCalculated( another->isCalculated );
     }
 }

@@ -353,7 +353,7 @@ this_is_a_primary_expression:
         //      generic-selection
         if ( look->is(Tag::Identifier) || look->is(Tag::Constant) || look->is(Tag::StringLiteral) ) {
             TokenPtr tok = look;  next();
-            return make_shared<PrimaryExpression>(look);
+            return make_shared<PrimaryExpression>(tok);
         }
         if ( look->is('(') ) {
             next();

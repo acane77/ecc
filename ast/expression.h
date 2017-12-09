@@ -177,7 +177,7 @@ namespace Miyuki::AST {
         virtual void gen() { assert( false && "unimplemented" ); }
         int getKind() { return Kind::CastExpression; }
 
-        virtual void eval() override { /* not evaluatable*/ }
+        virtual void eval() override;
     };
 
     class LogicalNot : public Unary {
