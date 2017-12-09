@@ -28,6 +28,13 @@ namespace Miyuki::AST {
 
         void parse() override;
 
+        // Test if parse is success
+        //   for #if directive, it only build AST for expression, and due to this reason,
+        //   we cannot check if it is in line with the grammar after the expressions that have been read,
+        //   so we should check it manually, and if it next token is EOF, wo can refer than all tokens have
+        //   been read, so it mean parsing is success, otherwise failed.
+        bool success() { return next()->is(-1); }
+
     };
 
 }

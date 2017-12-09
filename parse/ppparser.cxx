@@ -3,6 +3,8 @@
 #include "ast/ppastbuilder.h"
 
 namespace Miyuki::Parse {
+    MacroPack* MacroPack::instance;
+
     void PreprocessorParser::testLexer() {
         Lex::Token::flread = M_pplex->getSourceManager();
         next();
@@ -40,6 +42,20 @@ namespace Miyuki::Parse {
 
     int FunctionLikeMacro::replace(TokenSequence &toksResult) {
         int replacementCount = 0;
+
+        // process defined() if it is. if defination is nullptr, it must be defined
+        if (macroName->toSourceLiteral() == "defined") {
+            if (params.size() != 1 || params[0]->size() != 1 || (*params[0])[0]->isNot(Tag::Identifier)) {
+                IParser::instance->diagError("operator \"defined\" requires an identifier", macroName);
+                return replacementCount;
+            }
+
+            bool defined = MacroPack::getInstance()->getMacroDef( static_pointer_cast<WordToken>( (*params[0])[0])->name ) != nullptr;
+            toksResult.push_back(make_shared<IntToken>(defined ? 1 : 0));
+            replacementCount++;
+            return replacementCount;
+        }
+
         if (((!defination->isParamVarible) && defination->lparlen.size() != params.size()) || (defination->isParamVarible && defination->lparlen.size() > params.size())) {
             IParser::instance->diagError("'{0}' requires {1}{2} parameters, and {3} provided."_format( macroName->toSourceLiteral(), defination->isParamVarible ? "at least ":"", defination->lparlen.size() , params.size() ), macroName);
             return 0;
@@ -183,14 +199,14 @@ namespace Miyuki::Parse {
 
                 // first we check if it is a macro
                 MacroDefinePtr macroDef = macros.getMacroDef(tokW->name);
-                if (!macroDef) {
+                if (!macroDef && tokW->name != "defined") {
                     // is not a macro
                     // directly add to seqNew
                     seqNew->push_back(tok);
                     continue;
                 }
                 // if is a function-like macro
-                if (macroDef->isFunctionLike) {
+                if (tokW->name == "defined" || macroDef->isFunctionLike) {
                     // first we check if next token is '('
                     if (i != original->size() - 1   // has next item
                         && (*original)[i + 1]->is('(')) { // is a '('
@@ -558,6 +574,10 @@ recache:
             diagError("macro names must be identifiers", groupPart->directiveTok);
             return;
         }
+        if (static_pointer_cast<WordToken>((*cachedLine)[0])->name == "defined") {
+            diagError("'define' cannot use as a macro name", (*cachedLine)[0]);
+            return;
+        }
         bool isAFunctionLikeMacro = cachedLine->size() >= 2 && (*cachedLine)[1]->is('(');
         MacroDefinePtr macroDef = make_shared<MacroDefine>();
         macroDef->isFunctionLike = isAFunctionLikeMacro;
@@ -711,6 +731,11 @@ recache:
         if (!evaledToks)  return;
         PreprocessorASTBuilder ast(evaledToks);
         ExpressionPtr astRoot = ast.constantExpression();
+        if (!ast.success() || !astRoot) {
+            diagError("conditional expression is invalid.", groupPart->directiveTok);
+            addNewCondition(0);
+            return;
+        }
         astRoot->eval();
         cout << Console::Green("processIf()  ");
         if (astRoot->IsCalculated())
@@ -755,6 +780,11 @@ recache:
         if ( !evaledToks )  return;
         PreprocessorASTBuilder ast(evaledToks);
         ExpressionPtr astRoot = ast.constantExpression();
+        if (!ast.success() || !astRoot) {
+            diagError("conditional expression is invalid.", groupPart->directiveTok);
+            addNewCondition(0);
+            return;
+        }
         astRoot->eval();
         cout << Console::Green("processIf()  ");
         if (astRoot->IsCalculated())

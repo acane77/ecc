@@ -37,11 +37,13 @@ namespace Miyuki::Parse {
 
     // store a pack of macro
     class MacroPack {
-        static MacroPack instance;
+        static MacroPack* instance;
     public:
         unordered_map<string, MacroDefinePtr> macros;
 
-        static MacroPack &getInstance() { return instance; }
+        MacroPack() { instance = this; }
+
+        static MacroPack* &getInstance() { return instance; }
         MacroDefinePtr getMacroDef(string name, bool isFunctionLike) { // FIXME: remove? maybe useless
             auto it = macros.find(name);
             if (it != macros.end() && it->second->isFunctionLike == isFunctionLike) return it->second;
