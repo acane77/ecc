@@ -282,6 +282,18 @@ namespace Miyuki::Parse {
                         // repplace function macro
                         replaceCount += macro->replace(*seqNew);
                     }
+                    // if this is a defined operator (non-bracket format)
+                    else if (tokW->name == "defined"
+                        &&  i != original->size() - 1   // has next item
+                        && (*original)[i + 1]->is(Tag::Identifier)) {
+                        FunctionLikeMacroPtr macro = make_shared<FunctionLikeMacro>(macroDef);
+                        macro->macroName = tokW;
+                        TokenSequencePtr param = make_shared<TokenSequence>();
+                        param->push_back((*original)[++i]);
+                        macro->params.push_back(param);
+                        // replace define operator
+                        replaceCount += macro->replace(*seqNew);
+                    }
                     // if this macro is used like a varible
                     else ; // do nothing
                 }
