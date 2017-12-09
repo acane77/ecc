@@ -853,7 +853,10 @@ recache:
     void PreprocessorParser::finish() {
         // check if all #if or #ifdef are closed
         if (condHierarchy.size()) {
-            diagError("expected {0} more #endif at the end"_format(condHierarchy.size()), make_shared<Token>(Tag::EndOfFile));
+            // travel all unterminated #if or #ifdef directive
+            for (PreprocConditionPtr cond : condHierarchy) {
+                diagError("unterminated #{0}"_format(cond->tok->toSourceLiteral()), cond->tok);
+            }
         }
     }
 }
