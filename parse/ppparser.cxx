@@ -520,9 +520,12 @@ recache:
             }
             else if (kind == GroupPart::If) {
                 processIf();
+                evaledToks = nullptr;  // for if and endif, evaledTok is only for evaluating expression (provide
+                                       // tokens to lexer, so set it to zero to ensure it will not print to source
             }
             else if (kind == GroupPart::Elif) {
                 processElif();
+                evaledToks = nullptr;
             }
             else if (kind == GroupPart::Pragma) {
                 processPragma();
@@ -737,7 +740,19 @@ recache:
             return;
         }
         if (condHierarchy.size() == 0) {
-            diagError("#else without #if", groupPart->directiveTok);
+            diagError("#elif without #if", groupPart->directiveTok);
+            return;
+        }
+        if (getCondition()) {
+            // if condition is true, negative the condition
+            if (condHierarchy.back()->parentIsTrue) {
+                negateCondition();
+            }
+            return;
+        }
+        // if condition is false and used to be true, it also be false
+        //   for this situation: #if 0 ... [#elif 1] ... [#elif 0] ... [#elif 1 <this>] ... #endif
+        else if (condHierarchy.back()->_conditionUsedToBeTrue) {
             return;
         }
 
@@ -752,7 +767,10 @@ recache:
             addNewCondition(0);
             return;
         }
+        // set flag to allow && and || eval
+        Symbol::isPreprocessorSymbol = true;
         astRoot->eval();
+        Symbol::isPreprocessorSymbol = false;
         cout << Console::Green("processIf()  ");
         if (astRoot->IsCalculated())
             cout << "expression is calculated, value is " << astRoot->getCalculatedToken()->toInt() << endl;
@@ -801,7 +819,10 @@ recache:
             addNewCondition(0);
             return;
         }
+        // set flag to allow && and || eval
+        Symbol::isPreprocessorSymbol = true;
         astRoot->eval();
+        Symbol::isPreprocessorSymbol = false;
         cout << Console::Green("processIf()  ");
         if (astRoot->IsCalculated())
             cout << "expression is calculated, value is " << astRoot->getCalculatedToken()->toInt() << endl;

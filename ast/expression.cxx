@@ -4,7 +4,7 @@ namespace Miyuki::AST {
 
 #define EVAL_EXPRESSION(siblingLevel, nextLevel, op) \
     /* if this symbol has already been calculated */\
-    if (IsCalculated()) return;\
+    if (IsCalculated()) return; \
     if (nextLevel) nextLevel->eval(); /* if next level is exist */ \
     /*  if no same level, directly return */\
     if (!siblingLevel) {\
@@ -231,14 +231,14 @@ namespace Miyuki::AST {
         // if any token is float
         if ( ( tok2->is(Tag::Floating) && ( tok1->is(Tag::Number) || tok1->is(Tag::Character) ) ) ||
                 ( tok1->is(Tag::Floating) && ( tok2->is(Tag::Number) || tok2->is(Tag::Character) ) ) ) {
-            if ( op == '*' || op == '/' || op == '+' || op == '-' || op == ',' || op == '>' || op == '<' || op == Tag::GreaterThanEqual || op == Tag::LessThanEqual || op == Tag::Equal || op == Tag::NotEqual)
+            if ( op == '*' || op == '/' || op == '+' || op == '-' || op == '>' || op == '<' || op == Tag::GreaterThanEqual || op == Tag::LessThanEqual || op == Tag::Equal || op == Tag::NotEqual)
                 return true;
             else if ( calculateRelationship && ( op == Tag::And || op == Tag::Or ) )
                 return true;
         }
         // if any token is integer
         else if ( (tok1->is(Tag::Integer) || tok1->is(Tag::Character) ) && ( tok2->is(Tag::Integer) || tok2->is(Tag::Character) ) ) {
-            if ( op == '*' || op == '/' || op == '+' || op == '-' || op == '%' || op == Tag::LeftShift || op == Tag::RightShift || op == ',' || op == '>' || op == '<' || op == Tag::GreaterThanEqual || op == Tag::LessThanEqual || op == Tag::Equal || op == Tag::NotEqual)
+            if ( op == '*' || op == '/' || op == '+' || op == '-' || op == '%' || op == Tag::LeftShift || op == Tag::RightShift || op == '>' || op == '<' || op == Tag::GreaterThanEqual || op == Tag::LessThanEqual || op == Tag::Equal || op == Tag::NotEqual)
                 return true;
             else if ( calculateRelationship && ( op == Tag::And || op == Tag::Or ) )
                 return true;
@@ -283,7 +283,6 @@ namespace Miyuki::AST {
             case '&': return a & b;
             case '|': return a | b;
             case '^': return a ^ b;
-            case ',': return b;
 
             // the following is for preprocessing only
             case Tag::And: return a && b;

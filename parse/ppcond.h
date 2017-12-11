@@ -16,6 +16,7 @@ namespace Miyuki::Parse {
     public:
 
         bool _condition;
+        bool _conditionUsedToBeTrue;
         TokenPtr tok;
         bool parentIsTrue;
 
@@ -30,7 +31,7 @@ namespace Miyuki::Parse {
         }
 
         virtual bool isTrue() { return _condition; }
-        void set(bool b) { _condition = b; }
+        void set(bool b) { _condition = b; _conditionUsedToBeTrue = _conditionUsedToBeTrue || b; }
 
     };
 

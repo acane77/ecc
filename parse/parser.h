@@ -1,12 +1,12 @@
 #ifndef _MIYUKI_PARSER_H
 #define _MIYUKI_PARSER_H
 
-#include "parse/ifparser.h"
+#include "ast/astbuilder.h"
 #include "parse/ppparser.h"
 
 namespace Miyuki::Parse {
 
-    class Parser : public IParser {
+    class Parser : public AST::ASTBuilder {
     private:
         // preprocessor: we get token from it
         PreprocessorPtr M_proc;
