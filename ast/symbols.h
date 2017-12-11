@@ -36,9 +36,17 @@ namespace Miyuki::AST {
         enum Kind {
             SYMBOL = 0,
 
+            // expression
             Expression, commaExpression, typeInfoExpression,
             AssignmentExpression, LogicalOrExpression, ConditionalExpression, LogicalAndExpression, Arith, UNARY, LogicalNot, CastExpression,
-            postfixExpression, StructAccess, ArrayAccess, FunctionCall, ArgumentExpressionList, AnonymousArray, PrimaryExpression
+            postfixExpression, StructAccess, ArrayAccess, FunctionCall, ArgumentExpressionList, AnonymousArray, PrimaryExpression,
+
+            // declaration
+            declaration, declarationSpecifier, storageClassSpecifier, typeSpecifier, typeQualifier, functionSpecifier, alignmentSpecifier,
+            structOrUninSpecifier, structDeclarationList, structDeclaration, structDeclaratorList, structDeclarator, enumSpecifier, enumerator,
+            declarator, pointer_decl, directDeclarator, parameterTypeList, parameter, parameterDecleartion, parameterList, abstractDeclarator, 
+            typeName, directAbstractDeclarator, init, initList, designation, designator, initDeclr
+
         };
 
         virtual int getKind() { return Kind::SYMBOL; }

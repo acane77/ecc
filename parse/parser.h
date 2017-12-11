@@ -12,7 +12,7 @@ namespace Miyuki::Parse {
         PreprocessorPtr M_proc;
 
         // generated AST
-        TokenPtr        M_ast = nullptr;
+        AST::SymbolPtr  M_ast = nullptr;
 
         // get next token
         //    get token from preprocessor

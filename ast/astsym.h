@@ -2,5 +2,6 @@
 
 #include "symbols.h"
 #include "expression.h"
+#include "declaration.h"
 
 #endif
