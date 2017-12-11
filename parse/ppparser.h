@@ -197,19 +197,7 @@ namespace Miyuki::Parse {
         void processTextline();
         void processInclude();
 
-        // finishing work
-        void finish();
-
-    public:
-        explicit PreprocessorParser(const char * path) : M_pplex(make_shared<PreprocessorLexer>()), M_imlex(make_shared<IntermediateLexer>()) {
-            M_pplex->openFile(path);
-            M_lex = M_pplex;
-            registerObserver();
-        }
-
-        void testLexer();
-        void parse() final;
-
+    private:
         // get group-part kind from opTok
         // return value: true if is a valid group part,
         //               false if invalid
@@ -232,7 +220,34 @@ namespace Miyuki::Parse {
         //   convert PPLiterial to corresponding token
         void convertToken();
 
+    public:
+        explicit PreprocessorParser(const char * path) : M_pplex(make_shared<PreprocessorLexer>()), M_imlex(make_shared<IntermediateLexer>()) {
+            M_pplex->openFile(path);
+            M_lex = M_pplex;
+            registerObserver();
+        }
+
+        void testLexer();
+        void parse() final;
+
+        // return tokens to parser
+        TokenPtr nextToken();
+
+        // initial parser in order to get token.
+        void prepareGetToken();
+
+        // finishing work
+        void finish();
+
+        // get preprocessor lexer
+        LexerPtr getPreprocessorLexer() { return M_lex; }
+
     };
+
+	DEFINE_SHARED_PTR(PreprocessorParser);
+
+	typedef PreprocessorParser Preprocessor;
+	typedef PreprocessorParserPtr PreprocessorPtr;
 
 }
 

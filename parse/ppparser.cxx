@@ -859,6 +859,32 @@ recache:
             }
         }
     }
+
+    void PreprocessorParser::prepareGetToken() {
+        Lex::Token::flread = M_pplex->getSourceManager();
+        evalCachedLine();
+        if (evaledToks && evaledToks->size())
+            evaledToksIter = evaledToks->begin();
+    }
+
+    TokenPtr PreprocessorParser::nextToken() {
+rescan:
+        // if reach the end
+        if (!evaledToks || evaledToks->size() == 0)
+            return make_shared<Token>(Tag::EndOfFile);
+
+        // if this line does not reach the end
+        if (evaledToksIter != evaledToks->end()) {
+            // return the token'
+            return *(evaledToksIter++);
+        }
+        // else reach end
+        evalCachedLine();
+        if (evaledToks && evaledToks->size())
+            evaledToksIter = evaledToks->begin();
+        goto rescan;
+        assert( false && "you shouldn't go here." );
+    }
 }
 
 
