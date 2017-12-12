@@ -604,6 +604,11 @@ recache:
         bool paramListClosed = false;
         if (isAFunctionLikeMacro) {
             int i = 2;
+            // if no parameter
+            currTok();
+            if (tok->is(')'))
+                goto parse_replacement_list;
+
             // parse paramter list
             for ( ; i < cachedLine->size(); i++ ) {
                 currTok();
@@ -639,6 +644,7 @@ recache:
                 diagError("')' required after {0} token"_format(tok->toSourceLiteral()), tok);
                 return;
             }
+parse_replacement_list:
             // parse replacement-list
             for ( i++ ; i < cachedLine->size(); i++ ) {
                 currTok();

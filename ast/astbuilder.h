@@ -36,6 +36,37 @@ namespace Miyuki::AST {
         AssignmentExpressionPtr  assignmentExpression();
         ArgumentExpressionListPtr argumentExpressionList();
 
+        // statements  (ref A.2.2)
+        DeclarationPtr           declaration();
+        DeclarationSpecifierPtr  declarationSpecifiers();
+        InitDeclaratorListPtr    initDeclaratorList();
+        InitDeclaratorPtr        initDeclarator();
+        TypeSpecifierPtr         typeSpecifier();
+        StructOrUnionSpecifierPtr structOrUnionSpecifier();
+        EnumSpecifierPtr         enumSpecifier();
+        StructDeclarationListPtr structDeclarationList();
+        StructDeclarationPtr     structDeclaration();
+        SpecifierAndQualifierListPtr specifierQualifierList();
+        StructDeclaratorListPtr  structDeclaratorList();
+        StructDeclaratorPtr      structDeclarator();
+        EnumeratorListPtr        enumeratorList();
+        EnumeratorPtr            enumerator();
+        DeclaratorPtr            declarator();
+        DirectDeclaratorPtr      directDeclarator();
+        PointerDeclPtr           pointerDecl();
+        TypeQualifierListPtr     typeQualifierList();
+        ParameterTypeListPtr     parameterTypeList();
+        ParameterListPtr         parameterList();
+        ParameterDecleartionPtr  parameterDecleartion();
+        WordTokenListPtr         identifierList();
+        TypeNamePtr              typeName();
+        AbstractDeclaratorPtr    abstractDeclarator();
+        DirectAbstractDeclaratorPtr directAbstractDeclarator();
+        InitializerPtr           initializer();
+        InitializerListPtr       initializerList();
+        DesignationPtr           designation();
+        DesignatorListPtr        designatorList();
+        DesignatorPtr            designator();
     };
 
 }

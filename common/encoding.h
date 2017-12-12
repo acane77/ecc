@@ -21,6 +21,7 @@ namespace Miyuki::Common {
         uint32_t getEncoding() { return encoding; }
         const char * getEncodingString() { return encodingString; }
         void setEncoding(uint32_t encoding) {
+            Encoding::encoding = encoding;
             if (encoding == U) encodingString = "U";
             else if (encoding == u) encodingString = "u";
             else if (encoding == u8) encodingString = "u8";

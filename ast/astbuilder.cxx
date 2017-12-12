@@ -12,7 +12,7 @@ namespace Miyuki::AST {
         SKIP_TO_SEMI_AND_END_THIS_SYMBOL\
     } else next(); }
 
-    // expression
+    ////////////////////////    expressions   /////////////////////////////
 
     ConditionalExpressionPtr ASTBuilder::constantExpression() {
         // constant-expression:  conditional-expression
@@ -390,6 +390,11 @@ this_is_a_primary_expression:
         }
         return ret;
         // skip until , or ) or ; in assi
+    }
+
+    ////////////////////////    statements   /////////////////////////////
+    DeclarationPtr Miyuki::AST::ASTBuilder::declaration() {
+        
     }
 }
 

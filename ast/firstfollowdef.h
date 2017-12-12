@@ -4,7 +4,7 @@
 #define ISTAG(x)      look->is(Tag:: x)
 #define LIS(x)        look->is(x)
 
-// expression
+////////////////////////   expression   //////////////////////////////
 // FIRST(primary-expression)={ identifier , constant , string-literal , ( ,  }
 #define FIRST_PRIMARY_EXPRESSION() \
     ( ISTAG(Identifier) || ISTAG(Constant) || ISTAG(StringLiteral) || LIS('(') )
@@ -34,8 +34,6 @@
 // FOLLOW(conditional-expression)=            {$ , , , : , ] , ) ,  }
 #define FOLLOW_CONDITIONAL_EXPRESSION() \
     ( FOLLOW_CONSTANT_EXPRESSION() || FOLLOW_EXPRESSION() )
-
-
 
 // FOLLOW(logical-OR-expression)=             {$ , , , : , ] , ) , ? , || ,  }
 #define FOLLOW_LOGICAL_OR_EXPRESSION() \
@@ -76,8 +74,6 @@
 // FOLLOW(cast-expression)= {AssignOperator , $ , , , : , ] , ) , ? , || , && , | , ^ , & , == , != , < , > , <= , >= , << , >> , + , - , * , / , % ,  }
 #define FOLLOW_CAST_EXPRESSION() FOLLOW_UNARY_EXPRESSION()
 
-
-
 // FOLLOW(argument-expression-list)={, , ) ,  }
 // TODO: Consider if this is a part of FOLLOW(expression)
 #define FOLLOW_ARGUMENT_EXPRESSION_LIST() \
@@ -85,5 +81,25 @@
 
 // FOLLOW(unary-operator)={identifier , constant , string-literal , ( , ++ , -- , & , * , + , - , ~ , ! , sizeof ,  }
 #define FOLLOW_UNARY_OPERATOR() FIRST_EXPRESSION()
+
+////////////////////////   statements   //////////////////////////////
+
+#define FIRST_DECLARATION FIRST_DECLARATION_SPECIFIERS
+
+#define FIRST_DECLARATION_SPECIFIERS() \
+    ( FIRST_STORAGE_CLASS_SPECIFIER() || FIRST_TYPE_SPECIFIER() || FIRST_TYPE_QUALIFIER() || FIRST_FUNCTION_SPECIFIER() )
+
+#define FIRST_STORAGE_CLASS_SPECIFIER() \
+    ( ISTAG(Typedef) || ISTAG(Extern) || ISTAG(Static) || ISTAG(KThread_local) || ISTAG(Auto) || ISTAG(Register) )
+
+#define FIRST_TYPE_SPECIFIER() \
+    ( ISTAG(Void) || ISTAG(Char) || ISTAG(Short) || ISTAG(Int) || ISTAG(Long) || ISTAG(Float) || ISTAG(Double) || ISTAG(Signed) || \
+    	ISTAG(Unsigned) || ISTAG(KBool) || ISTAG(KComplex) )
+
+#define FIRST_TYPE_QUALIFIER() \
+    ( ISTAG(Const) || ISTAG(Restrict) || ISTAG(Volatile) || ISTAG(KAtomic) )
+
+#define FIRST_FUNCTION_SPECIFIER() \
+    ( ISTAG(Inline) )
 
 #endif
