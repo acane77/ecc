@@ -14,11 +14,10 @@ namespace Miyuki::AST {
     using namespace Lex;
 
 // define a list of some type
-#define DEFINE_LIST(type) typedef deque<type> type##List; typedef shared_ptr<type##List> type##ListPtr;
+#define DEFINE_LIST(type) typedef deque<type##Ptr> type##List; typedef shared_ptr<type##List> type##ListPtr;
 
     DEFINE_SHARED_PTR(IDeclaration)
     DEFINE_SHARED_PTR(Declaration)
-    DEFINE_SHARED_PTR(DeclarationSpecifiers)
     DEFINE_SHARED_PTR(InitDeclarator)
     DEFINE_LIST(InitDeclarator)
     DEFINE_SHARED_PTR(DeclarationSpecifier)
@@ -62,10 +61,10 @@ namespace Miyuki::AST {
 
     class Declaration : public IDeclaration {
     public:
-        DeclarationSpecifiersPtr decSpec = nullptr;
+        DeclarationSpecifierPtr decSpec = nullptr;
         InitDeclaratorListPtr    initDeclList = nullptr;
 
-        Declaration(const DeclarationSpecifiersPtr &decSpec, const InitDeclaratorListPtr &initDeclList);
+        Declaration(const DeclarationSpecifierPtr &decSpec, const InitDeclaratorListPtr &initDeclList);
 
         // we do not support static_assert
         int getKind() override { return Kind::declaration; }
@@ -168,7 +167,7 @@ namespace Miyuki::AST {
         void gen() override;
     };
 
-    class EnumSpecifier : public IDeclaration {
+    class EnumSpecifier : public TypeSpecifier {
     public:
         TokenPtr id = nullptr;
         EnumeratorListPtr enumList = nullptr;
@@ -368,10 +367,10 @@ namespace Miyuki::AST {
 
     class InitDeclarator : public IDeclaration {
     public:
-        DesignatorPtr desOr = nullptr;
+        DeclaratorPtr desOr = nullptr;
         InitializerPtr init = nullptr;
 
-        explicit InitDeclarator(const DesignatorPtr &desOr, const InitializerPtr &init = nullptr);
+        explicit InitDeclarator(const DeclaratorPtr &desOr, const InitializerPtr &init = nullptr);
 
         virtual int getKind() { return Kind::initDeclr; }
         void gen() override;

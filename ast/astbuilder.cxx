@@ -11,6 +11,7 @@ namespace Miyuki::AST {
         diagError(#x " expected. at {1} line: {0}"_format( __LINE__ , __FUNCTION__ ), look);\
         SKIP_TO_SEMI_AND_END_THIS_SYMBOL\
     } else next(); }
+#define REPORT_ERROR(msg) { diagError(msg, look); SKIP_TO_SEMI_AND_END_THIS_SYMBOL; }
 
     ////////////////////////    expressions   /////////////////////////////
 
@@ -394,7 +395,226 @@ this_is_a_primary_expression:
 
     ////////////////////////    statements   /////////////////////////////
     DeclarationPtr Miyuki::AST::ASTBuilder::declaration() {
-        
+        /*declaration:
+            declaration-specifiers init-declarator-listopt ;
+            static_assert-declaration (not implemented)*/
+        if (FIRST_DECLARATION()) {
+            DeclarationSpecifierPtr spec = declarationSpecifiers();
+            InitDeclaratorListPtr initDeclList = nullptr;
+            if (look->isNot(';'))
+                initDeclList = initDeclaratorList();
+            match(';');
+            return make_shared<Declaration>(spec, initDeclList);
+            //return nullptr;
+        }
+        else diagError("invalid declaration.", look);
+    }
+
+    DeclarationSpecifierPtr Miyuki::AST::ASTBuilder::declarationSpecifiers() {
+        /*
+        declaration-specifiers:
+            storage-class-specifier declaration-specifiersopt
+            type-specifier declaration-specifiersopt
+            type-qualifier declaration-specifiersopt
+            function-specifier declaration-specifiersopt
+            alignment-specifier declaration-specifiersopt (unimplemented)
+        */
+        DeclarationSpecifierPtr declSpec = nullptr;
+        do {
+            SpecifierAndQualifierPtr spec;
+            if (FIRST_STORAGE_CLASS_SPECIFIER()) {
+                spec = make_shared<StorageClassSpecifier>(look);  next();
+            }
+            else if (FIRST_TYPE_QUALIFIER()) {
+                spec = make_shared<TypeQualifier>(look); next();
+            }
+            else if (FIRST_TYPE_SPECIFIER()) {
+                spec = typeSpecifier();
+            }
+            else if (FIRST_FUNCTION_SPECIFIER()) {
+                spec = make_shared<FunctionSpecifier>(look); next();
+            }
+            else REPORT_ERROR("invalid declaration-specifier.")
+
+            declSpec = make_shared<DeclarationSpecifier>(spec, declSpec);
+        }
+        while (FIRST_DECLARATION_SPECIFIERS());
+        return declSpec;
+    }
+
+    InitDeclaratorListPtr Miyuki::AST::ASTBuilder::initDeclaratorList() {
+        /*
+        init-declarator-list:
+            init-declarator
+            init-declarator-list , init-declarator*/
+        InitDeclaratorListPtr lst = make_shared<InitDeclaratorList>();
+        do {
+            if (FIRST_INIT_DECLARATOR()) {
+                lst->push_back(initDeclarator());
+            }
+            else REPORT_ERROR("invalid declaration-specifier.")
+        } while (look->is(',') && next());
+        return lst;
+    }
+
+    InitDeclaratorPtr Miyuki::AST::ASTBuilder::initDeclarator() {
+        /*
+        init-declarator:
+            declarator
+            declarator = initializer*/
+        // already judegd
+        DeclaratorPtr decr = declarator();
+        InitializerPtr init = nullptr;
+        if (look->is('=')) {
+            next();
+            init = initializer();
+        }
+        return make_shared<InitDeclarator>(decr, init);
+    }
+
+    InitializerPtr Miyuki::AST::ASTBuilder::initializer() {
+        /*
+        initializer:
+            assignment-expression
+            { initializer-list }
+            { initializer-list , }*/
+        if (F_ASSIGNMENT_OPERATOR()) {
+            return make_shared<Initializer>(assignmentExpression());
+        }
+        if (look->is('{')) {
+            next(); 
+            InitializerListPtr initList = initializerList();
+            if (look->is(',')) next();
+            match('}');
+            return make_shared<Initializer>(initList);
+        }
+        REPORT_ERROR("initalizer should be an expression or an initializer-list");
+    }
+
+    InitializerListPtr Miyuki::AST::ASTBuilder::initializerList() {
+        /*initializer-list:
+            designation(opt) initializer
+            initializer-list , designation(opt) initializer*/
+        if (!FIRST_INITIALIZER_LIST()) {
+            REPORT_ERROR("invalid initializer");
+        }
+        InitializerListPtr initList = nullptr;
+        do {
+            DesignationPtr des = nullptr;
+            if (FIRST_DESIGNATION()) { des = designation(); }
+            initList = make_shared<InitializerList>(initializer(), des, initList);
+            if (look->is(',')) {
+                next();  // look ahead 2 tokens, because of comma
+                if (look->is('}')) {
+                    retract();
+                    break;
+                }
+                retract();
+            }
+            else break;
+        } while (true);
+        return initList;
+    }
+
+    DesignationPtr Miyuki::AST::ASTBuilder::designation() {
+        /*designation:
+            designator-list = */
+        if (FIRST_DESIGNATOR_LIST()) {
+            DesignatorListPtr desList = designatorList();
+            match('=');
+            return make_shared<Designation>(desList);
+        }
+        REPORT_ERROR("invalid designation");
+    }
+
+    DesignatorListPtr Miyuki::AST::ASTBuilder::designatorList() {
+        /*designator-list:
+            designator
+            designator-list designator*/
+        if (!FIRST_DESIGNATOR()) {
+            REPORT_ERROR("invalid designator");
+        }
+        DesignatorListPtr desList = make_shared<DesignatorList>();
+        do {
+            desList->push_back(designator());
+        } while (FIRST_DESIGNATOR());
+        return desList;
+    }
+
+    DesignatorPtr Miyuki::AST::ASTBuilder::designator() {
+        /*designator:
+             [ constant-expression ]
+             . identifier*/
+        if (look->is('[')) {
+            next();
+            return make_shared<Designator>(constantExpression());
+        }
+        else if (look->is('.')) {
+            next(); 
+            WordTokenPtr id = static_pointer_cast<WordToken>( look ); next();
+            return make_shared<Designator>(id);
+        }
+        assert(false && "expected '[' or '.'");
+    }
+
+    TypeSpecifierPtr Miyuki::AST::ASTBuilder::typeSpecifier() {
+        /*
+        type-specifier:
+            types
+            atomic-type-specifier
+            struct-or-union-specifier
+            enum-specifier
+            typedef-name -> id*/
+        if (FIRST_STRUCT_OR_UNION_SPECIFIER()) {
+            return structOrUnionSpecifier();
+        }
+        if (FIRST_ENUM_SPECIFIER()) {
+            return enumSpecifier();
+        }
+        TypeSpecifierPtr typeSpec = make_shared<TypeSpecifier>(look);
+        next();
+        return typeSpec;
+    }
+
+    StructOrUnionSpecifierPtr Miyuki::AST::ASTBuilder::structOrUnionSpecifier() {
+        /*struct-or-union-specifier:
+            struct-or-union identifier(opt) { struct-declaration-list }
+            struct-or-union identifier*/
+        // NOTE: CHECK BEFORE CALL THIS FUNCTION
+        TokenPtr keyword = look;
+        TokenPtr id = nullptr;
+        next();
+        if (look->is(Tag::Identifier)) {
+            id = look; next();
+        }
+        if (look->isNot('{')) {
+            return make_shared<StructOrUnionSpecifier>(keyword, id, nullptr);
+        }
+        next(); //eat '{'
+        StructDeclarationListPtr structDeclList = structDeclarationList();
+        match('}');
+        return make_shared<StructOrUnionSpecifier>(keyword, id, structDeclList);
+    }
+
+    EnumSpecifierPtr Miyuki::AST::ASTBuilder::enumSpecifier() {
+        /*
+        enum-specifier:
+            enum identifier(opt) { enumerator-list }
+            enum identifier(opt) { enumerator-list , }
+            enum identifier*/
+        // NOTE: CHECK BEFORE CALL THIS FUNCTION
+        TokenPtr id = nullptr;
+        next();
+        if (look->is(Tag::Identifier)) {
+            id = look; next();
+        }
+        if (look->isNot('{')) {
+            return make_shared<EnumSpecifier>(id, nullptr);
+        }
+        next(); //eat '{'
+        EnumeratorListPtr enumList = enumeratorList();
+        match('}');
+        return make_shared<EnumSpecifier>(id, enumList);
     }
 }
 

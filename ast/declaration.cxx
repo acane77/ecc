@@ -2,7 +2,7 @@
 
 namespace Miyuki::AST {
 
-    Declaration::Declaration(const DeclarationSpecifiersPtr &decSpec, const InitDeclaratorListPtr &initDeclList)
+    Declaration::Declaration(const DeclarationSpecifierPtr &decSpec, const InitDeclaratorListPtr &initDeclList)
             : decSpec(decSpec), initDeclList(initDeclList) {}
 
     DeclarationSpecifier::DeclarationSpecifier(const SpecifierAndQualifierPtr &spec,
@@ -31,7 +31,7 @@ namespace Miyuki::AST {
 
     StructDeclarator::StructDeclarator(const DeclaratorPtr &decr, const ConstantExpressionPtr &constExpr) : decr(decr), constExpr(  constExpr) {}
 
-    EnumSpecifier::EnumSpecifier(const TokenPtr &id, const EnumeratorListPtr &enumList) : id(id), enumList(enumList) {}
+    EnumSpecifier::EnumSpecifier(const TokenPtr &id, const EnumeratorListPtr &enumList) : id(id), enumList(enumList), TypeSpecifier(EnumSpecifierPtr(this)) {}
 
     Enumerator::Enumerator(const TokenPtr &enumConstant, const ConstantExpressionPtr &expr) : enumConstant(enumConstant), expr(expr) {}
 
@@ -105,5 +105,5 @@ namespace Miyuki::AST {
 
     Designator::Designator(const WordTokenPtr &id) : id(id) {}
 
-    InitDeclarator::InitDeclarator(const DesignatorPtr &desOr, const InitializerPtr &init) : desOr(desOr), init(init) {}
+    InitDeclarator::InitDeclarator(const DeclaratorPtr &desOr, const InitializerPtr &init) : desOr(desOr), init(init) {}
 }
