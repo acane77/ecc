@@ -55,7 +55,7 @@ namespace Miyuki::AST {
     DirectDeclarator::DirectDeclarator(const DirectDeclaratorPtr &directDecl, const TypeQualifierListPtr &typeQualList)
             : directDecl(directDecl), typeQualList(typeQualList) { hasPointer = true; productionID = 5; }
 
-    DirectDeclarator::DirectDeclarator(const DirectDeclaratorPtr &directDecl, const WordTokenPtr &idList) : directDecl( directDecl), idList(idList) { productionID = 7; }
+    DirectDeclarator::DirectDeclarator(const DirectDeclaratorPtr &directDecl, const WordTokenListPtr &idList) : directDecl( directDecl), idList(idList) { productionID = 7; }
 
     DirectDeclarator::DirectDeclarator(const DirectDeclaratorPtr &directDecl, const ParameterTypeListPtr &paramList)
             : directDecl(directDecl), paramList(paramList) { productionID = 6; }

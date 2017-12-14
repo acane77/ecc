@@ -11,6 +11,10 @@ namespace Miyuki::AST {
         diagError(#x " expected. at {1} line: {0}"_format( __LINE__ , __FUNCTION__ ), look);\
         SKIP_TO_SEMI_AND_END_THIS_SYMBOL\
     } else next(); }
+#define matchTag(x) { if ( look->isNot(Tag::x) ) {\
+        diagError("'" #x "' expected. at {1} line: {0}"_format( __LINE__ , __FUNCTION__ ), look);\
+        SKIP_TO_SEMI_AND_END_THIS_SYMBOL\
+    } else next(); }
 #define REPORT_ERROR(msg) { diagError(msg, look); SKIP_TO_SEMI_AND_END_THIS_SYMBOL; }
 
     ////////////////////////    expressions   /////////////////////////////
@@ -478,7 +482,7 @@ this_is_a_primary_expression:
             assignment-expression
             { initializer-list }
             { initializer-list , }*/
-        if (F_ASSIGNMENT_OPERATOR()) {
+        if (FIRST_EXPRESSION()) {
             return make_shared<Initializer>(assignmentExpression());
         }
         if (look->is('{')) {
@@ -576,11 +580,11 @@ this_is_a_primary_expression:
         return typeSpec;
     }
 
+    // NOTE: CHECK BEFORE CALL THIS FUNCTION
     StructOrUnionSpecifierPtr Miyuki::AST::ASTBuilder::structOrUnionSpecifier() {
         /*struct-or-union-specifier:
             struct-or-union identifier(opt) { struct-declaration-list }
             struct-or-union identifier*/
-        // NOTE: CHECK BEFORE CALL THIS FUNCTION
         TokenPtr keyword = look;
         TokenPtr id = nullptr;
         next();
@@ -588,6 +592,9 @@ this_is_a_primary_expression:
             id = look; next();
         }
         if (look->isNot('{')) {
+            if (id == nullptr) {
+                REPORT_ERROR("{0} name expected"_format(keyword->toSourceLiteral()));
+            }
             return make_shared<StructOrUnionSpecifier>(keyword, id, nullptr);
         }
         next(); //eat '{'
@@ -596,19 +603,22 @@ this_is_a_primary_expression:
         return make_shared<StructOrUnionSpecifier>(keyword, id, structDeclList);
     }
 
+    // NOTE: CHECK BEFORE CALL THIS FUNCTION
     EnumSpecifierPtr Miyuki::AST::ASTBuilder::enumSpecifier() {
         /*
         enum-specifier:
             enum identifier(opt) { enumerator-list }
             enum identifier(opt) { enumerator-list , }
             enum identifier*/
-        // NOTE: CHECK BEFORE CALL THIS FUNCTION
         TokenPtr id = nullptr;
         next();
         if (look->is(Tag::Identifier)) {
             id = look; next();
         }
         if (look->isNot('{')) {
+            if (id == nullptr) {
+                REPORT_ERROR("enum name expected");
+            }
             return make_shared<EnumSpecifier>(id, nullptr);
         }
         next(); //eat '{'
@@ -616,6 +626,488 @@ this_is_a_primary_expression:
         match('}');
         return make_shared<EnumSpecifier>(id, enumList);
     }
+
+    StructDeclarationListPtr Miyuki::AST::ASTBuilder::structDeclarationList() {
+        /*struct-declaration-list:
+            struct-declaration
+            struct-declaration-list struct-declaration*/
+        if (!FIRST_STRUCT_DECLARATION_LIST()) REPORT_ERROR("struct declaration expected.")
+        StructDeclarationListPtr lst = make_shared<StructDeclarationList>();
+        do {
+            lst->push_back(structDeclaration());
+        } while (FIRST_STRUCT_DECLARATION());
+        return lst;
+    }
+
+    // NOTE: CHECK BEFORE CALL THIS FUNCTION
+    StructDeclarationPtr Miyuki::AST::ASTBuilder::structDeclaration() {
+        /*
+        struct-declaration:
+            specifier-qualifier-list struct-declarator-list(opt) ;
+            static_assert-declaration (not implemented)
+        */
+        if (FIRST_SPECIFIER_QUALIFIER_LIST()) {
+            SpecifierAndQualifierListPtr spec = specifierQualifierList();
+            StructDeclaratorListPtr decl = structDeclaratorList();
+            return make_shared<StructDeclaration>(spec, decl);
+        }
+        REPORT_ERROR("need a specifier or qualifier here.");
+    }
+
+    SpecifierAndQualifierListPtr Miyuki::AST::ASTBuilder::specifierQualifierList() {
+        /*specifier-qualifier-list:
+            type-specifier specifier-qualifier-list(opt)
+            type-qualifier specifier-qualifier-list(opt)*/
+        SpecifierAndQualifierListPtr lst = make_shared<SpecifierAndQualifierList>();
+        do {
+            if (FIRST_TYPE_SPECIFIER()) {
+                lst->push_back(typeSpecifier());
+            }
+            else if (FIRST_TYPE_QUALIFIER()) {
+                lst->push_back(make_shared<TypeQualifier>(look));
+                next();
+            }
+            else REPORT_ERROR("type specifier or type specifier expected")
+        } while (FIRST_SPECIFIER_QUALIFIER_LIST());
+        return lst;
+    }
+
+    StructDeclaratorListPtr Miyuki::AST::ASTBuilder::structDeclaratorList() {
+        /*struct-declarator-list:
+            struct-declarator
+            struct-declarator-list , struct-declarator*/
+        StructDeclaratorListPtr lst = make_shared<StructDeclaratorList>();
+        do {
+            if (FIRST_STRUCT_DECLARATOR()) {
+                lst->push_back(structDeclarator());
+            }
+            else REPORT_ERROR("invalid struct-declarator.")
+        } while (look->is(',') && next());
+         return lst;
+    }
+
+    // NOTE: CHECK BEFORE CALL THIS FUNCTION
+    StructDeclaratorPtr Miyuki::AST::ASTBuilder::structDeclarator() {
+        /*struct-declarator:
+            declarator
+            declarator(opt) : constant-expression*/
+        DeclaratorPtr decl = nullptr;
+        if (FIRST_DECLARATOR()) {
+            decl = declarator();
+        }
+        if (look->isNot(':')) {
+            if (decl == nullptr) {
+                REPORT_ERROR("member name expected");
+            }
+            return make_shared<StructDeclarator>(decl, nullptr);
+        }
+        next();
+        return make_shared<StructDeclarator>(decl, constantExpression());
+    }
+
+    EnumeratorListPtr Miyuki::AST::ASTBuilder::enumeratorList() {
+        /*enumerator-list:
+            enumerator
+            enumerator-list , enumerator*/
+        EnumeratorListPtr lst = make_shared<EnumeratorList>();
+        do {
+            if (FIRST_ENUMERATOR()) {
+                lst->push_back(enumerator());
+            }
+            else REPORT_ERROR("expected identifier.")
+        } while (look->is(',') && next());
+        return lst;
+    }
+
+    EnumeratorPtr Miyuki::AST::ASTBuilder::enumerator() {
+        /*enumerator:
+            enumeration-constant
+            enumeration-constant = constant-expression*/
+        TokenPtr enumConst = look;
+        ConstantExpressionPtr constExpr = nullptr;
+        matchTag(Identifier);
+        if (look->is('=')) {
+            next();
+            constExpr = constantExpression();
+        }
+        return make_shared<Enumerator>(look, constExpr);
+    }
+
+    // NOTE: CHECK BEFORE CALL THIS FUNCTION
+    DeclaratorPtr Miyuki::AST::ASTBuilder::declarator() {
+        /*
+        declarator:
+            pointer(opt) direct-declarator
+        */
+        PointerDeclPtr ptrDecl = nullptr;
+        if (FIRST_POINTER()) {
+            ptrDecl = pointerDecl();
+        }
+        return make_shared<Declarator>(ptrDecl, directDeclarator());
+    }
+
+    DirectDeclaratorPtr Miyuki::AST::ASTBuilder::directDeclarator(bool leftBracketHandled) {
+        /*direct-declarator:
+            identifier
+            ( declarator )
+            direct-declarator [ type-qualifier-list(opt) assignment-expressionopt ]
+            direct-declarator [ static type-qualifier-list(opt) assignment-expression ]
+            direct-declarator [ type-qualifier-list static assignment-expression ]
+            direct-declarator [ type-qualifier-list(opt) * ]
+            direct-declarator ( parameter-type-list )
+            direct-declarator ( identifier-list(opt) )
+        */
+        DirectDeclaratorPtr directDecl = nullptr;
+        if (look->is(Tag::Identifier) && !leftBracketHandled) {
+            WordTokenPtr id = static_pointer_cast<WordToken>(look); next();
+            directDecl = make_shared<DirectDeclarator>(id);
+        }
+        else if (look->is('(')) {
+            next();
+            DeclaratorPtr decl = declarator();
+            match(')');
+            directDecl = make_shared<DirectDeclarator>(decl);
+        }
+        else REPORT_ERROR("expect varible or function name")
+
+        while ( look->is('[') || look->is('(') ) {
+            if (look->is('(')) {
+                next();
+                if (FIRST_IDENTIFIER_LIST()) {
+                    // TODO: UNCOMMENT HERE AFTER IMPLEMENTED
+                    // if identifier is typedef name
+                    //if ( getEnvironment()->isTypedefName(look) )
+                    //    goto new_style_paramster_list;
+                    WordTokenListPtr lst = identifierList();
+                    match(')');
+                    directDecl = make_shared<DirectDeclarator>(directDecl, lst);
+                }
+                else if (FIRST_PARAMETER_TYPE_LIST()) {
+new_style_paramster_list:
+                    ParameterTypeListPtr param = parameterTypeList();
+                    match(')');
+                    directDecl = make_shared<DirectDeclarator>(directDecl, param);
+                }
+                match(')');
+            }
+            else if (look->is('[')) {
+                next();
+                bool firstPositionIsStatic = look->is(Tag::Static) && next();
+                bool isStatic = firstPositionIsStatic;
+                bool hasPoiner = false;
+                int productID;
+                TypeQualifierListPtr typeQualList = nullptr;
+                if (FIRST_TYPE_QUALIFIER_LIST()) {
+                    typeQualList = typeQualifierList();
+                }
+                // because FIRST({*}) and FIRST(assignment-expression) both have * in set,
+                // so we must look ahead 2 tokens. 
+                if (look->is('*')) {
+                    next();
+                    if (look->is( ']' )) {
+                        if (firstPositionIsStatic) {
+                            REPORT_ERROR("unexpected static");
+                        }
+                        directDecl = make_shared<DirectDeclarator>(directDecl, typeQualList); //4
+                        continue;
+                    }
+                    retract();
+                }
+                if (look->is(Tag::Static)) {
+                    if (firstPositionIsStatic) {
+                        REPORT_ERROR("unexpected static");
+                    }
+                    isStatic = true;
+                    next();
+                }
+                AssignmentExpressionPtr assignExpr = assignmentExpression();
+                match(']');
+                if (!isStatic) productID = 2;
+                else if (firstPositionIsStatic) productID = 3;
+                else { 
+                    productID = 4;
+                    if (typeQualList == nullptr) {
+                        REPORT_ERROR("expect type-qualifier");
+                    }
+                }
+                directDecl = make_shared<DirectDeclarator>(directDecl, isStatic, assignExpr, typeQualList, productID);
+            }
+        }
+        return directDecl;
+    }
+
+    PointerDeclPtr Miyuki::AST::ASTBuilder::pointerDecl() {
+        /*
+        pointer:
+            * type-qualifier-list(opt)
+            * type-qualifier-list(opt) pointer
+        */
+        assert(look->is('*') && "for a pointer, token must be '*'");
+        PointerDeclPtr ptrDecl = nullptr;
+        do {
+            next();
+            ptrDecl = make_shared<PointerDecl>(typeQualifierList(), ptrDecl);
+        } while (look->is('*'));
+        return ptrDecl;
+    }
+
+    TypeQualifierListPtr Miyuki::AST::ASTBuilder::typeQualifierList() {
+        /*
+        type-qualifier-list:
+            type-qualifier
+            type-qualifier-list type-qualifier
+        */
+        assert(FIRST_TYPE_QUALIFIER_LIST() && "invalid type-qualifier");
+        TypeQualifierListPtr typeQual = make_shared<TypeQualifierList>();
+        do {
+            typeQual->push_back(make_shared<TypeQualifier>(look));
+            next();
+        } while (FIRST_TYPE_QUALIFIER_LIST());
+        return typeQual;
+    }
+
+    ParameterTypeListPtr Miyuki::AST::ASTBuilder::parameterTypeList() {
+        /*
+        parameter-type-list:
+            parameter-list
+            parameter-list , ...
+        */
+        assert(FIRST_PARAMETER_TYPE_LIST() && "please check token before call this function");
+        ParameterListPtr lst = parameterList();
+        bool isParameterVarible = false;
+        if (look->is(',')) {
+            next(); match(Tag::Ellipsis);
+            isParameterVarible = true;
+        }
+        return make_shared<ParameterTypeList>(lst, isParameterVarible);
+    }
+
+    ParameterListPtr Miyuki::AST::ASTBuilder::parameterList() {
+        /*parameter-list:
+            parameter-declaration
+            parameter-list , parameter-declaration*/
+        ParameterDecleartionListPtr lst = make_shared<ParameterDecleartionList>();
+        do {
+            if (FIRST_PARAMETER_DECLARATION()) {
+                // BUG: TEST_TYPEDEF_NAME
+                lst->push_back(parameterDecleartion());
+            }
+            else REPORT_ERROR("expected parameter declaration.")
+        } while (look->is(',') && next());
+        return lst;
+    }
+
+    ParameterDecleartionPtr Miyuki::AST::ASTBuilder::parameterDecleartion() {
+        /*
+        parameter-declaration:
+            declaration-specifiers declarator
+            declaration-specifiers abstract-declarator(opt)
+        */
+        assert(FIRST_PARAMETER_DECLARATION() && "please check token before call this function");
+
+        DeclarationSpecifierPtr spec = declarationSpecifiers();
+        if (FOLLOW_PARAMETER_DECLARATION()) {
+            // no abstract-declarator(opt)
+            return make_shared<ParameterDecleartion>(spec);
+        }
+        IDeclaratorPtr decl = iDeclarator();
+        if (decl->getKind() == Symbol::declarator) {
+            return make_shared<ParameterDecleartion>(spec, static_pointer_cast<Declarator>(decl));
+        }
+        return make_shared<ParameterDecleartion>(spec, static_pointer_cast<AbstractDeclarator>(decl));
+        /*
+        // ABONDANDED LOOP IMPLEMENTATION
+        deque<TokenPtr> S;
+        PointerDeclPtr ptrDecl = nullptr;
+        TypeQualifierListPtr typeQual = nullptr;
+
+        while (FIRST_POINTER() || look->is('(')) {
+            S.push_back(look); next();
+        }
+
+        if (look->is(Tag::Identifier)) {
+            // is an identifier, means it is a direct-declarator
+            DirectDeclaratorPtr dd = make_shared<DirectDeclarator>(look);
+            DeclarationPtr d;
+            next();
+            while (S.size()) {
+                TokenPtr x = S.back();
+                S.pop_back(); // pop a (
+
+                // test pointer
+                ptrDecl = nullptr;
+                x = S.back();
+                
+                deque<TokenPtr> T;
+                if (x->is('*')) {
+                    // while x is tokens in expansion of pointer
+                    while (x->is('*') || x->is(Tag::Const) || x->is(Tag::Restrict) || x->is(Tag::Volatile) || x->is(Tag::KAtomic) ) {
+                        T.push_back(x);
+                        S.pop_back(); x = S.back();
+                    }
+                }
+
+                // TODO: parse <pointer> & <type-qualifier-list>
+                while (T.size()) {
+                    TokenPtr y = T.back();
+                    T.pop_back(); // pop a *
+                    if (y->isNot('*')) REPORT_ERROR("missing pointer")
+                    ptrDecl = nullptr;
+                    do {
+                        TypeQualifierListPtr Q = nullptr;
+                        if (x->is)
+                        // TODO: parse <pointer> & <type-qualifier-list>
+                    } while (x->is('*'));
+                }
+            }
+        }
+        else {
+
+        }*/
+    }
+
+    IDeclaratorPtr Miyuki::AST::ASTBuilder::iDeclarator() {
+        // first read the pointer, and return type related to child nodes.
+        PointerDeclPtr ptrDecl = nullptr;
+        if (FIRST_POINTER()) {
+            ptrDecl = pointerDecl();
+        }
+        IDirectDeclaratorPtr dd = iDirectDeclarator();
+        if (dd->getKind() == Symbol::directDeclarator) {
+            return make_shared<Declarator>(static_pointer_cast<DirectDeclarator>(dd));
+        }
+        else {
+            return make_shared<AbstractDeclarator>(ptrDecl, static_pointer_cast<DirectAbstractDeclarator>(dd));
+        }
+    }
+
+    IDirectDeclaratorPtr Miyuki::AST::ASTBuilder::iDirectDeclarator() {
+        if (look->is(Tag::Identifier)) {
+            // it is an identitifer, reduced by direct-declarator -> identifier
+            return directAbstractDeclarator(true);
+        }
+        if (look->is('(')) {
+            next(); // eat '(', 
+            // do not know what it is, continue (reduce direct-(abstract-)declarator->(abstract-)declarator)
+            // if we do so, there will not be one more iDirectDeclarator
+            if (look->is(Tag::Identifier)) {
+                //if (is typedef-name) { // TODO: UNCOMMENT THIS AFTER IMPLEMENTED
+                //    // reduced by abstract-direct-declarator -> direct-abstract-declarator(opt) ( parameter-type-list(opt) )
+                //    // read 1 more token, so retract
+                //    retract(); return directAbstractDeclarator(true);
+                //}
+                // it is an identitifer, reduced by direct-declarator -> identifier
+            }
+            return iDirectDeclarator();
+        }
+        // other situations of direct-abstract-declarator
+        return directAbstractDeclarator(true);
+    }
+
+    DirectAbstractDeclaratorPtr Miyuki::AST::ASTBuilder::directAbstractDeclarator(bool leftBracketHandled) {
+        /*
+        direct-abstract-declarator:
+         1   ( abstract-declarator ) (handled in iDirectDeclarator())
+         2   direct-abstract-declaratoropt [ type-qualifier-listopt assignment-expressionopt ]
+         3   direct-abstract-declaratoropt [ static type-qualifier-listopt assignment-expression ]
+         4   direct-abstract-declaratoropt [ type-qualifier-list static assignment-expression ]
+         5   direct-abstract-declaratoropt [ * ]
+         6   direct-abstract-declaratoropt ( parameter-type-listopt )*/
+        DirectAbstractDeclaratorPtr dad = nullptr;
+        if (look->is('(') && !leftBracketHandled) {
+            next();
+            AbstractDeclaratorPtr decl = abstractDeclarator();
+            match(')');
+            dad = make_shared<DirectAbstractDeclarator>(decl);
+        }
+        do {
+            if (look->is('(')) {
+                // do not match production 1 because it it handled in iDirectDeclarator()
+                next();
+                ParameterTypeListPtr paramList = parameterTypeList();
+                match(')');
+                dad = make_shared<DirectAbstractDeclarator>(dad, paramList);
+            }
+            else if (look->is('[')) {
+                next();
+
+                if (look->is('*')) {
+                    next();  match(']');
+                    dad = make_shared<DirectAbstractDeclarator>(dad);
+                    continue;
+                }
+
+                bool firstPositionIsStatic = look->is(Tag::Static) && next();
+                bool isStatic = firstPositionIsStatic;
+                int productID;
+                TypeQualifierListPtr typeQualList = nullptr;
+
+                if (FIRST_TYPE_QUALIFIER_LIST()) {
+                    typeQualList = typeQualifierList();
+                }
+
+                if (look->is(Tag::Static)) {
+                    if (firstPositionIsStatic) {
+                        REPORT_ERROR("unexpected static");
+                    }
+                    isStatic = true;
+                    next();
+                }
+                AssignmentExpressionPtr assignExpr = assignmentExpression();
+                match(']');
+                if (!isStatic) productID = 1;
+                else if (firstPositionIsStatic) productID = 2;
+                else {
+                    productID = 3;
+                    if (typeQualList == nullptr) {
+                        REPORT_ERROR("expect type-qualifier");
+                    }
+                }
+                dad = make_shared<DirectAbstractDeclarator>(dad, assignExpr, typeQualList, isStatic, productID);
+            }
+            else assert(false && "is not a direct-abstract-declarator");
+        } while (look->is('(') || look->is('['));
+        return dad;
+    }
+
+    WordTokenListPtr Miyuki::AST::ASTBuilder::identifierList() {
+        /*
+        identifier-list:
+            identifier
+            identifier-list , identifier*/
+        assert(look->is(Tag::Identifier) && "please check token before call this function");
+        WordTokenListPtr lst = make_shared<WordTokenList>();
+        do {
+            lst->push_back(static_pointer_cast<WordToken>(look));
+            next();
+        } while (look->is(Tag::Identifier) && next());
+        return lst;
+    }
+
+    TypeNamePtr Miyuki::AST::ASTBuilder::typeName() {
+        /*
+        type-name:
+            specifier-qualifier-list abstract-declarator(opt)
+        */
+        SpecifierAndQualifierListPtr spec = specifierQualifierList();
+        AbstractDeclaratorPtr adecl = nullptr;
+        if (FIRST_ANSTRACT_DECLARATOR()) {
+            adecl = abstractDeclarator();
+        }
+        return make_shared<TypeName>(spec, adecl);
+    }
+
+    AbstractDeclaratorPtr Miyuki::AST::ASTBuilder::abstractDeclarator() {
+        /*abstract-declarator:
+            pointer
+            pointer(opt direct-abstract-declarator*/
+        PointerDeclPtr ptrDecl = nullptr;
+        if (FIRST_POINTER()) {
+            ptrDecl = pointerDecl();
+        }
+        return make_shared<AbstractDeclarator>(ptrDecl, directAbstractDeclarator());
+    }
+
 }
 
 #undef match

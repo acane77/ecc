@@ -52,7 +52,7 @@ namespace Miyuki::AST {
         EnumeratorListPtr        enumeratorList();
         EnumeratorPtr            enumerator();
         DeclaratorPtr            declarator();
-        DirectDeclaratorPtr      directDeclarator();
+        DirectDeclaratorPtr      directDeclarator(bool leftBracketHandled = false);
         PointerDeclPtr           pointerDecl();
         TypeQualifierListPtr     typeQualifierList();
         ParameterTypeListPtr     parameterTypeList();
@@ -61,12 +61,14 @@ namespace Miyuki::AST {
         WordTokenListPtr         identifierList();
         TypeNamePtr              typeName();
         AbstractDeclaratorPtr    abstractDeclarator();
-        DirectAbstractDeclaratorPtr directAbstractDeclarator();
+        DirectAbstractDeclaratorPtr directAbstractDeclarator(bool leftBracketHandled = false);
         InitializerPtr           initializer();
         InitializerListPtr       initializerList();
         DesignationPtr           designation();
         DesignatorListPtr        designatorList();
         DesignatorPtr            designator();
+        IDeclaratorPtr           iDeclarator();
+        IDirectDeclaratorPtr     iDirectDeclarator();
     };
 
 }

@@ -53,10 +53,22 @@ namespace Miyuki::AST {
     DEFINE_SHARED_PTR(Designation)
     DEFINE_SHARED_PTR(Designator)
     DEFINE_LIST(Designator)
+    DEFINE_SHARED_PTR(IDeclarator)
+    DEFINE_SHARED_PTR(IDirectDeclarator)
 
     class IDeclaration : public Symbol {
     public:
         virtual void gen() { assert(false && "IDeclaration::gen():  unimplemented"); }
+    };
+
+    class IDeclarator : public IDeclaration {
+    public:
+        virtual void gen() { assert(false && "not implemented"); }
+    };
+
+    class IDirectDeclarator : public IDeclaration {
+    public:
+        virtual void gen() { assert(false && "not implemented"); }
     };
 
     class Declaration : public IDeclaration {
@@ -68,7 +80,7 @@ namespace Miyuki::AST {
 
         // we do not support static_assert
         int getKind() override { return Kind::declaration; }
-        void gen() override;
+        void gen() {}
     };
 
     class DeclarationSpecifier : public IDeclaration {
@@ -79,7 +91,7 @@ namespace Miyuki::AST {
         DeclarationSpecifier(const SpecifierAndQualifierPtr &spec, const DeclarationSpecifierPtr &decSpec);
 
         int getKind() override { return Kind::declarationSpecifier; }
-        void gen() override;
+        void gen() {}
     };
 
     class SpecifierAndQualifier : public IDeclaration {
@@ -94,7 +106,7 @@ namespace Miyuki::AST {
         explicit StorageClassSpecifier(const TokenPtr &tok);
 
         virtual int getKind() { return Kind::storageClassSpecifier; }
-        void gen() override;
+        void gen() {}
     };
 
     class TypeSpecifier : public SpecifierAndQualifier {
@@ -120,7 +132,7 @@ namespace Miyuki::AST {
         explicit TypeQualifier(const TokenPtr &tok);
 
         virtual int getKind() { return Kind::typeQualifier; }
-        void gen() override;
+        void gen() {}
     };
 
     class FunctionSpecifier : public SpecifierAndQualifier {
@@ -130,7 +142,7 @@ namespace Miyuki::AST {
         explicit FunctionSpecifier(const TokenPtr &tok);
 
         virtual int getKind() { return Kind::functionSpecifier; }
-        void gen() override;
+        void gen() {}
     };
 
     class StructOrUnionSpecifier : public TypeSpecifier {
@@ -142,7 +154,7 @@ namespace Miyuki::AST {
         StructOrUnionSpecifier(const TokenPtr &structOrUnion, const TokenPtr &id, const StructDeclarationListPtr &declList);
 
         virtual int getKind() { return Kind::structOrUninSpecifier; }
-        void gen() override;
+        void gen() {}
     };
 
     class StructDeclaration: public IDeclaration {
@@ -153,7 +165,7 @@ namespace Miyuki::AST {
         StructDeclaration(const SpecifierAndQualifierListPtr &specList, const StructDeclaratorListPtr &structDecrList);
 
         virtual int getKind() { return Kind::structDeclaration; }
-        void gen() override;
+        void gen() {}
     };
 
     class StructDeclarator : public IDeclaration {
@@ -164,7 +176,7 @@ namespace Miyuki::AST {
         explicit StructDeclarator(const DeclaratorPtr &decr, const ConstantExpressionPtr &constExpr = nullptr);
 
         virtual int getKind() { return Kind::structDeclarator; }
-        void gen() override;
+        void gen() {}
     };
 
     class EnumSpecifier : public TypeSpecifier {
@@ -175,7 +187,7 @@ namespace Miyuki::AST {
         EnumSpecifier(const TokenPtr &id, const EnumeratorListPtr &enumList);
 
         virtual int getKind() { return Kind::enumSpecifier; }
-        void gen() override;
+        void gen() {}
     };
 
     class Enumerator : public IDeclaration {
@@ -186,10 +198,10 @@ namespace Miyuki::AST {
         explicit Enumerator(const TokenPtr &enumConstant, const ConstantExpressionPtr &expr = nullptr);
 
         virtual int getKind() { return Kind::enumerator; }
-        void gen() override;
+        void gen() {}
     };
 
-    class Declarator : public IDeclaration {
+    class Declarator : public IDeclarator {
     public:
         PointerDeclPtr pointer = nullptr;
         DirectDeclaratorPtr directDecl = nullptr;
@@ -199,9 +211,9 @@ namespace Miyuki::AST {
 
 
         virtual int getKind() { return Kind::declarator; }
-        void gen() override;
+        void gen() {}
     };
-
+     
     class PointerDecl : public IDeclaration {
     public:
         TypeQualifierListPtr typeQualList = nullptr;
@@ -211,10 +223,10 @@ namespace Miyuki::AST {
         PointerDecl(const PointerDeclPtr &pointerDecl);
 
         virtual int getKind() { return Kind::pointer_decl; }
-        void gen() override;
+        void gen() {}
     };
 
-    class DirectDeclarator : public IDeclaration {
+    class DirectDeclarator : public IDirectDeclarator {
     public:
         TokenPtr id = nullptr;
         // OR
@@ -225,7 +237,7 @@ namespace Miyuki::AST {
         AssignmentExpressionPtr assignExpr = nullptr;
         bool hasPointer = false;
         ParameterTypeListPtr paramList = nullptr;
-        WordTokenPtr idList = nullptr;
+        WordTokenListPtr idList = nullptr;
         TypeQualifierListPtr typeQualList = nullptr;
 
         // production to be used (ref 6.7.6)
@@ -238,10 +250,10 @@ namespace Miyuki::AST {
                          int productionID = 2);
         DirectDeclarator(const DirectDeclaratorPtr &directDecl, const TypeQualifierListPtr &typeQualList);
         DirectDeclarator(const DirectDeclaratorPtr &directDecl, const ParameterTypeListPtr &paramList);
-        DirectDeclarator(const DirectDeclaratorPtr &directDecl, const WordTokenPtr &idList);
+        DirectDeclarator(const DirectDeclaratorPtr &directDecl, const WordTokenListPtr &idList);
 
         virtual int getKind() { return Kind::directDeclarator; }
-        void gen() override;
+        void gen() {}
     };
 
     class ParameterTypeList : public IDeclaration {
@@ -252,7 +264,7 @@ namespace Miyuki::AST {
         explicit ParameterTypeList(const ParameterListPtr &paramList, bool isParameterVarible = false);
 
         virtual int getKind() { return Kind::parameterTypeList; }
-        void gen() override;
+        void gen() {}
     };
 
     class ParameterDecleartion : public IDeclaration {
@@ -268,10 +280,10 @@ namespace Miyuki::AST {
         explicit ParameterDecleartion(const DeclarationSpecifierPtr &declSpec, const AbstractDeclaratorPtr &abstructDecr = nullptr);
 
         virtual int getKind() { return Kind::parameterDecleartion; }
-        void gen() override;
+        void gen() {}
     };
 
-    class AbstractDeclarator : public IDeclaration {
+    class AbstractDeclarator : public IDeclarator {
     public:
         PointerDeclPtr pointerDecl = nullptr;
         DirectAbstractDeclaratorPtr directAbstractDecr = nullptr;
@@ -279,7 +291,7 @@ namespace Miyuki::AST {
         AbstractDeclarator(const PointerDeclPtr &pointerDecl, const DirectAbstractDeclaratorPtr &directAbstractDecr);
 
         virtual int getKind() { return Kind::abstractDeclarator; }
-        void gen() override;
+        void gen() {}
     };
 
     class TypeName : public IDeclaration {
@@ -290,10 +302,10 @@ namespace Miyuki::AST {
         TypeName(const SpecifierAndQualifierListPtr &specList, const AbstractDeclaratorPtr &abstructDecr);
 
         virtual int getKind() { return Kind::typeName; }
-        void gen() override;
+        void gen() {}
     };
 
-    class DirectAbstractDeclarator : public IDeclaration {
+    class DirectAbstractDeclarator : public IDirectDeclarator {
     public:
         AbstractDeclaratorPtr abstracrDecr = nullptr;
         // OR
@@ -314,7 +326,7 @@ namespace Miyuki::AST {
         DirectAbstractDeclarator(const DirectAbstractDeclaratorPtr &directAbstractDecr, const ParameterTypeListPtr &paramList);
 
         virtual int getKind() { return Kind::directAbstractDeclarator; }
-        void gen() override;
+        void gen() {}
     };
 
     class Initializer : public IDeclaration {
@@ -327,7 +339,7 @@ namespace Miyuki::AST {
         explicit Initializer(const InitializerListPtr &initList);
 
         virtual int getKind() { return Kind::init; }
-        void gen() override;
+        void gen() {}
     };
 
     class InitializerList : public IDeclaration {
@@ -339,7 +351,7 @@ namespace Miyuki::AST {
         InitializerList(const InitializerPtr &init, const DesignationPtr &design, const InitializerListPtr& initList = nullptr);
 
         virtual int getKind() { return Kind::initList; }
-        void gen() override;
+        void gen() {}
     };
 
     class Designation : public IDeclaration {
@@ -349,7 +361,7 @@ namespace Miyuki::AST {
         explicit Designation(const DesignatorListPtr &desList);
 
         virtual int getKind() { return Kind::designation; }
-        void gen() override;
+        void gen() {}
     };
 
     class Designator : public IDeclaration {
@@ -362,7 +374,7 @@ namespace Miyuki::AST {
         explicit Designator(const WordTokenPtr &id);
 
         virtual int getKind() { return Kind::designator; }
-        void gen() override;
+        void gen() {}
     };
 
     class InitDeclarator : public IDeclaration {
@@ -373,7 +385,7 @@ namespace Miyuki::AST {
         explicit InitDeclarator(const DeclaratorPtr &desOr, const InitializerPtr &init = nullptr);
 
         virtual int getKind() { return Kind::initDeclr; }
-        void gen() override;
+        void gen() {}
     };
 
 }
