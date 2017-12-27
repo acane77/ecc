@@ -39,12 +39,13 @@ namespace Miyuki::Parse {
     }
 
     void Parser::parse() {
-        TokenSequencePtr toks = getPreprocessedSource();
+        /*TokenSequencePtr toks = getPreprocessedSource();
         for (auto tok : *toks) {
             cout << tok->toSourceLiteral() << " ";
         }
 
-        M_proc->finish(); // finish preprocess
+        M_proc->finish(); // finish preprocess*/
+        declaration();
         parseDone();
     }
 

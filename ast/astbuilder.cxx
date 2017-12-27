@@ -16,6 +16,7 @@ namespace Miyuki::AST {
         SKIP_TO_SEMI_AND_END_THIS_SYMBOL\
     } else next(); }
 #define REPORT_ERROR(msg) { diagError(msg, look); SKIP_TO_SEMI_AND_END_THIS_SYMBOL; }
+#define REPORT_ERROR_1(msg, skipTo) { diagError(msg, look); skipUntil(skipTo, SkipUntilSemi | KeepSpecifiedToken); return nullptr; }
 
     ////////////////////////    expressions   /////////////////////////////
 
@@ -441,6 +442,9 @@ this_is_a_primary_expression:
             else REPORT_ERROR("invalid declaration-specifier.")
 
             declSpec = make_shared<DeclarationSpecifier>(spec, declSpec);
+
+            if (look->is(Tag::Identifier) && !isTypedefName(look))
+                break;
         }
         while (FIRST_DECLARATION_SPECIFIERS());
         return declSpec;
@@ -648,7 +652,10 @@ this_is_a_primary_expression:
         */
         if (FIRST_SPECIFIER_QUALIFIER_LIST()) {
             SpecifierAndQualifierListPtr spec = specifierQualifierList();
-            StructDeclaratorListPtr decl = structDeclaratorList();
+            StructDeclaratorListPtr decl = nullptr;
+            if (FIRST_STRUCT_DECLARATOR_LIST())
+                decl = structDeclaratorList();
+            match(';');
             return make_shared<StructDeclaration>(spec, decl);
         }
         REPORT_ERROR("need a specifier or qualifier here.");
@@ -661,6 +668,8 @@ this_is_a_primary_expression:
         SpecifierAndQualifierListPtr lst = make_shared<SpecifierAndQualifierList>();
         do {
             if (FIRST_TYPE_SPECIFIER()) {
+                if (look->is(Tag::Identifier) && !isTypedefName(look))
+                    break;
                 lst->push_back(typeSpecifier());
             }
             else if (FIRST_TYPE_QUALIFIER()) {
@@ -746,7 +755,7 @@ this_is_a_primary_expression:
         return make_shared<Declarator>(ptrDecl, directDeclarator());
     }
 
-    DirectDeclaratorPtr Miyuki::AST::ASTBuilder::directDeclarator(bool leftBracketHandled) {
+    DirectDeclaratorPtr Miyuki::AST::ASTBuilder::directDeclarator(bool leftBracketHandled, PointerDeclPtr ptr) {
         /*direct-declarator:
             identifier
             ( declarator )
@@ -758,11 +767,11 @@ this_is_a_primary_expression:
             direct-declarator ( identifier-list(opt) )
         */
         DirectDeclaratorPtr directDecl = nullptr;
-        if (look->is(Tag::Identifier) && !leftBracketHandled) {
+        if (look->is(Tag::Identifier)) {
             WordTokenPtr id = static_pointer_cast<WordToken>(look); next();
             directDecl = make_shared<DirectDeclarator>(id);
         }
-        else if (look->is('(')) {
+        else if (look->is('(') && !leftBracketHandled) {
             next();
             DeclaratorPtr decl = declarator();
             match(')');
@@ -774,18 +783,15 @@ this_is_a_primary_expression:
             if (look->is('(')) {
                 next();
                 if (FIRST_IDENTIFIER_LIST()) {
-                    // TODO: UNCOMMENT HERE AFTER IMPLEMENTED
                     // if identifier is typedef name
-                    //if ( getEnvironment()->isTypedefName(look) )
-                    //    goto new_style_paramster_list;
+                    if ( isTypedefName(look) )
+                        goto new_style_paramster_list;
                     WordTokenListPtr lst = identifierList();
-                    match(')');
                     directDecl = make_shared<DirectDeclarator>(directDecl, lst);
                 }
                 else if (FIRST_PARAMETER_TYPE_LIST()) {
 new_style_paramster_list:
                     ParameterTypeListPtr param = parameterTypeList();
-                    match(')');
                     directDecl = make_shared<DirectDeclarator>(directDecl, param);
                 }
                 match(')');
@@ -846,7 +852,8 @@ new_style_paramster_list:
         PointerDeclPtr ptrDecl = nullptr;
         do {
             next();
-            ptrDecl = make_shared<PointerDecl>(typeQualifierList(), ptrDecl);
+            if (FIRST_TYPE_QUALIFIER_LIST())
+                ptrDecl = make_shared<PointerDecl>(typeQualifierList(), ptrDecl);
         } while (look->is('*'));
         return ptrDecl;
     }
@@ -889,7 +896,11 @@ new_style_paramster_list:
         ParameterDecleartionListPtr lst = make_shared<ParameterDecleartionList>();
         do {
             if (FIRST_PARAMETER_DECLARATION()) {
-                // BUG: TEST_TYPEDEF_NAME
+                if (look->is(Tag::Identifier) && !isTypedefName(look)) {
+                    diagError("'{0}' does not name a type"_format(look->toSourceLiteral()), look);
+                    skipUntil({ ',' }, SkipUntilSemi);
+                    continue;
+                }
                 lst->push_back(parameterDecleartion());
             }
             else REPORT_ERROR("expected parameter declaration.")
@@ -911,6 +922,7 @@ new_style_paramster_list:
             return make_shared<ParameterDecleartion>(spec);
         }
         IDeclaratorPtr decl = iDeclarator();
+        if (!decl) return nullptr;
         if (decl->getKind() == Symbol::declarator) {
             return make_shared<ParameterDecleartion>(spec, static_pointer_cast<Declarator>(decl));
         }
@@ -973,6 +985,7 @@ new_style_paramster_list:
             ptrDecl = pointerDecl();
         }
         IDirectDeclaratorPtr dd = iDirectDeclarator();
+        if (!dd) return nullptr;
         if (dd->getKind() == Symbol::directDeclarator) {
             return make_shared<Declarator>(static_pointer_cast<DirectDeclarator>(dd));
         }
@@ -984,27 +997,43 @@ new_style_paramster_list:
     IDirectDeclaratorPtr Miyuki::AST::ASTBuilder::iDirectDeclarator() {
         if (look->is(Tag::Identifier)) {
             // it is an identitifer, reduced by direct-declarator -> identifier
-            return directAbstractDeclarator(true);
+            return directDeclarator(true);
         }
         if (look->is('(')) {
             next(); // eat '(', 
             // do not know what it is, continue (reduce direct-(abstract-)declarator->(abstract-)declarator)
             // if we do so, there will not be one more iDirectDeclarator
             if (look->is(Tag::Identifier)) {
-                //if (is typedef-name) { // TODO: UNCOMMENT THIS AFTER IMPLEMENTED
-                //    // reduced by abstract-direct-declarator -> direct-abstract-declarator(opt) ( parameter-type-list(opt) )
-                //    // read 1 more token, so retract
-                //    retract(); return directAbstractDeclarator(true);
-                //}
+                if (isTypedefName(look)) {
+                    // reduced by abstract-direct-declarator -> direct-abstract-declarator(opt) ( parameter-type-list(opt) )
+                    // read 1 more token, so retract
+                    retract(); return directAbstractDeclarator(true);
+                }
                 // it is an identitifer, reduced by direct-declarator -> identifier
             }
-            return iDirectDeclarator();
+            else if (FIRST_PARAMETER_TYPE_LIST() || look->is(')')) {
+                // reduced by direct-abstract-declaratoropt ( parameter-type-listopt )
+                retract();
+                return directAbstractDeclarator(true);
+            }
+            else if (look->is('*')) {
+                // reduce by -> ( (abstract-)declarator )
+                IDeclaratorPtr idecl = iDeclarator();
+                match(')');
+                if (!idecl) return nullptr;
+                return (idecl->getKind()) == Symbol::declarator ?
+                    static_pointer_cast<IDirectDeclarator>(make_shared<DirectDeclarator>(static_pointer_cast<Declarator>(idecl))) :
+                    static_pointer_cast<IDirectDeclarator>(make_shared<DirectAbstractDeclarator>(static_pointer_cast<AbstractDeclarator>(idecl)));
+            }
+            IDirectDeclaratorPtr r = iDirectDeclarator();
+            match(')');
+            return r;
         }
         // other situations of direct-abstract-declarator
         return directAbstractDeclarator(true);
     }
 
-    DirectAbstractDeclaratorPtr Miyuki::AST::ASTBuilder::directAbstractDeclarator(bool leftBracketHandled) {
+    DirectAbstractDeclaratorPtr Miyuki::AST::ASTBuilder::directAbstractDeclarator(bool leftBracketHandled, PointerDeclPtr ptr) {
         /*
         direct-abstract-declarator:
          1   ( abstract-declarator ) (handled in iDirectDeclarator())
@@ -1012,7 +1041,7 @@ new_style_paramster_list:
          3   direct-abstract-declaratoropt [ static type-qualifier-listopt assignment-expression ]
          4   direct-abstract-declaratoropt [ type-qualifier-list static assignment-expression ]
          5   direct-abstract-declaratoropt [ * ]
-         6   direct-abstract-declaratoropt ( parameter-type-listopt )*/
+         6   direct-abstract-declaratoropt ( parameter-type-list(opt) )*/
         DirectAbstractDeclaratorPtr dad = nullptr;
         if (look->is('(') && !leftBracketHandled) {
             next();
@@ -1024,7 +1053,9 @@ new_style_paramster_list:
             if (look->is('(')) {
                 // do not match production 1 because it it handled in iDirectDeclarator()
                 next();
-                ParameterTypeListPtr paramList = parameterTypeList();
+                ParameterTypeListPtr paramList = nullptr;
+                if (FIRST_PARAMETER_TYPE_LIST())
+                    paramList = parameterTypeList();
                 match(')');
                 dad = make_shared<DirectAbstractDeclarator>(dad, paramList);
             }
@@ -1078,9 +1109,11 @@ new_style_paramster_list:
         assert(look->is(Tag::Identifier) && "please check token before call this function");
         WordTokenListPtr lst = make_shared<WordTokenList>();
         do {
+            if (look->isNot(Tag::Identifier))
+                REPORT_ERROR_1("expect identifier.", { ')' });
             lst->push_back(static_pointer_cast<WordToken>(look));
             next();
-        } while (look->is(Tag::Identifier) && next());
+        } while (look->is(',') && next());
         return lst;
     }
 
@@ -1106,6 +1139,14 @@ new_style_paramster_list:
             ptrDecl = pointerDecl();
         }
         return make_shared<AbstractDeclarator>(ptrDecl, directAbstractDeclarator());
+    }
+
+    bool Miyuki::AST::ASTBuilder::isTypedefName(const TokenPtr& tok)
+    {
+        if (tok->isNot(Tag::Identifier)) {
+            return false;
+        }
+        return find(typedefNames.begin(), typedefNames.end(), static_pointer_cast<WordToken>(tok)->name) != typedefNames.end();
     }
 
 }

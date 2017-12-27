@@ -31,7 +31,7 @@ namespace Miyuki::AST {
         virtual void eval() = 0;
     };
 
-    class Symbol {
+    class Symbol : public std::enable_shared_from_this<Symbol> {
     public:
         enum Kind {
             SYMBOL = 0,

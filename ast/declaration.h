@@ -113,13 +113,10 @@ namespace Miyuki::AST {
     public:
         TokenPtr tok = nullptr; // INCLUDE typedef-name
         // OR
-        StructOrUnionSpecifierPtr structSpec = nullptr;
-        // OR
-        EnumSpecifierPtr enumSpec = nullptr;
+        // is enum or struxt or union (derived class)
 
-        explicit TypeSpecifier(const EnumSpecifierPtr &enumSpec);
         explicit TypeSpecifier(const TokenPtr &tok);
-        explicit TypeSpecifier(const StructOrUnionSpecifierPtr &structSpec);
+        explicit TypeSpecifier();
 
         virtual int getKind() { return Kind::typeSpecifier; }
         virtual void gen() { assert ( false && "unimplemented" ); }

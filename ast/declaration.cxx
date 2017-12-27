@@ -12,9 +12,7 @@ namespace Miyuki::AST {
 
     TypeSpecifier::TypeSpecifier(const TokenPtr &tok) : tok(tok) {}
 
-    TypeSpecifier::TypeSpecifier(const EnumSpecifierPtr &enumSpec) : enumSpec(enumSpec) {}
-
-    TypeSpecifier::TypeSpecifier(const StructOrUnionSpecifierPtr &structSpec) : structSpec(structSpec) {}
+    TypeSpecifier::TypeSpecifier() {}
 
     TypeQualifier::TypeQualifier(const TokenPtr &tok) : tok(tok) {}
 
@@ -22,7 +20,7 @@ namespace Miyuki::AST {
 
     StructOrUnionSpecifier::StructOrUnionSpecifier(const TokenPtr &structOrUnion,
                                                    const TokenPtr &id, const StructDeclarationListPtr &declList)
-            : TypeSpecifier(StructOrUnionSpecifierPtr(this)), structOrUnion(structOrUnion), id(id), declList(declList) {}
+            : structOrUnion(structOrUnion), id(id), declList(declList) {}
 
     StructDeclaration::StructDeclaration(const SpecifierAndQualifierListPtr &specList,
                                          const StructDeclaratorListPtr &structDecrList) : specList(specList),
@@ -31,7 +29,7 @@ namespace Miyuki::AST {
 
     StructDeclarator::StructDeclarator(const DeclaratorPtr &decr, const ConstantExpressionPtr &constExpr) : decr(decr), constExpr(  constExpr) {}
 
-    EnumSpecifier::EnumSpecifier(const TokenPtr &id, const EnumeratorListPtr &enumList) : id(id), enumList(enumList), TypeSpecifier(EnumSpecifierPtr(this)) {}
+    EnumSpecifier::EnumSpecifier(const TokenPtr &id, const EnumeratorListPtr &enumList) : id(id), enumList(enumList) {}
 
     Enumerator::Enumerator(const TokenPtr &enumConstant, const ConstantExpressionPtr &expr) : enumConstant(enumConstant), expr(expr) {}
 

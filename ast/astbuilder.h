@@ -15,6 +15,10 @@ namespace Miyuki::AST {
     public:
         virtual TokenPtr buildXXX() { assert( false && "do not use this function, just a sample function." ); }
 
+        // typedef names (identifier)
+        vector<string> typedefNames;
+        bool isTypedefName(const TokenPtr& tok);
+
         // expression  (ref A.2.1)
         CommaExpressionPtr       expression();
         ConditionalExpressionPtr constantExpression();
@@ -52,7 +56,7 @@ namespace Miyuki::AST {
         EnumeratorListPtr        enumeratorList();
         EnumeratorPtr            enumerator();
         DeclaratorPtr            declarator();
-        DirectDeclaratorPtr      directDeclarator(bool leftBracketHandled = false);
+        DirectDeclaratorPtr      directDeclarator(bool leftBracketHandled = false, PointerDeclPtr ptr = nullptr);
         PointerDeclPtr           pointerDecl();
         TypeQualifierListPtr     typeQualifierList();
         ParameterTypeListPtr     parameterTypeList();
@@ -61,7 +65,7 @@ namespace Miyuki::AST {
         WordTokenListPtr         identifierList();
         TypeNamePtr              typeName();
         AbstractDeclaratorPtr    abstractDeclarator();
-        DirectAbstractDeclaratorPtr directAbstractDeclarator(bool leftBracketHandled = false);
+        DirectAbstractDeclaratorPtr directAbstractDeclarator(bool leftBracketHandled = false, PointerDeclPtr ptr = nullptr);
         InitializerPtr           initializer();
         InitializerListPtr       initializerList();
         DesignationPtr           designation();
