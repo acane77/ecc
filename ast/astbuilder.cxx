@@ -517,7 +517,6 @@ this_is_a_primary_expression:
                     retract();
                     break;
                 }
-                retract();
             }
             else break;
         } while (true);
@@ -902,6 +901,11 @@ new_style_paramster_list:
                     continue;
                 }
                 lst->push_back(parameterDecleartion());
+            }
+            else if (look->is(Tag::Ellipsis)) {
+                // for , ... (varible parameter)
+                retract();
+                break;
             }
             else REPORT_ERROR("expected parameter declaration.")
         } while (look->is(',') && next());
