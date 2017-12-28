@@ -46,7 +46,7 @@ namespace Miyuki::Parse {
 
         M_proc->finish(); // finish preprocess*/
         try {
-            declaration();
+            statement();
         }
         catch (exception& e) {
             cout << "Exception occurred: " << e.what();

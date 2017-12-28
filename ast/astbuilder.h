@@ -75,7 +75,15 @@ namespace Miyuki::AST {
         IDirectDeclaratorPtr     iDirectDeclarator();
 
         // statements
-
+        StatementPtr             statement();
+        LabeledStatementPtr      labeledStatement();
+        CompoundStatementPtr     compoundStatement();
+        BlockItemListPtr         blockItemList();
+        BlockItemPtr             blockItem();
+        ExpressionStatementPtr   expressionStatement();
+        StatementPtr             selectionStatement();
+        StatementPtr             iterationStatement();
+        StatementPtr             jumpStatement();
     };
 
 }

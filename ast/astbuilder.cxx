@@ -307,7 +307,7 @@ namespace Miyuki::AST {
             TypeNamePtr typeNam = nullptr;
             match(')'); match('{');
             InitializerListPtr initList = nullptr;
-            match('}');
+            match(0x7d);
             exp = make_shared<AnonymousArray>(typeNam, initList);
         }
         else if ( FIRST_PRIMARY_EXPRESSION() ) {
@@ -343,7 +343,7 @@ this_is_a_primary_expression:
                 // array access
                 next();
                 ExpressionPtr expr = expression();
-                match('}');
+                match(0x7d);
                 exp = make_shared<ArrayAccess>( nullptr, nullptr, exp, expr );
             }
         }
@@ -379,7 +379,7 @@ this_is_a_primary_expression:
         // I replace unary-expression with conditional-expression, and judge if it is a lvalue
         AssignmentExpressionPtr exp = make_shared<AssignmentExpression>( conditionalExpression() );
         while ( F_ASSIGNMENT_OPERATOR() ) {
-            TokenPtr op = look;
+            TokenPtr op = look; next();
             exp = make_shared<AssignmentExpression>( op, conditionalExpression(), exp );
         }
         return exp;
@@ -493,7 +493,7 @@ this_is_a_primary_expression:
             next(); 
             InitializerListPtr initList = initializerList();
             if (look->is(',')) next();
-            match('}');
+            match(0x7d);
             return make_shared<Initializer>(initList);
         }
         REPORT_ERROR("initalizer should be an expression or an initializer-list");
@@ -602,7 +602,7 @@ this_is_a_primary_expression:
         }
         next(); //eat '{'
         StructDeclarationListPtr structDeclList = structDeclarationList();
-        match('}');
+        match(0x7d);
         return make_shared<StructOrUnionSpecifier>(keyword, id, structDeclList);
     }
 
@@ -626,7 +626,7 @@ this_is_a_primary_expression:
         }
         next(); //eat '{'
         EnumeratorListPtr enumList = enumeratorList();
-        match('}');
+        match(0x7d);
         return make_shared<EnumSpecifier>(id, enumList);
     }
 
@@ -1153,6 +1153,237 @@ new_style_paramster_list:
         return find(typedefNames.begin(), typedefNames.end(), static_pointer_cast<WordToken>(tok)->name) != typedefNames.end();
     }
 
+    /////////////////  statements //////////////////
+    StatementPtr Miyuki::AST::ASTBuilder::statement() {
+        /*statement:
+            labeled-statement
+            compound-statement
+            expression-statement
+            selection-statement
+            iteration-statement
+            jump-statement*/
+        //assert( FIRST_STATEMENT() && "check brfore this statement" );
+
+        if (FIRST_LABELED_STATEMENT()) {
+            // if look is id, it conflects with Expression-Statement
+            TokenPtr prev = look;
+            next();
+            if (prev->is(Tag::Identifier) && look->isNot(':')) {
+                // is an expression-statement
+                retract();
+                goto this_is_an_expression_statement;
+            }
+            retract();
+            return labeledStatement();
+        }
+this_is_an_expression_statement:
+        if (FIRST_EXPRSSION_STATEMENT()) {
+            return expressionStatement();
+        }
+        else if (FIRST_COMPOUND_STATEMENT()) {
+            return compoundStatement();
+        }
+        else if (FIRST_SELECTION_STATEMENT()) {
+            return selectionStatement();
+        }
+        else if (FIRST_ITERATION_STATEMENT()) {
+            return iterationStatement();
+        }
+        else if (FIRST_JUMP_STATEMENT()) {
+            return jumpStatement();
+        }
+        else REPORT_ERROR("invalid statement");
+    }
+
+    LabeledStatementPtr Miyuki::AST::ASTBuilder::labeledStatement() {
+        /*labeled-statement:
+                identifier : statement
+                case constant-expression : statement
+                default : statement*/
+        assert(FIRST_LABELED_STATEMENT() && "please check token before use this function");
+        if (look->is(Tag::Identifier)) {
+            TokenPtr id = look;
+            next();  match(':');
+            StatementPtr stmt = statement();
+            return make_shared<LabeledStatement>(stmt, static_pointer_cast<WordToken>(id));
+        }
+        else if (look->is(Tag::Case)) {
+            next();
+            ConstantExpressionPtr constExpr = constantExpression();
+            match(':');
+            StatementPtr stmt = statement();
+            return make_shared<LabeledStatement>(stmt, constExpr);
+        }
+        else if (look->is(Tag::Default)) {
+            next();  match(':');
+            StatementPtr stmt = statement();
+            return make_shared<LabeledStatement>(stmt);
+        }
+        assert(false);
+    }
+
+    CompoundStatementPtr Miyuki::AST::ASTBuilder::compoundStatement() {
+        /*compound-statement:
+                { block-item-list(opt) }*/
+        assert(FIRST_COMPOUND_STATEMENT() && "please check token before use this function");
+        match('{');
+        BlockItemListPtr blkItemList = nullptr;
+        if (FIRST_BLOCK_ITEM_LIST()) {
+            blkItemList = blockItemList();
+        }
+        match(0x7d);
+        return make_shared<CompoundStatement>(blkItemList);
+    }
+
+    BlockItemListPtr Miyuki::AST::ASTBuilder::blockItemList() {
+        /*block-item-list:
+            block-item
+            block-item-list block-item
+        */
+        assert(FIRST_BLOCK_ITEM_LIST() && "check");
+        BlockItemListPtr lst = make_shared<BlockItemList>();
+        do {
+            BlockItemPtr blkItem = blockItem();
+            lst->push_back(blkItem);
+        } while (FIRST_BLOCK_ITEM()); //optmize to !FOLLOW(block-item-list)
+        return lst;
+    }
+
+    BlockItemPtr Miyuki::AST::ASTBuilder::blockItem() {
+        /*block-item:
+            declaration
+            statement*/
+        assert(FIRST_BLOCK_ITEM() && "check");
+        if (FIRST_STATEMENT()) {
+            // if next token is ID, conflets. so check
+            if (look->is(Tag::Identifier) && isTypedefName(look)) {
+                goto this_is_a_declaration;
+            }
+            return make_shared<BlockItem>(statement());
+        }
+        else if (FIRST_DECLARATION()) {
+this_is_a_declaration:
+            return make_shared<BlockItem>(declaration());
+        }
+    }
+
+    ExpressionStatementPtr Miyuki::AST::ASTBuilder::expressionStatement() {
+        /*expression-statement:
+            expressionopt ;*/
+        assert(FIRST_EXPRSSION_STATEMENT() && "check");
+        ExpressionPtr expr = nullptr;
+        if (look->isNot(';'))
+            expr = expression();
+        match(';');
+        return make_shared<ExpressionStatement>(expr);
+    }
+
+    StatementPtr Miyuki::AST::ASTBuilder::selectionStatement() {
+        /*selection-statement:
+                if ( expression ) statement
+                if ( expression ) statement else statement
+                switch ( expression ) statement
+        */
+        if (look->is(Tag::If)) {
+            next(); match('(');
+            ExpressionPtr cond = expression();
+            match(')');
+            StatementPtr stmt = statement();
+            ElsePtr elseStmt = nullptr;
+            if (look->is(Tag::Else)) {
+                next();
+                elseStmt = make_shared<Else>(statement());
+            }
+            return make_shared<If>(cond, stmt, elseStmt);
+        }
+        else if (look->is(Tag::Switch)) {
+            next(); match('(');
+            ExpressionPtr expr = expression();
+            match(')');
+            StatementPtr stmt = statement();
+            return make_shared<Switch>(expr, stmt);
+        }
+        else assert(false && "require if or switch");
+    }
+
+    StatementPtr Miyuki::AST::ASTBuilder::iterationStatement() {
+        /*iteration-statement:
+                while ( expression ) statement
+                do statement while ( expression ) ;
+                for ( expressionopt ; expressionopt ; expressionopt ) statement
+                for ( declaration expressionopt ; expressionopt ) statement
+        */
+        if (look->is(Tag::While)) {
+            next(); match('(');
+            ExpressionPtr cond = expression();
+            match(')');
+            StatementPtr stmt = statement();
+            return make_shared<While>(cond, stmt);
+        }
+        else if (look->is(Tag::Do)) {
+            next();
+            StatementPtr stmt = statement();
+            matchTag(While); 
+            match('('); ExpressionPtr cond = expression(); match(')'); match(';');
+            return make_shared<DoWhile>(cond, stmt);
+        }
+        else if (look->is(Tag::For)) {
+            next(); match('(');
+            DeclarationPtr decl = nullptr;
+            ExpressionPtr init = nullptr, cond = nullptr, inc = nullptr;
+            if (FIRST_DECLARATION() && (look->isNot(Tag::Identifier) || isTypedefName(look))) {
+                // is declaration
+                decl = declaration();
+            }
+            else if (FIRST_EXPRESSION()) {
+                // else is expression
+                init = expression();
+                match(';');
+            } 
+            else { // else init nothing
+                match(';');
+            }
+            
+            if (FIRST_EXPRESSION())
+                cond = expression();
+            match(';');
+            if (FIRST_EXPRESSION())
+                inc = expression();
+            match(')');
+            StatementPtr stmt = statement();
+            return make_shared<For>(decl, init, cond, inc, stmt);
+        }
+        else assert(false && "expected while, do, for");
+    }
+
+    StatementPtr Miyuki::AST::ASTBuilder::jumpStatement() {
+        /*jump-statement:
+                goto identifier ;
+                continue ;
+                break ;
+                return expressionopt ;*/
+        if (look->is(Tag::Goto)) {
+            next(); TokenPtr id = look;
+            matchTag(Identifier); match(';');
+            return make_shared<Goto>(id);
+        }
+        else if (look->is(Tag::Continue)) {
+            next(); match(';');
+            return make_shared<Continue>();
+        }
+        else if (look->is(Tag::Break)) {
+            next(); match(';');
+            return make_shared<Break>();
+        }
+        else if (look->is(Tag::Return)) {
+            next();
+            ExpressionPtr expr = nullptr;
+            if (FIRST_EXPRESSION()) {
+                expr = expression();
+            }
+            return make_shared<Return>(expr);
+        }
+    }
 }
 
 #undef match

@@ -82,7 +82,7 @@
 // FOLLOW(unary-operator)={identifier , constant , string-literal , ( , ++ , -- , & , * , + , - , ~ , ! , sizeof ,  }
 #define FOLLOW_UNARY_OPERATOR() FIRST_EXPRESSION()
 
-////////////////////////   statements   //////////////////////////////
+////////////////////////   declaration   //////////////////////////////
 
 #define FIRST_DECLARATION FIRST_DECLARATION_SPECIFIERS
 
@@ -136,5 +136,17 @@
 #define FIRST_ANSTRACT_DECLARATOR() ( FIRST_POINTER() || FIRST_DIRECT_ABSTRACT_DECLARATOR() )
 
 #define FOLLOW_PARAMETER_DECLARATION() ( LIS(')') || LIS(',') )
+
+////////////////////////   statements   //////////////////////////////
+#define FIRST_STATEMENT() ( FIRST_LABELED_STATEMENT() || FIRST_COMPOUND_STATEMENT() || FIRST_EXPRSSION_STATEMENT() || FIRST_SELECTION_STATEMENT() ||\
+    FIRST_ITERATION_STATEMENT() || FIRST_JUMP_STATEMENT() )
+#define FIRST_LABELED_STATEMENT() ( ISTAG(Identifier) || ISTAG(Case) || ISTAG(Default) )
+#define FIRST_COMPOUND_STATEMENT() ( LIS('{') )
+#define FIRST_BLOCK_ITEM_LIST FIRST_BLOCK_ITEM
+#define FIRST_BLOCK_ITEM() ( FIRST_DECLARATION() || FIRST_STATEMENT() )
+#define FIRST_EXPRSSION_STATEMENT() ( FIRST_EXPRESSION() || LIS(';') )
+#define FIRST_SELECTION_STATEMENT() ( ISTAG(If) || ISTAG(Switch) )
+#define FIRST_ITERATION_STATEMENT() ( ISTAG(While) || ISTAG(Do) || ISTAG(For) )
+#define FIRST_JUMP_STATEMENT() ( ISTAG(Goto) || ISTAG(Continue) || ISTAG(Break) || ISTAG(Return) )
 
 #endif
