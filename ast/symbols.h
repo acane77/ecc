@@ -54,7 +54,10 @@ namespace Miyuki::AST {
 
             // statements
             statement, labeledStatement, compoundStatement, blockItem, expressionStatement, _if, _else, _switch, _while, doWile, _for, _goto, _continue,
-            _break, _return
+            _break, _return,
+
+            // external
+            translationUnit, externalDeclaration, functionDefinition
 
         };
 

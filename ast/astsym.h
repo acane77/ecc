@@ -2,9 +2,10 @@
 
 // Symbols used in building AST
 
-#include "symbols.h"
-#include "expression.h"
-#include "declaration.h"
-#include "statements.h"
+#include "ast/symbols.h"
+#include "ast/expression.h"
+#include "ast/declaration.h"
+#include "ast/statements.h"
+#include "ast/extdefinitions.h"
 
 #endif

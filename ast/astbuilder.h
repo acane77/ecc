@@ -84,6 +84,12 @@ namespace Miyuki::AST {
         StatementPtr             selectionStatement();
         StatementPtr             iterationStatement();
         StatementPtr             jumpStatement();
+
+        // external definition
+        TranslationUnitPtr       translationUnit();
+        ExternalDeclarationPtr   externalDeclaration();
+        FunctionDefinitionPtr    functionDefinition();
+        DeclarationListPtr       declarationList();
     };
 
 }
