@@ -40,7 +40,7 @@ namespace Miyuki::AST {
         AssignmentExpressionPtr  assignmentExpression();
         ArgumentExpressionListPtr argumentExpressionList();
 
-        // statements  (ref A.2.2)
+        // declaration  (ref A.2.2)
         DeclarationPtr           declaration();
         DeclarationSpecifierPtr  declarationSpecifiers();
         InitDeclaratorListPtr    initDeclaratorList();
@@ -73,6 +73,9 @@ namespace Miyuki::AST {
         DesignatorPtr            designator();
         IDeclaratorPtr           iDeclarator();
         IDirectDeclaratorPtr     iDirectDeclarator();
+
+        // statements
+
     };
 
 }

@@ -13,9 +13,6 @@ namespace Miyuki::AST {
     using namespace std;
     using namespace Lex;
 
-// define a list of some type
-#define DEFINE_LIST(type) typedef deque<type##Ptr> type##List; typedef shared_ptr<type##List> type##ListPtr;
-
     DEFINE_SHARED_PTR(IDeclaration)
     DEFINE_SHARED_PTR(Declaration)
     DEFINE_SHARED_PTR(InitDeclarator)

@@ -7,6 +7,11 @@
 
 namespace Miyuki::AST {
 
+// define a list of some type
+#ifndef DEFINE_LIST
+    #define DEFINE_LIST(type) typedef deque<type##Ptr> type##List; typedef shared_ptr<type##List> type##ListPtr;
+#endif // DEFINE_LIST
+
     DEFINE_SHARED_PTR(Symbol)
     DEFINE_SHARED_PTR(IEvaluatable)
 
@@ -45,7 +50,11 @@ namespace Miyuki::AST {
             declaration, declarationSpecifier, storageClassSpecifier, typeSpecifier, typeQualifier, functionSpecifier, alignmentSpecifier,
             structOrUninSpecifier, structDeclarationList, structDeclaration, structDeclaratorList, structDeclarator, enumSpecifier, enumerator,
             declarator, pointer_decl, directDeclarator, parameterTypeList, parameter, parameterDecleartion, parameterList, abstractDeclarator, 
-            typeName, directAbstractDeclarator, init, initList, designation, designator, initDeclr
+            typeName, directAbstractDeclarator, init, initList, designation, designator, initDeclr,
+
+            // statements
+            statement, labeledStatement, compoundStatement, blockItem, expressionStatement, _if, _else, _switch, _while, doWile, _for, _goto, _continue,
+            _break, _return
 
         };
 
