@@ -102,7 +102,7 @@ add_exponment:
                 else if (peak == '*') {
                     readch();
                     for (; ; readch()) {
-                        if (peak == Tag::EndOfFile)   throw SyntaxError("Comment not closed.");
+                        if (peak == Tag::EndOfFile)   diagError("Comment not closed.");
                         if (peak == '*') {
                             readch();
                             if (peak == '/') break;
@@ -113,7 +113,7 @@ add_exponment:
                 else {
                     // if code runs here, it represent that the '/' is as a divide instead of a comment
                     // So break here
-                    retract();
+                    retract();  peak = '/';
                     break;
                 }
             }

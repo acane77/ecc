@@ -7,7 +7,7 @@
 ////////////////////////   expression   //////////////////////////////
 // FIRST(primary-expression)={ identifier , constant , string-literal , ( ,  }
 #define FIRST_PRIMARY_EXPRESSION() \
-    ( ISTAG(Identifier) || ISTAG(Constant) || ISTAG(StringLiteral) || LIS('(') )
+    ( ISTAG(Identifier) || ISTAG(Constant) || ISTAG(Character) || ISTAG(StringLiteral) || LIS('(') )
 
 // FIRST(expression)={ identifier , constant , string-literal , ( , ++ , -- , & , * , + , - , ~ , ! , sizeof ,  }
 #define FIRST_EXPRESSION() \

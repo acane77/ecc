@@ -105,7 +105,7 @@ namespace Miyuki::Lex {
                 else {
                     // if code runs here, it represent that the '/' is as a divide instead of a comment
                     // So break here
-                    retract();
+                    retract(); peak = '/';
                     break;
                 }
             }

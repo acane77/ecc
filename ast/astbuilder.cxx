@@ -45,10 +45,7 @@ namespace Miyuki::AST {
             if ( look->is('?') ) {
                 next();
                 ExpressionPtr expr = expression();
-                if ( look->isNot(':') ) {
-                    diagError("':' token expected.", look);
-                    SKIP_TO_SEMI_AND_END_THIS_SYMBOL
-                }
+                match(':');
                 ConditionalExpressionPtr condExpr = conditionalExpression();
                 return make_shared<ConditionalExpression>( orExpr, expr, condExpr );
             }
@@ -217,26 +214,31 @@ namespace Miyuki::AST {
         // cast-expression:
         //      unary-expression
         //      ( type-name ) cast-expression
-        if ( FIRST_EXPRESSION() ) {
+        if (look->is('(')) {
+            next(); //read more token
+            if (! FIRST_TYPE_NAME() ) {
+                retract();
+                goto this_is_an_expression;
+            }
+
+            if (look->is(Tag::Identifier) && !isTypedefName(look) ) {
+                retract();
+                goto this_is_an_expression;
+            }
+            
+            TypeNamePtr typeNam = typeName();
+            match(')');
+            return make_shared<CastExpression>(typeNam, castExpression());
+        }
+
+        else if ( FIRST_EXPRESSION() ) {
+this_is_an_expression:
             return make_shared<CastExpression>( unaryExpression() );
         }
-        CastExpressionPtr castExp = nullptr;
-        if ( look->is('(') ) {
-            while ( look->is('(') ) {
-                // TODO: complete this after implement typeName
-                assert( false && "unimplemented" );
-                next();
-                TypeNamePtr typeNam = nullptr;
-                if ( look->isNot(')') ) {
-                    diagError("')' expected.", look);
-                    SKIP_TO_SEMI_AND_END_THIS_SYMBOL
-                }
-                castExp = make_shared<CastExpression>(typeNam, castExp);
-            }
-        }
+        
         else  // PRIBLEM: it seems catch any error here.
             diagError("unexpected '{0}' token."_format(look->toSourceLiteral()), look);
-        return castExp;
+        assert(false && "invalid come to here");
     }
 
     UnaryPtr ASTBuilder::unaryExpression() {
@@ -310,6 +312,13 @@ SizeOfType:
                 retract();
                 goto this_is_a_primary_expression;
             }
+
+            if (look->is(Tag::Identifier) && !isTypedefName(look)) {
+                // this is a primary-expression instead
+                // id maybe a typedef -name
+                retract();
+                goto this_is_a_primary_expression;
+            }
             
             TypeNamePtr typeNam = typeName();
             match(')'); match('{');
@@ -364,7 +373,7 @@ this_is_a_primary_expression:
         //      string-literal
         //      ( expression )
         //      generic-selection
-        if ( look->is(Tag::Identifier) || look->is(Tag::Constant) || look->is(Tag::StringLiteral) ) {
+        if ( look->is(Tag::Identifier) || look->is(Tag::Constant) || look->is(Tag::Character) || look->is(Tag::StringLiteral) ) {
             TokenPtr tok = look;  next();
             return make_shared<PrimaryExpression>(tok);
         }
@@ -899,8 +908,10 @@ new_style_paramster_list:
         PointerDeclPtr ptrDecl = nullptr;
         do {
             next();
+            TypeQualifierListPtr qual = nullptr;
             if (FIRST_TYPE_QUALIFIER_LIST())
-                ptrDecl = make_shared<PointerDecl>(typeQualifierList(), ptrDecl);
+                qual = typeQualifierList();
+            ptrDecl = make_shared<PointerDecl>(qual, ptrDecl);
         } while (look->is('*'));
         return ptrDecl;
     }
@@ -1212,10 +1223,18 @@ new_style_paramster_list:
             pointer
             pointer(opt direct-abstract-declarator*/
         PointerDeclPtr ptrDecl = nullptr;
+        DirectAbstractDeclaratorPtr dad = nullptr;
         if (FIRST_POINTER()) {
             ptrDecl = pointerDecl();
         }
-        return make_shared<AbstractDeclarator>(ptrDecl, directAbstractDeclarator());
+        if (FIRST_DIRECT_ABSTRACT_DECLARATOR()) {
+            dad = directAbstractDeclarator();
+        }
+        if (!(ptrDecl || dad)) {
+            // at least one of ptrDecl and dad should be non-Null
+            REPORT_ERROR("invalid abstract declarator");
+        }
+        return make_shared<AbstractDeclarator>(ptrDecl, dad);
     }
 
     bool ASTBuilder::isTypedefName(const TokenPtr& tok)
