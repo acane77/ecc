@@ -8,11 +8,11 @@ BEGIN
     BLOCK "080904E4"
     BEGIN
       VALUE "CompanyName", "Miyuki"
-      VALUE "FileDescription", "JACC - Java Code C"
+      VALUE "FileDescription", "Emilia C Compiler"
       VALUE "FileVersion", "1.0"
-      VALUE "InternalName", "jacc"
+      VALUE "InternalName", "ecc"
       VALUE "LegalCopyright", "(c) 2017 Miyuki"
-      VALUE "OriginalFilename", "jacc.exe"
+      VALUE "OriginalFilename", "ecc.exe"
       VALUE "ProductName", "JACC"
       VALUE "ProductVersion", "1.0"
     END

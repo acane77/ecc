@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(jacc)
+project(ecc)
 
 if(NOT MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
@@ -23,12 +23,12 @@ add_subdirectory(ast)
 add_subdirectory(test)
 
 # Main program
-aux_source_directory(. JACC_SOURCE)	
+aux_source_directory(. ECC_SOURCE)	
 if (WIN32)
-	add_executable("jacc" "res.rc" ${JACC_SOURCE})
+	add_executable("ecc" "res.rc" ${ECC_SOURCE})
 else()
-	add_executable("jacc" ${JACC_SOURCE})
+	add_executable("ecc" ${ECC_SOURCE})
 endif()
-target_link_libraries("jacc" bytecode parse lex codeg common ast ${LINK_LIBS})
+target_link_libraries("ecc" bytecode parse lex codeg common ast ${LINK_LIBS})
 
 message("libs:${LINK_INTERFACE_LIBRARIES}")

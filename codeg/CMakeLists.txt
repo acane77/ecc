@@ -1,5 +1,5 @@
 
 # Code Generation lib
-aux_source_directory(. JACC_CODEG)	
-add_library(codeg ${JACC_CODEG})
+aux_source_directory(. ECC_CODEG)	
+add_library(codeg ${ECC_CODEG})
 target_link_libraries("codeg")
