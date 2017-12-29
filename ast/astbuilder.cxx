@@ -794,7 +794,7 @@ this_is_a_primary_expression:
         return make_shared<Declarator>(ptrDecl, directDeclarator());
     }
 
-    DirectDeclaratorPtr Miyuki::AST::ASTBuilder::directDeclarator(bool leftBracketHandled, PointerDeclPtr ptr) {
+    DirectDeclaratorPtr Miyuki::AST::ASTBuilder::directDeclarator(bool leftBracketHandled, DirectDeclaratorPtr ptr) {
         /*direct-declarator:
             identifier
             ( declarator )
@@ -805,7 +805,7 @@ this_is_a_primary_expression:
             direct-declarator ( parameter-type-list )
             direct-declarator ( identifier-list(opt) )
         */
-        DirectDeclaratorPtr directDecl = nullptr;
+        DirectDeclaratorPtr directDecl = ptr;
         if (look->is(Tag::Identifier)) {
             WordTokenPtr id = static_pointer_cast<WordToken>(look); next();
             directDecl = make_shared<DirectDeclarator>(id);
@@ -816,6 +816,7 @@ this_is_a_primary_expression:
             match(')');
             directDecl = make_shared<DirectDeclarator>(decl);
         }
+        else if (ptr);
         else REPORT_ERROR("expect varible or function name")
 
         while ( look->is('[') || look->is('(') ) {
@@ -1028,6 +1029,11 @@ new_style_paramster_list:
         if (FIRST_POINTER()) {
             ptrDecl = pointerDecl();
         }
+        if (!FIRST_DIRECT_DECLARATOR() && !FIRST_DIRECT_ABSTRACT_DECLARATOR()) {
+            // if next token is not a direct(-abstract)-declarator, it must
+            // reduce by abstract-declarator->pointer
+            return make_shared<AbstractDeclarator>(ptrDecl, nullptr);
+        }
         IDirectDeclaratorPtr dd = iDirectDeclarator();
         if (!dd) return nullptr;
         if (dd->getKind() == Symbol::directDeclarator) {
@@ -1065,9 +1071,23 @@ new_style_paramster_list:
                 IDeclaratorPtr idecl = iDeclarator();
                 match(')');
                 if (!idecl) return nullptr;
-                return (idecl->getKind()) == Symbol::declarator ?
-                    static_pointer_cast<IDirectDeclarator>(make_shared<DirectDeclarator>(static_pointer_cast<Declarator>(idecl))) :
-                    static_pointer_cast<IDirectDeclarator>(make_shared<DirectAbstractDeclarator>(static_pointer_cast<AbstractDeclarator>(idecl)));
+
+                if (idecl->getKind() == Symbol::declarator) {
+                    DirectDeclaratorPtr dd = make_shared<DirectDeclarator>(static_pointer_cast<Declarator>(idecl));
+                    if (look->is('[') || look->is('(')) {
+                        // If there is a follow-up structure
+                        dd = directDeclarator(true, dd);
+                    }
+                    return dd;
+                }
+                else {
+                    DirectAbstractDeclaratorPtr dad = make_shared<DirectAbstractDeclarator>(static_pointer_cast<AbstractDeclarator>(idecl));
+                    if (look->is('[') || look->is('(')) {
+                        // If there is a follow-up structure
+                        dad = directAbstractDeclarator(true, dad);
+                    }
+                    return dad;
+                }
             }
             IDirectDeclaratorPtr r = iDirectDeclarator();
             match(')');
@@ -1077,7 +1097,7 @@ new_style_paramster_list:
         return directAbstractDeclarator(true);
     }
 
-    DirectAbstractDeclaratorPtr Miyuki::AST::ASTBuilder::directAbstractDeclarator(bool leftBracketHandled, PointerDeclPtr ptr) {
+    DirectAbstractDeclaratorPtr Miyuki::AST::ASTBuilder::directAbstractDeclarator(bool leftBracketHandled, DirectAbstractDeclaratorPtr ptr) {
         /*
         direct-abstract-declarator:
          1   ( abstract-declarator ) (handled in iDirectDeclarator())
@@ -1086,13 +1106,15 @@ new_style_paramster_list:
          4   direct-abstract-declaratoropt [ type-qualifier-list static assignment-expression ]
          5   direct-abstract-declaratoropt [ * ]
          6   direct-abstract-declaratoropt ( parameter-type-list(opt) )*/
-        DirectAbstractDeclaratorPtr dad = nullptr;
+        DirectAbstractDeclaratorPtr dad = ptr;
         if (look->is('(') && !leftBracketHandled) {
             next();
             AbstractDeclaratorPtr decl = abstractDeclarator();
             match(')');
             dad = make_shared<DirectAbstractDeclarator>(decl);
         }
+        else if (ptr);
+
         do {
             if (look->is('(')) {
                 // do not match production 1 because it it handled in iDirectDeclarator()
