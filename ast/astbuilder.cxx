@@ -17,6 +17,16 @@ namespace Miyuki::AST {
     } else next(); }
 #define REPORT_ERROR(msg) { diagError(msg, look); SKIP_TO_SEMI_AND_END_THIS_SYMBOL; }
 #define REPORT_ERROR_1(msg, skipTo) { diagError(msg, look); skipUntil(skipTo, SkipUntilSemi | KeepSpecifiedToken); return nullptr; }
+    //////////////////////// global varibles  /////////////////////////////
+    // use for solve ambiguity between function declaration and function declaration
+    InitializerPtr __sInitializer = nullptr;
+    DeclarationSpecifierPtr __sDeclSpec = nullptr;
+    DeclaratorPtr   __sDeclaeator = nullptr;
+    bool _sFlagIsFunctionDef = false;   // is function definition
+    bool _sFlagAllowFunctionDef = false; // check if is called by external-declaration
+
+    // use for reconize typedef-name
+    bool __sHasTypedefSpecifier = false;
 
     ////////////////////////    expressions   /////////////////////////////
 
@@ -408,6 +418,8 @@ this_is_a_primary_expression:
             InitDeclaratorListPtr initDeclList = nullptr;
             if (look->isNot(';'))
                 initDeclList = initDeclaratorList();
+            // return if is function definition
+            if (_sFlagIsFunctionDef) return nullptr;
             match(';');
             return make_shared<Declaration>(spec, initDeclList);
             //return nullptr;
@@ -428,6 +440,8 @@ this_is_a_primary_expression:
         do {
             SpecifierAndQualifierPtr spec;
             if (FIRST_STORAGE_CLASS_SPECIFIER()) {
+                if (look->is(Tag::Typedef))
+                    __sHasTypedefSpecifier = true;
                 spec = make_shared<StorageClassSpecifier>(look);  next();
             }
             else if (FIRST_TYPE_QUALIFIER()) {
@@ -447,6 +461,7 @@ this_is_a_primary_expression:
                 break;
         }
         while (FIRST_DECLARATION_SPECIFIERS());
+        __sDeclSpec = declSpec;
         return declSpec;
     }
 
@@ -456,9 +471,32 @@ this_is_a_primary_expression:
             init-declarator
             init-declarator-list , init-declarator*/
         InitDeclaratorListPtr lst = make_shared<InitDeclaratorList>();
+        int indexOfInitDecl = 0;
         do {
             if (FIRST_INIT_DECLARATOR()) {
                 lst->push_back(initDeclarator());
+                
+                // use for resolve ambiguity between function declaration and function 
+                // definition.
+                // If this is the 1st declarator and next token is follow(declaration-specifiers declarator)
+                // and no initializer, this is a function definition, and destory this tree
+                // (6.9.1) function-definition:
+                //              declaration-specifiers declarator declaration-listopt compound-statement
+                // follow(declaration-specifiers declarator)
+                if (FIRST_DECLARATION_LIST() || FIRST_COMPOUND_STATEMENT()) {
+                    // may be function definition
+                    if (!indexOfInitDecl && __sInitializer == nullptr) {
+                        if (!_sFlagAllowFunctionDef) {
+                            diagError("function definition is not allowed here.", look);
+                            skipUntil({ '{' }, SkipUntilEndOfFile);
+                            return nullptr;
+                        }
+                        _sFlagIsFunctionDef = true;  // set function definition flag to true and 
+                                                     // this flag will be processed later
+                        break;
+                    }
+                }
+                
             }
             else REPORT_ERROR("invalid declaration-specifier.")
         } while (look->is(',') && next());
@@ -473,9 +511,11 @@ this_is_a_primary_expression:
         // already judegd
         DeclaratorPtr decr = declarator();
         InitializerPtr init = nullptr;
+        __sDeclaeator = decr;
         if (look->is('=')) {
             next();
             init = initializer();
+            __sInitializer = init;
         }
         return make_shared<InitDeclarator>(decr, init);
     }
@@ -1385,6 +1425,78 @@ this_is_a_declaration:
         }
     }
 
+    TranslationUnitPtr Miyuki::AST::ASTBuilder::translationUnit() {
+        /*translation-unit:
+                external-declaration
+                translation-unit external-declaration*/
+        TranslationUnitPtr unit = nullptr;
+        while (true) {
+            if (FIRST_EXTERNAL_DECLARATION()) {
+                unit = make_shared<TranslationUnit>(externalDeclaration(), unit);
+                continue;
+            }
+            if (look->is(Tag::EndOfFile)) {
+                break;
+            }
+            // report error and skip to next sentense
+            diagError("only declarations and function definition are allowed at globe scope", look);
+            skipUntil({ ';' }, SkipUntilSemi);
+        }
+        return unit;
+    }
+
+    ExternalDeclarationPtr Miyuki::AST::ASTBuilder::externalDeclaration() {
+        /*external-declaration:
+                function-definition
+                declaration*/
+        assert(FIRST_EXTERNAL_DECLARATION() && "check before call");
+
+        // because FIRST(function-definition) = FIRST(declaration)
+        // so we cannot determine which branch to go only by FIRST set
+        _sFlagAllowFunctionDef = true;
+        DeclarationPtr decl = declaration();
+        _sFlagAllowFunctionDef = false;
+        if (_sFlagIsFunctionDef) {
+            // if meet a function definition
+            FunctionDefinitionPtr funcDef = functionDefinition();
+            return make_shared<ExternalDeclaration>(funcDef);
+        }
+        // otherwise is a declaration
+        return make_shared<ExternalDeclaration>(decl);
+    }
+
+    FunctionDefinitionPtr Miyuki::AST::ASTBuilder::functionDefinition() {
+        /*function-definition:
+                declaration-specifiers declarator declaration-listopt compound-statement
+        */
+        assert(_sFlagIsFunctionDef && "this is not a functin definition");
+        _sFlagIsFunctionDef = false;
+
+        DeclarationSpecifierPtr declSpec = __sDeclSpec;
+        DeclaratorPtr decr = __sDeclaeator;
+        DeclarationListPtr declLst = nullptr;
+        CompoundStatementPtr compStmt = nullptr;
+
+        // continue parsing at declaration-list(opt) compound-statement
+        if (FIRST_DECLARATION_LIST()) {
+            declLst = declarationList();
+        }
+        if (look->is('{'))
+            compStmt = compoundStatement();
+        else REPORT_ERROR("expected '=', ',', ';' before '{0}' token."_format(look->toSourceLiteral()))
+        return make_shared<FunctionDefinition>(declSpec, decr, declLst, compStmt);
+    }
+
+    DeclarationListPtr Miyuki::AST::ASTBuilder::declarationList() {
+        /*declaration-list:
+                declaration
+                declaration-list declaration*/
+        DeclarationListPtr lst = make_shared<DeclarationList>();
+        do {
+            lst->push_back(declaration());
+        } while (FIRST_DECLARATION());
+        return lst;
+    }
 }
 
 #undef match
