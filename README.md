@@ -1,4 +1,6 @@
-# JACC - Java Code C
+# ECC - Emilia C Compiler
 
----
-BY MIYUKI
+
+This is my graduation project.
+
+Start at October 2017
