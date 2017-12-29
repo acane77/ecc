@@ -265,11 +265,9 @@ namespace Miyuki::AST {
         else if ( look->is(Tag::Alignof) ) {
             next();
             if ( look->is('(') ) {
-                SizeOfType:
+SizeOfType:
                 next();
-                // TODO: complete this after implement typeName
-                assert( false && "unimplemented" );
-                TypeNamePtr typeNam = nullptr;
+                TypeNamePtr typeNam = typeName();
                 match(')');
                 return make_shared<TypeInfoExpression>(op, typeNam);
             }
@@ -306,17 +304,16 @@ namespace Miyuki::AST {
         PostfixExpressionPtr exp = nullptr;
         if ( look->is('(') ) {
             next();
-            // TODO: uncomment here after implement
-            //if ( ! FIRST_TYPE_NAME() )
+            
+            if ( ! FIRST_TYPE_NAME() )
             { // this is a primary-expression instead
                 retract();
                 goto this_is_a_primary_expression;
             }
-            // TODO: complete this after implement typeName and initializerList
-            assert( false && "unimplemented" );
-            TypeNamePtr typeNam = nullptr;
+            
+            TypeNamePtr typeNam = typeName();
             match(')'); match('{');
-            InitializerListPtr initList = nullptr;
+            InitializerListPtr initList = initializerList();
             match(0x7d);
             exp = make_shared<AnonymousArray>(typeNam, initList);
         }
@@ -353,7 +350,7 @@ this_is_a_primary_expression:
                 // array access
                 next();
                 ExpressionPtr expr = expression();
-                match(0x7d);
+                match(']');
                 exp = make_shared<ArrayAccess>( nullptr, nullptr, exp, expr );
             }
         }
@@ -409,7 +406,7 @@ this_is_a_primary_expression:
     }
 
     ////////////////////////    statements   /////////////////////////////
-    DeclarationPtr Miyuki::AST::ASTBuilder::declaration() {
+    DeclarationPtr ASTBuilder::declaration() {
         /*declaration:
             declaration-specifiers init-declarator-listopt ;
             static_assert-declaration (not implemented)*/
@@ -421,13 +418,14 @@ this_is_a_primary_expression:
             // return if is function definition
             if (_sFlagIsFunctionDef) return nullptr;
             match(';');
+            __sHasTypedefSpecifier = false;
             return make_shared<Declaration>(spec, initDeclList);
             //return nullptr;
         }
         else diagError("invalid declaration.", look);
     }
 
-    DeclarationSpecifierPtr Miyuki::AST::ASTBuilder::declarationSpecifiers() {
+    DeclarationSpecifierPtr ASTBuilder::declarationSpecifiers() {
         /*
         declaration-specifiers:
             storage-class-specifier declaration-specifiersopt
@@ -465,7 +463,7 @@ this_is_a_primary_expression:
         return declSpec;
     }
 
-    InitDeclaratorListPtr Miyuki::AST::ASTBuilder::initDeclaratorList() {
+    InitDeclaratorListPtr ASTBuilder::initDeclaratorList() {
         /*
         init-declarator-list:
             init-declarator
@@ -503,7 +501,7 @@ this_is_a_primary_expression:
         return lst;
     }
 
-    InitDeclaratorPtr Miyuki::AST::ASTBuilder::initDeclarator() {
+    InitDeclaratorPtr ASTBuilder::initDeclarator() {
         /*
         init-declarator:
             declarator
@@ -520,7 +518,7 @@ this_is_a_primary_expression:
         return make_shared<InitDeclarator>(decr, init);
     }
 
-    InitializerPtr Miyuki::AST::ASTBuilder::initializer() {
+    InitializerPtr ASTBuilder::initializer() {
         /*
         initializer:
             assignment-expression
@@ -539,7 +537,7 @@ this_is_a_primary_expression:
         REPORT_ERROR("initalizer should be an expression or an initializer-list");
     }
 
-    InitializerListPtr Miyuki::AST::ASTBuilder::initializerList() {
+    InitializerListPtr ASTBuilder::initializerList() {
         /*initializer-list:
             designation(opt) initializer
             initializer-list , designation(opt) initializer*/
@@ -563,7 +561,7 @@ this_is_a_primary_expression:
         return initList;
     }
 
-    DesignationPtr Miyuki::AST::ASTBuilder::designation() {
+    DesignationPtr ASTBuilder::designation() {
         /*designation:
             designator-list = */
         if (FIRST_DESIGNATOR_LIST()) {
@@ -574,7 +572,7 @@ this_is_a_primary_expression:
         REPORT_ERROR("invalid designation");
     }
 
-    DesignatorListPtr Miyuki::AST::ASTBuilder::designatorList() {
+    DesignatorListPtr ASTBuilder::designatorList() {
         /*designator-list:
             designator
             designator-list designator*/
@@ -588,7 +586,7 @@ this_is_a_primary_expression:
         return desList;
     }
 
-    DesignatorPtr Miyuki::AST::ASTBuilder::designator() {
+    DesignatorPtr ASTBuilder::designator() {
         /*designator:
              [ constant-expression ]
              . identifier*/
@@ -604,19 +602,22 @@ this_is_a_primary_expression:
         assert(false && "expected '[' or '.'");
     }
 
-    TypeSpecifierPtr Miyuki::AST::ASTBuilder::typeSpecifier() {
+    TypeSpecifierPtr ASTBuilder::typeSpecifier() {
         /*
         type-specifier:
             types
             atomic-type-specifier
             struct-or-union-specifier
             enum-specifier
-            typedef-name -> id*/
+            typedef-name        id*/
         if (FIRST_STRUCT_OR_UNION_SPECIFIER()) {
             return structOrUnionSpecifier();
         }
         if (FIRST_ENUM_SPECIFIER()) {
             return enumSpecifier();
+        }
+        if (look->is(Tag::Identifier) && !isTypedefName(look)) {
+            REPORT_ERROR("'{0}' does not name a type"_format(look->toSourceLiteral()));
         }
         TypeSpecifierPtr typeSpec = make_shared<TypeSpecifier>(look);
         next();
@@ -624,7 +625,7 @@ this_is_a_primary_expression:
     }
 
     // NOTE: CHECK BEFORE CALL THIS FUNCTION
-    StructOrUnionSpecifierPtr Miyuki::AST::ASTBuilder::structOrUnionSpecifier() {
+    StructOrUnionSpecifierPtr ASTBuilder::structOrUnionSpecifier() {
         /*struct-or-union-specifier:
             struct-or-union identifier(opt) { struct-declaration-list }
             struct-or-union identifier*/
@@ -647,7 +648,7 @@ this_is_a_primary_expression:
     }
 
     // NOTE: CHECK BEFORE CALL THIS FUNCTION
-    EnumSpecifierPtr Miyuki::AST::ASTBuilder::enumSpecifier() {
+    EnumSpecifierPtr ASTBuilder::enumSpecifier() {
         /*
         enum-specifier:
             enum identifier(opt) { enumerator-list }
@@ -670,7 +671,7 @@ this_is_a_primary_expression:
         return make_shared<EnumSpecifier>(id, enumList);
     }
 
-    StructDeclarationListPtr Miyuki::AST::ASTBuilder::structDeclarationList() {
+    StructDeclarationListPtr ASTBuilder::structDeclarationList() {
         /*struct-declaration-list:
             struct-declaration
             struct-declaration-list struct-declaration*/
@@ -683,7 +684,7 @@ this_is_a_primary_expression:
     }
 
     // NOTE: CHECK BEFORE CALL THIS FUNCTION
-    StructDeclarationPtr Miyuki::AST::ASTBuilder::structDeclaration() {
+    StructDeclarationPtr ASTBuilder::structDeclaration() {
         /*
         struct-declaration:
             specifier-qualifier-list struct-declarator-list(opt) ;
@@ -700,7 +701,7 @@ this_is_a_primary_expression:
         REPORT_ERROR("need a specifier or qualifier here.");
     }
 
-    SpecifierAndQualifierListPtr Miyuki::AST::ASTBuilder::specifierQualifierList() {
+    SpecifierAndQualifierListPtr ASTBuilder::specifierQualifierList() {
         /*specifier-qualifier-list:
             type-specifier specifier-qualifier-list(opt)
             type-qualifier specifier-qualifier-list(opt)*/
@@ -720,7 +721,7 @@ this_is_a_primary_expression:
         return lst;
     }
 
-    StructDeclaratorListPtr Miyuki::AST::ASTBuilder::structDeclaratorList() {
+    StructDeclaratorListPtr ASTBuilder::structDeclaratorList() {
         /*struct-declarator-list:
             struct-declarator
             struct-declarator-list , struct-declarator*/
@@ -735,7 +736,7 @@ this_is_a_primary_expression:
     }
 
     // NOTE: CHECK BEFORE CALL THIS FUNCTION
-    StructDeclaratorPtr Miyuki::AST::ASTBuilder::structDeclarator() {
+    StructDeclaratorPtr ASTBuilder::structDeclarator() {
         /*struct-declarator:
             declarator
             declarator(opt) : constant-expression*/
@@ -753,7 +754,7 @@ this_is_a_primary_expression:
         return make_shared<StructDeclarator>(decl, constantExpression());
     }
 
-    EnumeratorListPtr Miyuki::AST::ASTBuilder::enumeratorList() {
+    EnumeratorListPtr ASTBuilder::enumeratorList() {
         /*enumerator-list:
             enumerator
             enumerator-list , enumerator*/
@@ -767,7 +768,7 @@ this_is_a_primary_expression:
         return lst;
     }
 
-    EnumeratorPtr Miyuki::AST::ASTBuilder::enumerator() {
+    EnumeratorPtr ASTBuilder::enumerator() {
         /*enumerator:
             enumeration-constant
             enumeration-constant = constant-expression*/
@@ -782,7 +783,7 @@ this_is_a_primary_expression:
     }
 
     // NOTE: CHECK BEFORE CALL THIS FUNCTION
-    DeclaratorPtr Miyuki::AST::ASTBuilder::declarator() {
+    DeclaratorPtr ASTBuilder::declarator() {
         /*
         declarator:
             pointer(opt) direct-declarator
@@ -794,7 +795,7 @@ this_is_a_primary_expression:
         return make_shared<Declarator>(ptrDecl, directDeclarator());
     }
 
-    DirectDeclaratorPtr Miyuki::AST::ASTBuilder::directDeclarator(bool leftBracketHandled, DirectDeclaratorPtr ptr) {
+    DirectDeclaratorPtr ASTBuilder::directDeclarator(bool leftBracketHandled, DirectDeclaratorPtr ptr) {
         /*direct-declarator:
             identifier
             ( declarator )
@@ -808,6 +809,9 @@ this_is_a_primary_expression:
         DirectDeclaratorPtr directDecl = ptr;
         if (look->is(Tag::Identifier)) {
             WordTokenPtr id = static_pointer_cast<WordToken>(look); next();
+            if (__sHasTypedefSpecifier) {
+                typedefNames.push_back(id->name);
+            }
             directDecl = make_shared<DirectDeclarator>(id);
         }
         else if (look->is('(') && !leftBracketHandled) {
@@ -866,7 +870,10 @@ new_style_paramster_list:
                     isStatic = true;
                     next();
                 }
-                AssignmentExpressionPtr assignExpr = assignmentExpression();
+                AssignmentExpressionPtr assignExpr = nullptr;
+                if (FIRST_EXPRESSION()) {
+                    assignExpr = assignmentExpression();
+                }
                 match(']');
                 if (!isStatic) productID = 2;
                 else if (firstPositionIsStatic) productID = 3;
@@ -882,7 +889,7 @@ new_style_paramster_list:
         return directDecl;
     }
 
-    PointerDeclPtr Miyuki::AST::ASTBuilder::pointerDecl() {
+    PointerDeclPtr ASTBuilder::pointerDecl() {
         /*
         pointer:
             * type-qualifier-list(opt)
@@ -898,7 +905,7 @@ new_style_paramster_list:
         return ptrDecl;
     }
 
-    TypeQualifierListPtr Miyuki::AST::ASTBuilder::typeQualifierList() {
+    TypeQualifierListPtr ASTBuilder::typeQualifierList() {
         /*
         type-qualifier-list:
             type-qualifier
@@ -913,7 +920,7 @@ new_style_paramster_list:
         return typeQual;
     }
 
-    ParameterTypeListPtr Miyuki::AST::ASTBuilder::parameterTypeList() {
+    ParameterTypeListPtr ASTBuilder::parameterTypeList() {
         /*
         parameter-type-list:
             parameter-list
@@ -929,7 +936,7 @@ new_style_paramster_list:
         return make_shared<ParameterTypeList>(lst, isParameterVarible);
     }
 
-    ParameterListPtr Miyuki::AST::ASTBuilder::parameterList() {
+    ParameterListPtr ASTBuilder::parameterList() {
         /*parameter-list:
             parameter-declaration
             parameter-list , parameter-declaration*/
@@ -953,7 +960,7 @@ new_style_paramster_list:
         return lst;
     }
 
-    ParameterDecleartionPtr Miyuki::AST::ASTBuilder::parameterDecleartion() {
+    ParameterDecleartionPtr ASTBuilder::parameterDecleartion() {
         /*
         parameter-declaration:
             declaration-specifiers declarator
@@ -1023,7 +1030,7 @@ new_style_paramster_list:
         }*/
     }
 
-    IDeclaratorPtr Miyuki::AST::ASTBuilder::iDeclarator() {
+    IDeclaratorPtr ASTBuilder::iDeclarator() {
         // first read the pointer, and return type related to child nodes.
         PointerDeclPtr ptrDecl = nullptr;
         if (FIRST_POINTER()) {
@@ -1044,7 +1051,7 @@ new_style_paramster_list:
         }
     }
 
-    IDirectDeclaratorPtr Miyuki::AST::ASTBuilder::iDirectDeclarator() {
+    IDirectDeclaratorPtr ASTBuilder::iDirectDeclarator() {
         if (look->is(Tag::Identifier)) {
             // it is an identitifer, reduced by direct-declarator -> identifier
             return directDeclarator(true);
@@ -1097,7 +1104,7 @@ new_style_paramster_list:
         return directAbstractDeclarator(true);
     }
 
-    DirectAbstractDeclaratorPtr Miyuki::AST::ASTBuilder::directAbstractDeclarator(bool leftBracketHandled, DirectAbstractDeclaratorPtr ptr) {
+    DirectAbstractDeclaratorPtr ASTBuilder::directAbstractDeclarator(bool leftBracketHandled, DirectAbstractDeclaratorPtr ptr) {
         /*
         direct-abstract-declarator:
          1   ( abstract-declarator ) (handled in iDirectDeclarator())
@@ -1150,7 +1157,11 @@ new_style_paramster_list:
                     isStatic = true;
                     next();
                 }
-                AssignmentExpressionPtr assignExpr = assignmentExpression();
+                AssignmentExpressionPtr assignExpr = nullptr;
+                if (FIRST_EXPRESSION()) {
+                    assignExpr = assignmentExpression();
+                }
+                
                 match(']');
                 if (!isStatic) productID = 1;
                 else if (firstPositionIsStatic) productID = 2;
@@ -1167,7 +1178,7 @@ new_style_paramster_list:
         return dad;
     }
 
-    WordTokenListPtr Miyuki::AST::ASTBuilder::identifierList() {
+    WordTokenListPtr ASTBuilder::identifierList() {
         /*
         identifier-list:
             identifier
@@ -1183,7 +1194,7 @@ new_style_paramster_list:
         return lst;
     }
 
-    TypeNamePtr Miyuki::AST::ASTBuilder::typeName() {
+    TypeNamePtr ASTBuilder::typeName() {
         /*
         type-name:
             specifier-qualifier-list abstract-declarator(opt)
@@ -1196,7 +1207,7 @@ new_style_paramster_list:
         return make_shared<TypeName>(spec, adecl);
     }
 
-    AbstractDeclaratorPtr Miyuki::AST::ASTBuilder::abstractDeclarator() {
+    AbstractDeclaratorPtr ASTBuilder::abstractDeclarator() {
         /*abstract-declarator:
             pointer
             pointer(opt direct-abstract-declarator*/
@@ -1207,7 +1218,7 @@ new_style_paramster_list:
         return make_shared<AbstractDeclarator>(ptrDecl, directAbstractDeclarator());
     }
 
-    bool Miyuki::AST::ASTBuilder::isTypedefName(const TokenPtr& tok)
+    bool ASTBuilder::isTypedefName(const TokenPtr& tok)
     {
         if (tok->isNot(Tag::Identifier)) {
             return false;
@@ -1216,7 +1227,7 @@ new_style_paramster_list:
     }
 
     /////////////////  statements //////////////////
-    StatementPtr Miyuki::AST::ASTBuilder::statement() {
+    StatementPtr ASTBuilder::statement() {
         /*statement:
             labeled-statement
             compound-statement
@@ -1257,7 +1268,7 @@ this_is_an_expression_statement:
         else REPORT_ERROR("invalid statement");
     }
 
-    LabeledStatementPtr Miyuki::AST::ASTBuilder::labeledStatement() {
+    LabeledStatementPtr ASTBuilder::labeledStatement() {
         /*labeled-statement:
                 identifier : statement
                 case constant-expression : statement
@@ -1284,7 +1295,7 @@ this_is_an_expression_statement:
         assert(false);
     }
 
-    CompoundStatementPtr Miyuki::AST::ASTBuilder::compoundStatement() {
+    CompoundStatementPtr ASTBuilder::compoundStatement() {
         /*compound-statement:
                 { block-item-list(opt) }*/
         assert(FIRST_COMPOUND_STATEMENT() && "please check token before use this function");
@@ -1297,7 +1308,7 @@ this_is_an_expression_statement:
         return make_shared<CompoundStatement>(blkItemList);
     }
 
-    BlockItemListPtr Miyuki::AST::ASTBuilder::blockItemList() {
+    BlockItemListPtr ASTBuilder::blockItemList() {
         /*block-item-list:
             block-item
             block-item-list block-item
@@ -1311,7 +1322,7 @@ this_is_an_expression_statement:
         return lst;
     }
 
-    BlockItemPtr Miyuki::AST::ASTBuilder::blockItem() {
+    BlockItemPtr ASTBuilder::blockItem() {
         /*block-item:
             declaration
             statement*/
@@ -1329,7 +1340,7 @@ this_is_a_declaration:
         }
     }
 
-    ExpressionStatementPtr Miyuki::AST::ASTBuilder::expressionStatement() {
+    ExpressionStatementPtr ASTBuilder::expressionStatement() {
         /*expression-statement:
             expressionopt ;*/
         assert(FIRST_EXPRSSION_STATEMENT() && "check");
@@ -1340,7 +1351,7 @@ this_is_a_declaration:
         return make_shared<ExpressionStatement>(expr);
     }
 
-    StatementPtr Miyuki::AST::ASTBuilder::selectionStatement() {
+    StatementPtr ASTBuilder::selectionStatement() {
         /*selection-statement:
                 if ( expression ) statement
                 if ( expression ) statement else statement
@@ -1368,7 +1379,7 @@ this_is_a_declaration:
         else assert(false && "require if or switch");
     }
 
-    StatementPtr Miyuki::AST::ASTBuilder::iterationStatement() {
+    StatementPtr ASTBuilder::iterationStatement() {
         /*iteration-statement:
                 while ( expression ) statement
                 do statement while ( expression ) ;
@@ -1418,7 +1429,7 @@ this_is_a_declaration:
         else assert(false && "expected while, do, for");
     }
 
-    StatementPtr Miyuki::AST::ASTBuilder::jumpStatement() {
+    StatementPtr ASTBuilder::jumpStatement() {
         /*jump-statement:
                 goto identifier ;
                 continue ;
@@ -1447,7 +1458,7 @@ this_is_a_declaration:
         }
     }
 
-    TranslationUnitPtr Miyuki::AST::ASTBuilder::translationUnit() {
+    TranslationUnitPtr ASTBuilder::translationUnit() {
         /*translation-unit:
                 external-declaration
                 translation-unit external-declaration*/
@@ -1467,7 +1478,7 @@ this_is_a_declaration:
         return unit;
     }
 
-    ExternalDeclarationPtr Miyuki::AST::ASTBuilder::externalDeclaration() {
+    ExternalDeclarationPtr ASTBuilder::externalDeclaration() {
         /*external-declaration:
                 function-definition
                 declaration*/
@@ -1487,7 +1498,7 @@ this_is_a_declaration:
         return make_shared<ExternalDeclaration>(decl);
     }
 
-    FunctionDefinitionPtr Miyuki::AST::ASTBuilder::functionDefinition() {
+    FunctionDefinitionPtr ASTBuilder::functionDefinition() {
         /*function-definition:
                 declaration-specifiers declarator declaration-listopt compound-statement
         */
@@ -1509,7 +1520,7 @@ this_is_a_declaration:
         return make_shared<FunctionDefinition>(declSpec, decr, declLst, compStmt);
     }
 
-    DeclarationListPtr Miyuki::AST::ASTBuilder::declarationList() {
+    DeclarationListPtr ASTBuilder::declarationList() {
         /*declaration-list:
                 declaration
                 declaration-list declaration*/
