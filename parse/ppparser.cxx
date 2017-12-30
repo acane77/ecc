@@ -181,6 +181,12 @@ namespace Miyuki::Parse {
             for (int i=0; i<original->size(); i++) {
                 TokenPtr tok = (*original)[i];
                 if (tok->isNot(Tag::Identifier)) {
+                    // if is two or more string connected
+                    if (seqNew->size() && tok->is(Tag::StringLiteral) && seqNew->back()->is(Tag::StringLiteral)) {
+                        // connect two strings
+                        static_pointer_cast<StringToken>(seqNew->back())->value += static_pointer_cast<StringToken>(tok)->value;
+                        continue;
+                    }
                     // directly add to seqNew
                     seqNew->push_back(tok);
                     continue;
