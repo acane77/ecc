@@ -11,7 +11,7 @@ endif()
 set(LINK_LIBS -lstdc++ -lfmt)
 
 # Add header file include directories
-include_directories(./ ./bytecode ./lex, ./parse, ./codeg ./include ./common ./ast ./llvm)
+include_directories(./ ./bytecode ./lex, ./parse, ./codeg ./include ./common ./ast ./llvm ./vm)
 
 # Add block directories
 add_subdirectory(bytecode)
@@ -20,6 +20,7 @@ add_subdirectory(lex)
 add_subdirectory(codeg)
 add_subdirectory(common)
 add_subdirectory(ast)
+add_subdirectory(vm)
 add_subdirectory(test)
 
 # Main program
