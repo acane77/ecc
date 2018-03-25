@@ -61,11 +61,6 @@ namespace Miyuki::AST {
         bool isCalculatable(TokenPtr tok, int op, bool calculateRelationship);
     };
 
-    class ExpressionBuilder {
-    public:
-        static ExpressionPtr getSymbol(const TypePtr &typ, TokenPtr tok);
-    };
-
     class CommaExpression : public Expression {
     public:
         CommaExpressionPtr commaExp;

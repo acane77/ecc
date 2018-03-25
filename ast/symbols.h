@@ -1,7 +1,6 @@
 #ifndef _MIYUKI_SYMBOLS_H
 #define _MIYUKI_SYMBOLS_H
 
-#include "ast/type.h"
 #include "lex/token.h"
 #include "common/ptrdef.h"
 
@@ -12,6 +11,8 @@ namespace Miyuki::AST {
     #define DEFINE_LIST(type) typedef deque<type##Ptr> type##List; typedef shared_ptr<type##List> type##ListPtr;
 #endif // DEFINE_LIST
 
+    using namespace Miyuki::Lex;
+
     DEFINE_SHARED_PTR(Symbol)
     DEFINE_SHARED_PTR(IEvaluatable)
 
@@ -19,17 +20,16 @@ namespace Miyuki::AST {
     public:
         // specify if expression is calculated
         bool isCalculated = false;
-        // type of this symbol (expression)
-        TypePtr symbolType = nullptr;
         // token after calculated (after calc)
         TokenPtr calculatedToken = nullptr;
 
         bool IsCalculated() const;
         void setIsCalculated(bool isCalculated);
-        const TypePtr &getSymbolType() const;
-        void setSymbolType(const TypePtr &symbolType);
         const TokenPtr &getCalculatedToken() const;
         void setCalculatedToken(const TokenPtr &calculatedToken);
+
+        // TypePtr getSymbolType();
+        // void setSymbolType(TypePtr type);
 
         void copyEvalPerproty(IEvaluatablePtr another);
 

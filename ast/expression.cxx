@@ -142,7 +142,8 @@ namespace Miyuki::AST {
     }
 
     PrimaryExpression::PrimaryExpression(const ExpressionPtr &exp) : exp(exp), PostfixExpression(nullptr, nullptr, nullptr) {
-        setSymbolType( exp->getSymbolType() );
+        /// TODO: 改为设置LLVM的type
+        /// setSymbolType( exp->getSymbolType() );
     }
 
     void PrimaryExpression::eval() {
@@ -158,14 +159,6 @@ namespace Miyuki::AST {
             if (exp && exp->IsCalculated())
                 setCalculatedToken(exp->getCalculatedToken());
         }
-    }
-
-    ExpressionPtr ExpressionBuilder::getSymbol(const TypePtr &typ, TokenPtr tok) {
-        // this function is for calculated value, so only return calculatable primary-expressions
-        assert( ( tok->is(Tag::Number) || tok->is(Tag::Identifier) || tok->is(Tag::Constant) ) && "tok is not a primary expression" );
-        PrimaryExpressionPtr expr = make_shared<PrimaryExpression>(tok);
-        expr->setSymbolType(typ);
-        return expr;
     }
 
     CommaExpression::CommaExpression(const CommaExpressionPtr &commaExp, const AssignmentExpressionPtr &assignExp)

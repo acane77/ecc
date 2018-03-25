@@ -2,6 +2,8 @@
 
 namespace Miyuki::AST {
 
+    using namespace Miyuki::Lex;
+
     bool Symbol::isPreprocessorSymbol = false;
 
     bool IEvaluatable::IsCalculated() const {
@@ -10,14 +12,6 @@ namespace Miyuki::AST {
 
     void IEvaluatable::setIsCalculated(bool isCalculated) {
         IEvaluatable::isCalculated = isCalculated;
-    }
-
-    const TypePtr &IEvaluatable::getSymbolType() const {
-        return symbolType;
-    }
-
-    void IEvaluatable::setSymbolType(const TypePtr &symbolType) {
-        IEvaluatable::symbolType = symbolType;
     }
 
     const TokenPtr &IEvaluatable::getCalculatedToken() const {

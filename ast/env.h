@@ -3,13 +3,14 @@
 
 #include <map>
 #include <vector>
-#include "ast/type.h"
 #include "ast/declaration.h"
-#include "ast/semanticinf.h"
 
 namespace Miyuki::AST {
     
     using namespace std;
+
+    class TypePtr {};
+    class IdentifierPtr {};
 
     typedef map<uint64_t, TypePtr> TypeMap;
     typedef map<string, TypePtr>   TypedefMap;
