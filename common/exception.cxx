@@ -14,4 +14,7 @@ namespace Miyuki::Common {
         return msg.c_str();
     }
 
+	const char * InvalidTypeSizeException::what() const noexcept {
+		return "invalid type size.";
+	}
 }

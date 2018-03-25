@@ -11,4 +11,6 @@
 typedef long double FloatingType;
 typedef int64_t     IntegerType;
 
+#define TARGET_ARCH_PTR_SIZE 4
+
 #endif

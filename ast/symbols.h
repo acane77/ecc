@@ -4,6 +4,7 @@
 #include "ast/type.h"
 #include "lex/token.h"
 #include "common/ptrdef.h"
+#include "ast/type.h"
 
 namespace Miyuki::AST {
 

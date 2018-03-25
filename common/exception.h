@@ -33,5 +33,10 @@ namespace Miyuki::Common {
         const char * what() const noexcept override;
     };
 
+	class InvalidTypeSizeException {
+	public:
+		const char * what() const noexcept override;
+	};
+
 }
 #endif

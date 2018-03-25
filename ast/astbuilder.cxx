@@ -1494,7 +1494,7 @@ this_is_a_declaration:
             }
             // report error and skip to next sentense
             diagError("only declarations and function definition are allowed at globe scope", look);
-            skipUntil({ ';' }, SkipUntilSemi);
+            skipUntil({ ';' }, RecoveryFlag::ConsumeSpecifiedToken);
         }
         return unit;
     }
