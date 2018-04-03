@@ -28,4 +28,12 @@ namespace Miyuki::AST {
         setCalculatedToken( another->getCalculatedToken() );
         setIsCalculated( another->isCalculated );
     }
+
+    TypePtr Miyuki::AST::IEvaluatable::getSymbolType() {
+        return symbolType;
+    }
+
+    void Miyuki::AST::IEvaluatable::setSymbolType(TypePtr type) {
+        symbolType = type;
+    }
 }

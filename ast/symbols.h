@@ -3,6 +3,7 @@
 
 #include "lex/token.h"
 #include "common/ptrdef.h"
+#include "ast/type.h"
 
 namespace Miyuki::AST {
 
@@ -22,14 +23,16 @@ namespace Miyuki::AST {
         bool isCalculated = false;
         // token after calculated (after calc)
         TokenPtr calculatedToken = nullptr;
+        // type of this symbol
+        TypePtr symbolType = nullptr;
 
         bool IsCalculated() const;
         void setIsCalculated(bool isCalculated);
         const TokenPtr &getCalculatedToken() const;
         void setCalculatedToken(const TokenPtr &calculatedToken);
 
-        // TypePtr getSymbolType();
-        // void setSymbolType(TypePtr type);
+        TypePtr getSymbolType();
+        void setSymbolType(TypePtr type);
 
         void copyEvalPerproty(IEvaluatablePtr another);
 

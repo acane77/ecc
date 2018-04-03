@@ -75,10 +75,10 @@ namespace Miyuki::Lex {
         }
 
         // type conversion (used by AST eval)
-        virtual FloatingType toFloat() { assert( false && "this token cannot convert to floating point" ); }
-        virtual IntegerType toInt() { assert( false && "this token cannot convert to integer" ); }
-        virtual void setValue(FloatingType f) { assert( false && "this token cannot set value of floating point" ); }
-        virtual void setValue(IntegerType i) { assert( false && "this token cannotset value of integer" ); }
+        virtual FloatingLiteralType toFloat() { assert( false && "this token cannot convert to floating point" ); }
+        virtual IntegerLiteralType toInt() { assert( false && "this token cannot convert to integer" ); }
+        virtual void setValue(FloatingLiteralType f) { assert( false && "this token cannot set value of floating point" ); }
+        virtual void setValue(IntegerLiteralType i) { assert( false && "this token cannotset value of integer" ); }
 
         // other
         void copyAdditionalInfo(const TokenPtr& otherToken);
@@ -110,30 +110,30 @@ namespace Miyuki::Lex {
         short bit;
         uint64_t value;
         bool  isSigned;
-        IntegerType signedValue;
+        IntegerLiteralType signedValue;
 
         IntToken(uint64_t _value, bool _isSigned = true, short _bit = 32) :Token(Tag::Integer) { value = _value; isSigned = _isSigned; bit = _bit; signedValue = value; }
         string toString() override { return "Integer: {0}"_format(value); }
         string toSourceLiteral() override { return "{0}"_format(value); }
-        IntegerType toInt() override { return signedValue; }
-        FloatingType toFloat() override { return (FloatingType)signedValue; }
-        void setValue(IntegerType v) override { value = (uint64_t)v; signedValue = v; }
+        IntegerLiteralType toInt() override { return signedValue; }
+        FloatingLiteralType toFloat() override { return (FloatingLiteralType)signedValue; }
+        void setValue(IntegerLiteralType v) override { value = (uint64_t)v; signedValue = v; }
     };
 
     // Floating Constant
     class FloatToken : public Token {
     public:
         short bit;
-        FloatingType value;
+        FloatingLiteralType value;
 
-        FloatToken(FloatingType _value, short _bit) :Token(Tag::Floating) { value = _value; bit = _bit; }
+        FloatToken(FloatingLiteralType _value, short _bit) :Token(Tag::Floating) { value = _value; bit = _bit; }
         string toString() override { return "Floating: {0}"_format(value); }
         string toSourceLiteral() override { return "{0}"_format(value); }
 
-        FloatingType toFloat() override { return value; }
-        IntegerType toInt() { return (IntegerType)value; }
-        void setValue(FloatingType f) { value = f; }
-        void setValue(IntegerType i) { value = (FloatingType)i; }
+        FloatingLiteralType toFloat() override { return value; }
+        IntegerLiteralType toInt() { return (IntegerLiteralType)value; }
+        void setValue(FloatingLiteralType f) { value = f; }
+        void setValue(IntegerLiteralType i) { value = (FloatingLiteralType)i; }
     };
 
     // Charater Constant
@@ -158,8 +158,8 @@ namespace Miyuki::Lex {
         string toString() override { return "Character({2}): '{0}', value={1}"_format((char)value, value, encoding.getEncodingString()); }
         string toSourceLiteral() override { return "{0}'{1}'"_format( encoding.getEncodingString(), charseq ); }
 
-        IntegerType toInt() override { return (IntegerType)value; }
-        FloatingType toFloat() override { return (FloatingType)value; }
+        IntegerLiteralType toInt() override { return (IntegerLiteralType)value; }
+        FloatingLiteralType toFloat() override { return (FloatingLiteralType)value; }
     };
 
     // String Literals
@@ -188,9 +188,9 @@ namespace Miyuki::Lex {
     // Prepressor Numbers
     class PPNumberToken : public Token {
     public:
-        FloatingType value;
+        FloatingLiteralType value;
 
-        explicit PPNumberToken(FloatingType _value) : Token(Tag::PPNumber) { value = _value; }
+        explicit PPNumberToken(FloatingLiteralType _value) : Token(Tag::PPNumber) { value = _value; }
         string toString() override { return "PP Number: {0}"_format(value); }
         string toSourceLiteral() override { return "{0}"_format(value); }
     };

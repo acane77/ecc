@@ -24,6 +24,7 @@ namespace Miyuki::AST {
     DeclaratorPtr   __sDeclaeator = nullptr;
     bool _sFlagIsFunctionDef = false;   // is function definition
     bool _sFlagAllowFunctionDef = false; // check if is called by external-declaration
+    int  _sIndexOfInitDecl = 0; // index of initial decl
 
     // use for reconize typedef-name
     bool __sHasTypedefSpecifier = false;
@@ -478,7 +479,7 @@ this_is_a_primary_expression:
             init-declarator
             init-declarator-list , init-declarator*/
         InitDeclaratorListPtr lst = make_shared<InitDeclaratorList>();
-        int indexOfInitDecl = 0;
+        _sIndexOfInitDecl = 0; __sInitializer = nullptr;
         do {
             if (FIRST_INIT_DECLARATOR()) {
                 lst->push_back(initDeclarator());
@@ -492,7 +493,7 @@ this_is_a_primary_expression:
                 // follow(declaration-specifiers declarator)
                 if (FIRST_DECLARATION_LIST() || FIRST_COMPOUND_STATEMENT()) {
                     // may be function definition
-                    if (!indexOfInitDecl && __sInitializer == nullptr) {
+                    if (!_sIndexOfInitDecl  && __sInitializer == nullptr) {
                         if (!_sFlagAllowFunctionDef) {
                             diagError("function definition is not allowed here.", look);
                             skipUntil({ '{' }, SkipUntilEndOfFile);
@@ -506,6 +507,7 @@ this_is_a_primary_expression:
                 
             }
             else REPORT_ERROR("invalid declaration-specifier.")
+            _sIndexOfInitDecl++;
         } while (look->is(',') && next());
         return lst;
     }

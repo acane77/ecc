@@ -311,7 +311,7 @@ namespace Miyuki::Lex {
 
     TokenPtr Lexer::scanIntegerAndFloating() {
         // Integer and floating constant
-        FloatingType floating;
+        FloatingLiteralType floating;
         // Integer of integer part of floating
         uint64_t intValue = 0;
         // Ary of the integer (or integer part of floating)
@@ -411,7 +411,7 @@ add_exponment:
 
         // Floating-constant (decimal)
         if (peak == '.') {
-            readch(); FloatingType decimalPart;
+            readch(); FloatingLiteralType decimalPart;
             if (peak == '.') {
                 // why retract here? if here is .. it reads two more characters than
                 // nessesarry, so retract is required.
@@ -431,7 +431,7 @@ add_exponment:
             if (intValue == 0 && ary == 8) ary = 10;
             if (ary == 8)  diagError("Invalid number.");
             else if (ary == 10) {
-                FloatingType fraction = 0.0, factor = 0.1;
+                FloatingLiteralType fraction = 0.0, factor = 0.1;
                 int exponment = 0;
                 for (; isdigit(peak); readch()) {
                     fraction = fraction + (peak - '0') * factor;
@@ -451,10 +451,10 @@ add_exponment:
                 if (readch(); peak == '-' || peak == '+') { positive = peak == '+'; readch(); }
                 for (; isdigit(peak); readch())
                     exponment = exponment * 10 + peak - '0';
-                if (positive) decimalPart = (FloatingType)fraction / 16 * (1 << exponment);
-                else          decimalPart = (FloatingType)fraction / 16 / (1 << exponment);
+                if (positive) decimalPart = (FloatingLiteralType)fraction / 16 * (1 << exponment);
+                else          decimalPart = (FloatingLiteralType)fraction / 16 / (1 << exponment);
             }
-            floating = ((FloatingType)intValue) + decimalPart;
+            floating = ((FloatingLiteralType)intValue) + decimalPart;
 add_floating_suffix:
             // floting-constant suffix
             for (; isalnum(peak) ; readch()) {

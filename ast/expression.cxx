@@ -136,14 +136,11 @@ namespace Miyuki::AST {
             : typeName(typeName), initList(initList), PostfixExpression(nullptr, nullptr, nullptr) {}
 
     PrimaryExpression::PrimaryExpression(const TokenPtr &factor) : factor(factor), PostfixExpression(nullptr, nullptr, nullptr) {
-        //setSymbolType( TypeFactory::build(factor) );
-        // 上面这句话如果注释掉， 就不报错，否则报错
-        // BUG: link failed here
+        setSymbolType( TypeFactory::build(factor) );
     }
 
     PrimaryExpression::PrimaryExpression(const ExpressionPtr &exp) : exp(exp), PostfixExpression(nullptr, nullptr, nullptr) {
-        /// TODO: 改为设置LLVM的type
-        /// setSymbolType( exp->getSymbolType() );
+        setSymbolType( exp->getSymbolType() );
     }
 
     void PrimaryExpression::eval() {
@@ -206,12 +203,12 @@ namespace Miyuki::AST {
         // normal type
         if ( tok1->is(Tag::Floating) || tok2->is(Tag::Floating) ) {
             // If any one is Float the result is Float
-            FloatingType result = calculateConstantValue( tok1->toFloat() , tok2->toFloat(), op->tag );
+            FloatingLiteralType result = calculateConstantValue( tok1->toFloat() , tok2->toFloat(), op->tag );
             return make_shared<FloatToken>(result, 64);
         }
         else  /*if ( tok1->is(Tag::Integer) || tok2->is(Tag::Integer) )*/ {
             // any of it is integer
-            IntegerType result = calculateConstantValue( tok1->toInt() , tok2->toInt(), op->tag );
+            IntegerLiteralType result = calculateConstantValue( tok1->toInt() , tok2->toInt(), op->tag );
             return make_shared<IntToken>(result);
         }
     }
@@ -249,7 +246,7 @@ namespace Miyuki::AST {
 
     }
 
-    FloatingType Expression::calculateConstantValue(FloatingType a, FloatingType b, int op) {
+    FloatingLiteralType Expression::calculateConstantValue(FloatingLiteralType a, FloatingLiteralType b, int op) {
         switch (op) {
             case '*': return a * b;
             case '/': return a / b;
@@ -264,7 +261,7 @@ namespace Miyuki::AST {
         assert( false && "not calculatable" );
     }
 
-    IntegerType Expression::calculateConstantValue(IntegerType a, IntegerType b, int op) {
+    IntegerLiteralType Expression::calculateConstantValue(IntegerLiteralType a, IntegerLiteralType b, int op) {
         switch (op) {
             case '*': return a * b;
             case '/': return a / b;
@@ -284,7 +281,7 @@ namespace Miyuki::AST {
         assert( false && "not calculatable" );
     }
 
-    IntegerType Expression::calculateCompare(FloatingType a, FloatingType b, int op) {
+    IntegerLiteralType Expression::calculateCompare(FloatingLiteralType a, FloatingLiteralType b, int op) {
         switch (op) {
             case '<': return a<b;
             case '>': return a>b;
@@ -296,7 +293,7 @@ namespace Miyuki::AST {
         assert( false && "not calculatable" );
     }
 
-    IntegerType Expression::calculateCompare(IntegerType a, IntegerType b, int op) {
+    IntegerLiteralType Expression::calculateCompare(IntegerLiteralType a, IntegerLiteralType b, int op) {
         switch (op) {
             case '<': return a<b;
             case '>': return a>b;
@@ -328,7 +325,7 @@ namespace Miyuki::AST {
         return Miyuki::Lex::TokenPtr();
     }
 
-    FloatingType Expression::calculateConstantValue(FloatingType a, int op) {
+    FloatingLiteralType Expression::calculateConstantValue(FloatingLiteralType a, int op) {
         switch (op) {
             case '+': return a;
             case '-': return -a;
@@ -336,7 +333,7 @@ namespace Miyuki::AST {
         assert( false && "not calculatable" );
     }
 
-    IntegerType Expression::calculateConstantValue(IntegerType a, int op) {
+    IntegerLiteralType Expression::calculateConstantValue(IntegerLiteralType a, int op) {
         switch (op) {
             case '~': return ~a;
             case '+': return a;
@@ -362,5 +359,23 @@ namespace Miyuki::AST {
                 return true;
         }
         return false;
+    }
+
+    //////////////// Code Generation //////////////////
+    /// NOTE: Call eval() before call gen()
+    void CommaExpression::gen() {
+        if (IsCalculated()) {
+            setSymbolType(TypeFactory::build(getCalculatedToken()));
+            return;
+        }
+        ExpressionPtr nextLevel = assignExp, siblingLevel = commaExp;
+        /// TODO: gen here
+        /* set symbol type */
+        if (siblingLevel) {
+            setSymbolType(siblingLevel->getSymbolType());
+        }
+        else {
+            setSymbolType(nextLevel->getSymbolType());
+        }
     }
 }

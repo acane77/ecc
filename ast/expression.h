@@ -48,16 +48,16 @@ namespace Miyuki::AST {
 
         // for arithmetic
         TokenPtr calculateConstant(TokenPtr tok1, TokenPtr tok2, TokenPtr op);
-        FloatingType calculateConstantValue(FloatingType a, FloatingType b, int op);
-        IntegerType  calculateConstantValue(IntegerType  a, IntegerType b, int op);
-        IntegerType  calculateCompare(FloatingType a, FloatingType b, int op);
-        IntegerType  calculateCompare(IntegerType a, IntegerType b, int op);
+        FloatingLiteralType calculateConstantValue(FloatingLiteralType a, FloatingLiteralType b, int op);
+        IntegerLiteralType  calculateConstantValue(IntegerLiteralType  a, IntegerLiteralType b, int op);
+        IntegerLiteralType  calculateCompare(FloatingLiteralType a, FloatingLiteralType b, int op);
+        IntegerLiteralType  calculateCompare(IntegerLiteralType a, IntegerLiteralType b, int op);
         bool isCalculatable(TokenPtr tok1, TokenPtr tok2, int op, bool calculateRelationship);
 
         // for unary
         TokenPtr calculateConstant(TokenPtr tok, TokenPtr op);
-        FloatingType calculateConstantValue(FloatingType a, int op);
-        IntegerType  calculateConstantValue(IntegerType a, int op);
+        FloatingLiteralType calculateConstantValue(FloatingLiteralType a, int op);
+        IntegerLiteralType  calculateConstantValue(IntegerLiteralType a, int op);
         bool isCalculatable(TokenPtr tok, int op, bool calculateRelationship);
     };
 
@@ -68,7 +68,7 @@ namespace Miyuki::AST {
 
         CommaExpression(const CommaExpressionPtr &commaExp, const AssignmentExpressionPtr &assignExp);
 
-        void gen() { assert( false && "unimplemented" ); }
+        void gen();
         int getKind() { return Kind::commaExpression; }
 
         virtual void eval();

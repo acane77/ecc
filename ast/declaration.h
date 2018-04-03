@@ -52,6 +52,7 @@ namespace Miyuki::AST {
     DEFINE_LIST(Designator)
     DEFINE_SHARED_PTR(IDeclarator)
     DEFINE_SHARED_PTR(IDirectDeclarator)
+    DEFINE_SHARED_PTR(FunctionSpecifier)
 
     class IDeclaration : public Symbol {
     public:
@@ -75,7 +76,7 @@ namespace Miyuki::AST {
 
         Declaration(const DeclarationSpecifierPtr &decSpec, const InitDeclaratorListPtr &initDeclList);
 
-        // we do not support static_assert
+        // do not support static_assert
         int getKind() override { return Kind::declaration; }
         virtual void gen() {}
     };
@@ -89,11 +90,24 @@ namespace Miyuki::AST {
 
         int getKind() override { return Kind::declarationSpecifier; }
         virtual void gen() {}
+
+        SpecifierAndQualifierListPtr generateSpecifierQualifierList();
+        void _genSpecQualList(SpecifierAndQualifierListPtr lst);
     };
 
     class SpecifierAndQualifier : public IDeclaration {
+    public:
         virtual int getKind() { assert( false && "unimplemented" ); }
-        virtual void gen() { assert ( false && "unimplemented" ); }
+        virtual void gen() { assert(false && "unimplemented"); }
+
+        virtual StorageClass getStorageClass() { assert(false && "is not a storage-class"); }
+        virtual void getTypeQualifier(TypeQualifierFlag& flag) { assert(false && "unimplemented"); }
+        virtual TypePtr getType() { assert(false && "unimplemented"); }
+        virtual bool isStorageClassSpecifier() { return false; }
+        virtual bool isTypeQualifier() { return false; }
+        virtual bool isFunctionSpecifier() { return false; }
+        virtual bool isTypeSpecifier() { return false; }
+
     };
 
     class StorageClassSpecifier : public SpecifierAndQualifier {
@@ -104,6 +118,8 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::storageClassSpecifier; }
         virtual void gen() {}
+        virtual StorageClass getStorageClass();
+        virtual bool isStorageClassSpecifier() { return true; }
     };
 
     class TypeSpecifier : public SpecifierAndQualifier {
@@ -117,6 +133,7 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::typeSpecifier; }
         virtual void gen() { assert ( false && "unimplemented" ); }
+        virtual TypePtr getType();
     };
 
     class TypeQualifier : public SpecifierAndQualifier {
@@ -127,6 +144,8 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::typeQualifier; }
         virtual void gen() {}
+        virtual void getTypeQualifier(TypeQualifierFlag& flag);
+        virtual bool isTypeQualifier() { return true; }
     };
 
     class FunctionSpecifier : public SpecifierAndQualifier {
@@ -137,6 +156,8 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::functionSpecifier; }
         virtual void gen() {}
+        virtual FunctionSpecifierFlag getFunctionSpecifier();
+        virtual bool isFunctionSpecifier() { return true; }
     };
 
     class StructOrUnionSpecifier : public TypeSpecifier {
@@ -149,6 +170,9 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::structOrUninSpecifier; }
         virtual void gen() {}
+        virtual TypePtr getType();
+        TypePtr getStructTy();
+        TypePtr getUnionTy();
     };
 
     class StructDeclaration: public IDeclaration {
@@ -160,6 +184,7 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::structDeclaration; }
         virtual void gen() {}
+        void getMember(vector<Type*>& memList, const TypeMapPtr& typeMap, IndexedTypeInformation::IndexType& index);
     };
 
     class StructDeclarator : public IDeclaration {
@@ -171,6 +196,8 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::structDeclarator; }
         virtual void gen() {}
+        TypePtr getType(TypePtr basetype);
+        string getName();
     };
 
     class EnumSpecifier : public TypeSpecifier {
@@ -206,6 +233,8 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::declarator; }
         virtual void gen() {}
+        virtual TypePtr getType(TypePtr baseType);
+        virtual string getName();
     };
      
     class PointerDecl : public IDeclaration {
@@ -218,6 +247,7 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::pointer_decl; }
         virtual void gen() {}
+        virtual TypePtr getType(TypePtr baseType);
     };
 
     class DirectDeclarator : public IDirectDeclarator {
@@ -236,6 +266,9 @@ namespace Miyuki::AST {
 
         // production to be used (ref 6.7.6)
         int productionID;
+        bool isArrayDeclarator = false;
+        bool isFunctionPrototypeDeclaration = false;
+        bool isOldStyleFunctionPrototypeDeclaration = false;
 
         explicit DirectDeclarator(const TokenPtr &id);
         explicit DirectDeclarator(const DeclaratorPtr &decl);
@@ -248,6 +281,8 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::directDeclarator; }
         virtual void gen() {}
+        virtual TypePtr getType(TypePtr baseType);
+        virtual string getName();
     };
 
     class ParameterTypeList : public IDeclaration {
@@ -259,6 +294,7 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::parameterTypeList; }
         virtual void gen() {}
+        void generateTypeList(vector<TypePtr>& list);
     };
 
     class ParameterDecleartion : public IDeclaration {
@@ -275,6 +311,7 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::parameterDecleartion; }
         virtual void gen() {}
+        virtual PackedTypeInformationPtr getTypeInfo();
     };
 
     class AbstractDeclarator : public IDeclarator {
@@ -286,6 +323,7 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::abstractDeclarator; }
         virtual void gen() {}
+        TypePtr getType(TypePtr baseType);
     };
 
     class TypeName : public IDeclaration {
@@ -297,6 +335,7 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::typeName; }
         virtual void gen() {}
+        PackedTypeInformationPtr getType();
     };
 
     class DirectAbstractDeclarator : public IDirectDeclarator {
@@ -309,6 +348,10 @@ namespace Miyuki::AST {
         bool hasPointer = false;
         ParameterTypeListPtr paramList = nullptr;
         TypeQualifierListPtr typeQualList = nullptr;
+        bool isArrayDeclarator = false;
+        bool isFunctionPrototypeDeclaration = false;
+        bool isOldStyleFunctionPrototypeDeclaration = false;
+        TypePtr getType(TypePtr baseType);
 
         // ref 6.7.7   production ID
         int productionID;
@@ -334,6 +377,7 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::init; }
         virtual void gen() {}
+        TypePtr getType();
     };
 
     class InitializerList : public IDeclaration {
@@ -346,6 +390,7 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::initList; }
         virtual void gen() {}
+        TypePtr getType();
     };
 
     class Designation : public IDeclaration {

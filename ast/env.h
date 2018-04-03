@@ -4,15 +4,16 @@
 #include <map>
 #include <vector>
 #include "ast/declaration.h"
+#include "ast/type.h"
+#include "llvm/IR/LLVMContext.h"
 
 namespace Miyuki::AST {
     
     using namespace std;
+    using namespace llvm;
 
-    class TypePtr {};
     class IdentifierPtr {};
 
-    typedef map<uint64_t, TypePtr> TypeMap;
     typedef map<string, TypePtr>   TypedefMap;
     typedef map<string, IdentifierPtr> IdentifierMap;
 
@@ -38,10 +39,11 @@ namespace Miyuki::AST {
         // intermediate-time dependence scopes
         ScopePtr      scopes = nullptr;
 
+        LLVMContext   context;
     public:
         // instance
         static GlobalScope instance;
-        static GlobalScope& getInstace() { return instance; }
+        static GlobalScope& getInstance() { return instance; }
 
     public:
         

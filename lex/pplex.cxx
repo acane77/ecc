@@ -56,7 +56,7 @@ it_is_a_punctuator:
 
     TokenPtr PreprocessorLexer::scanPPNumber() {
         bool noIntPart = !isdigit(peak), noFloatingPart;
-        FloatingType fracPart = 0.0, fraction = 0.1;
+        FloatingLiteralType fracPart = 0.0, fraction = 0.1;
         for ( ; isdigit(peak) ; readch() )
             fracPart = fracPart * 10 + (peak - '0');
         // Has no floating part, just go exponment

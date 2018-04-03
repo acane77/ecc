@@ -8,7 +8,7 @@
 #define ishexdigit(x) ( isdigit(x) || (x >= 'A' && x <= 'F') || (x >= 'a' && x <= 'f') )
 #define isoctdigit(x) ( x >= '0' && x <= '8' )
 
-typedef long double FloatingType;
-typedef int64_t     IntegerType;
+typedef long double FloatingLiteralType;
+typedef int64_t     IntegerLiteralType;
 
 #endif
