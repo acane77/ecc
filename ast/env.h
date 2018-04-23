@@ -34,7 +34,7 @@ namespace Miyuki::AST {
         TypedefMap    typedefs;
 
         // type list of all types
-        TypeMap&      types;
+        TypeMapPtr    types;
 
         // intermediate-time dependence scopes
         ScopePtr      scopes = nullptr;
@@ -46,7 +46,7 @@ namespace Miyuki::AST {
         static GlobalScope& getInstance() { return instance; }
 
     public:
-        
+        GlobalScope() {}
     };
 
 }

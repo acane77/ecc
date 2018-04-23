@@ -50,13 +50,6 @@ namespace Miyuki::AST {
         return make_shared<PackedTypeInformation>(type, storageClass, functionSpec, typeQual);
     }
 
-    template<class ...Args>
-    inline Miyuki::AST::StructTy::StructTy(const TypeMapPtr & tm, string StructName, Args... paramPassToGet) {
-        type = StructType::create(paramPassToGet...);
-        type->setName(StructName);
-        memberMap = tm;
-    }
-
     map<string, shared_ptr<StructTy>> StructTy::structs;
     void Miyuki::AST::StructTy::saveStruct(shared_ptr<StructTy> ty) {
         assert(ty && "ty == nullptr");
@@ -118,20 +111,25 @@ namespace Miyuki::AST {
             if (a == b) return a;
             else return nullptr; //error
         }
-
+        cout << "[ScalarSizeInBits] " << a->getScalarSizeInBits() << "  " << b->getScalarSizeInBits() << "\n";
         if (a->getScalarSizeInBits() > b->getScalarSizeInBits()) {
+            if (a->isDoubleTy()) return a;
             if (b->isFloatTy()) return b; // with int64_t and float
             return a;
         }
         else if (a->getScalarSizeInBits() < b->getScalarSizeInBits()) {
-            if (a->isFloatTy()) return a; // with int64_t and float
+            if (a->isDoubleTy()) return a; 
+            if (b->isDoubleTy()) return b; // with double and float
+            if (a->isFloatTy()) return a;
+            if (b->isFloatTy()) return b; // with int64_t and float
             return b;
         }
-        else {
+        else {  
             if (a->isFloatTy() || a->isDoubleTy())
-                return a;
+                return b->isDoubleTy() ? b : a;
             return b;
         }
+        return nullptr;
     }
 }
 

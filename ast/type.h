@@ -94,7 +94,11 @@ namespace Miyuki::AST {
         using IndexType = IndexedTypeInformation::IndexType;
 
         template <class... Args>
-        StructTy(const TypeMapPtr& tm, string StructName, Args... paramPassToGet);
+        StructTy(const TypeMapPtr& tm, string StructName, Args... paramPassToGet) {
+            type = StructType::create(paramPassToGet...);
+            type->setName(StructName);
+            memberMap = tm;
+        }
         IndexType getIndex(string memberName);
         
         static map<string, shared_ptr<StructTy>> structs;

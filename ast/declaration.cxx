@@ -213,7 +213,7 @@ namespace Miyuki::AST {
         // QUESTION: only for typedef names?
         if (!tok) {
             assert(0 && "invalid typedef-name");
-            return;
+            return nullptr;
         }
         auto it = GlobalScope::getInstance().typedefs.find( static_pointer_cast<WordToken>(tok)->name );
         if (it == GlobalScope::getInstance().typedefs.end())

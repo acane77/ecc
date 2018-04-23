@@ -8,7 +8,8 @@ if(NOT MSVC)
 else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++latest /MP /source-charset:utf-8")
 endif()
-set(LINK_LIBS -lstdc++ -lfmt)
+set(LLVM_LIBS -lLLVMCore -lLLVMSupport -lLLVMTarget -lLLVMTransformUtils -lLLVMCodeGen -lLLVMBinaryFormat)
+set(LINK_LIBS -lstdc++ -lfmt ${LLVM_LIBS})
 
 # Add header file include directories
 include_directories(./ ./bytecode ./lex, ./parse, ./codeg ./include ./common ./ast ./llvm)

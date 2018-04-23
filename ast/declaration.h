@@ -390,7 +390,7 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::initList; }
         virtual void gen() {}
-        TypePtr getType();
+        TypePtr getType() {}
     };
 
     class Designation : public IDeclaration {
