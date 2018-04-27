@@ -102,6 +102,10 @@ namespace Miyuki::AST {
     }
 
     TypePtr TypeUtil::raiseType(TypePtr a, TypePtr b) {
+        // if is same type
+        if (a == b)
+            return a;
+
         // one of the two is pointer type
         if (a->isPointerTy() && !b->isPointerTy()) a = Type::getInt32Ty(GlobalScope::getInstance().context);
         if (b->isPointerTy() && !a->isPointerTy()) b = Type::getInt32Ty(GlobalScope::getInstance().context);

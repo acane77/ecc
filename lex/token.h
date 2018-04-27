@@ -25,6 +25,7 @@ namespace Miyuki::Lex {
     DEFINE_SHARED_PTR(HeaderToken)
     DEFINE_SHARED_PTR(PPNumberToken)
     DEFINE_SHARED_PTR(PPLiteralToken)
+    DEFINE_SHARED_PTR(StringToken)
 
     // Punctuator Strings
     extern const char * PunctuatorString[];

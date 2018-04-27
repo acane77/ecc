@@ -36,4 +36,8 @@ namespace Miyuki::AST {
     void Miyuki::AST::IEvaluatable::setSymbolType(TypePtr type) {
         symbolType = type;
     }
+
+    void Miyuki::AST::IEvaluatable::setAddr(Value * _addr) {
+        addr = _addr;
+    }
 }

@@ -4,6 +4,7 @@
 #include "lex/token.h"
 #include "common/ptrdef.h"
 #include "ast/type.h"
+#include "llvm/IR/Value.h"
 
 namespace Miyuki::AST {
 
@@ -25,6 +26,8 @@ namespace Miyuki::AST {
         TokenPtr calculatedToken = nullptr;
         // type of this symbol
         TypePtr symbolType = nullptr;
+        // temporary address
+        Value* addr = nullptr;
 
         bool IsCalculated() const;
         void setIsCalculated(bool isCalculated);
@@ -37,6 +40,9 @@ namespace Miyuki::AST {
         void copyEvalPerproty(IEvaluatablePtr another);
 
         virtual void eval() = 0;
+
+        // Set address of expression, and its type(?)
+        void setAddr(Value* addr);
     };
 
     class Symbol : public std::enable_shared_from_this<Symbol> {

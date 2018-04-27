@@ -99,7 +99,7 @@ namespace Miyuki::AST {
         ConditionalExpression(const LogicalORExpressionPtr &logicalOrExp, const ExpressionPtr &exp = nullptr,
                               const ConditionalExpressionPtr &condExpr = nullptr);
 
-        void gen() { assert( false && "unimplemented" ); }
+        void gen();
         int getKind() { return Kind::ConditionalExpression; }
 
         virtual void eval();
@@ -112,7 +112,7 @@ namespace Miyuki::AST {
 
         LogicalORExpression(const LogicalANDExpressionPtr &logicalAndExp, const LogicalORExpressionPtr &logicalOrExp);
 
-        void gen() { assert( false && "unimplemented" ); }
+        void gen();
         int getKind() { return Kind::LogicalOrExpression; }
 
         virtual void eval();
@@ -126,7 +126,7 @@ namespace Miyuki::AST {
         LogicalANDExpression(const ArithmeticPtr &exclusiveOrExpression,
                              const LogicalANDExpressionPtr &logicalAndExpression);
 
-        void gen() { assert( false && "unimplemented" ); }
+        void gen();
         int getKind() { return Kind::LogicalAndExpression; }
 
         virtual void eval();
@@ -140,7 +140,7 @@ namespace Miyuki::AST {
 
         Arithmetic(const TokenPtr &op, const ExpressionPtr &expr1, const ExpressionPtr &expr2);
 
-        void gen() { assert( false && "unimplemented" ); }
+        void gen();
         int getKind() { return Kind::Arith; }
 
         virtual void eval() override;

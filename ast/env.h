@@ -5,14 +5,18 @@
 #include <vector>
 #include "ast/declaration.h"
 #include "ast/type.h"
+#include "parse/ifparser.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/IRBuilder.h"
 
 namespace Miyuki::AST {
     
     using namespace std;
     using namespace llvm;
 
-    class IdentifierPtr {};
+    typedef Value  Identifier;
+    typedef Value* IdentifierPtr;
 
     typedef map<string, TypePtr>   TypedefMap;
     typedef map<string, IdentifierPtr> IdentifierMap;
@@ -38,17 +42,30 @@ namespace Miyuki::AST {
 
         // intermediate-time dependence scopes
         ScopePtr      scopes = nullptr;
-
+         
+        // LLVM Gode Generation Related
         LLVMContext   context;
+        BasicBlock*   currentBasicBlock;
+        Function*     currentFunction;
+        Function*     globalInitFunction;
+        IRBuilder<>   Builder;
+
+        Parse::IParserPtr parser;
     public:
         // instance
         static GlobalScope instance;
         static GlobalScope& getInstance() { return instance; }
 
     public:
-        GlobalScope() {}
+        GlobalScope(): Builder(context) {}
     };
 
+    BasicBlock* switchBasicBlock(string name);
+    void switchBasicBlock(BasicBlock* BB);
+    LLVMContext& getGlobalContext();
+    BasicBlock* getCurrentBasicBlock();
+    Function* getCurrentFunction();
+    static IRBuilder<>& Builder;
 }
 
 #endif

@@ -1,6 +1,13 @@
 #include "expression.h"
+#include "parse/ifparser.h"
+#include "ast/value.h"
+#include "ast/env.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/TypeName.h"
 
 namespace Miyuki::AST {
+
+    using namespace std;
 
 #define EVAL_EXPRESSION(siblingLevel, nextLevel, op) \
     /* if this symbol has already been calculated */\
@@ -363,19 +370,274 @@ namespace Miyuki::AST {
 
     //////////////// Code Generation //////////////////
     /// NOTE: Call eval() before call gen()
+    void codeGen(string code) {
+        cout << "[CodeGen]\t" << code << "\n";
+    }
+
+    Value* errorValue(const string& msg, TokenPtr errTok, bool throwError = false) {
+        Parse::IParser::instance->diagError(string(msg), errTok);
+        if (throwError) throw exception(msg.c_str());
+        return nullptr;
+    }
+
+#define TRY_GEN(x, ...) if(x) x->gen(__VA_ARGS__)
+#define ReturnAddressIfCalculated() \
+    if (IsCalculated()) {\
+        setSymbolType(TypeFactory::build(getCalculatedToken()));\
+        addr = ValueFactory::build(getCalculatedToken());\
+        return;\
+    }
+#define SetExpressLevel(next, sibling) ExpressionPtr nextLevel = next, siblingLevel = sibling
+#define InheritSymbolTypeFrom(x) setSymbolType(x->getSymbolType());
+#define NewBasicBlock(name) BasicBlock::Create(getGlobalContext(), name)
+#define SetInsertBlock(BB) switchBasicBlock(BB)
+#define DefineBasicBlock(name) BasicBlock* BB_##name= NewBasicBlock(#name)
+#define GetIntNType(N) Type::getInt##N##Ty(getGlobalContext())
+
+    Value* ZeroValue = ConstantInt::getIntegerValue(Type::getInt32Ty(getGlobalContext()), APInt(32, (uint64_t)0));
+
     void CommaExpression::gen() {
-        if (IsCalculated()) {
-            setSymbolType(TypeFactory::build(getCalculatedToken()));
-            return;
-        }
-        ExpressionPtr nextLevel = assignExp, siblingLevel = commaExp;
-        /// TODO: gen here
-        /* set symbol type */
+        ReturnAddressIfCalculated();
+        SetExpressLevel(assignExp, commaExp);
+        // Code Generation
+        TRY_GEN(siblingLevel);
+        TRY_GEN(nextLevel);
+        // set symbol type & addr
         if (siblingLevel) {
-            setSymbolType(siblingLevel->getSymbolType());
+            addr = siblingLevel->addr;
+            InheritSymbolTypeFrom(siblingLevel);
         }
         else {
-            setSymbolType(nextLevel->getSymbolType());
+            addr = nextLevel->addr;
+            InheritSymbolTypeFrom(nextLevel);
         }
     }
+
+    void ConditionalExpression::gen() {
+        ReturnAddressIfCalculated();
+        // Code generation
+        logicalOrExp->gen();
+
+        if (exp && condExpr) {
+            DefineBasicBlock(CondExpr_lhs);
+            DefineBasicBlock(CondExpr_rhs);
+            DefineBasicBlock(CondExpr_end);
+
+            Builder.CreateCondBr(logicalOrExp->addr, BB_CondExpr_lhs, BB_CondExpr_rhs);
+            // LHS
+            SetInsertBlock(BB_CondExpr_lhs);
+            exp->gen();
+            Builder.CreateBr(BB_CondExpr_end);
+
+            // rhs
+            SetInsertBlock(BB_CondExpr_rhs);
+            condExpr->gen();
+            Builder.CreateBr(BB_CondExpr_end);
+
+            // end
+            SetInsertBlock(BB_CondExpr_end);
+        }
+        else {
+            addr = logicalOrExp->addr;
+        }
+        /// TODO: implement after JUMP implemented
+        //return logicalOrExp->gen(NewBasicBlock("condExpr"));
+    }
+
+#define IntermediateCode(x)
+    void LogicalORExpression::gen() {
+        ReturnAddressIfCalculated();
+        // Code generation
+        // Action in logical-or
+        //   calculate value, if in cond expr, branch
+        if (logicalOrExp) {
+            // is a || b
+            // Left-hand Statement
+            BasicBlock * BB_entry = getCurrentBasicBlock();
+
+            DefineBasicBlock(LOR_rhs);
+            DefineBasicBlock(LOR_end);
+            logicalAndExp->gen();
+            Value * toBool = Builder.CreateICmpNE(logicalAndExp->addr, ZeroValue, "toBool");
+            Builder.CreateCondBr(toBool, BB_LOR_end, BB_LOR_rhs);
+            
+            // Right-hand Statement
+            SetInsertBlock(BB_LOR_rhs);
+            logicalOrExp->gen();
+            Value* toBool1 = Builder.CreateICmpNE(logicalOrExp->addr, ZeroValue, "toBool");
+            Builder.CreateBr(BB_LOR_end);
+
+            // End
+            SetInsertBlock(BB_LOR_end);
+            PHINode* phi = Builder.CreatePHI(Type::getInt8Ty(getGlobalContext()), 2, "");
+            phi->addIncoming(ConstantInt::getTrue(Type::getInt1Ty(getGlobalContext())), BB_entry);
+            phi->addIncoming(toBool1, BB_LOR_rhs);
+            
+            addr = Builder.CreateZExt(phi, GetIntNType(32), "landExt");
+        }
+        else {
+            addr = logicalAndExp->addr;
+        }
+    }
+
+    void LogicalANDExpression::gen() {
+        ReturnAddressIfCalculated();
+        // Codegen
+        if (logicalAndExpression) {
+            // is a && b
+            BasicBlock * BB_entry = getCurrentBasicBlock();
+
+            DefineBasicBlock(LAND_rhs);
+            DefineBasicBlock(LAND_end);
+            exclusiveOrExpression->gen();
+
+            IntermediateCode({
+                toBool = [addr] != 0
+                if toBool goto LAND_rhs
+                goto LAND_end
+      LAND_rhs: gen[logicalAndExpr]
+                toBool1 = [logicalAndExpr.addr] != 0
+                goto LAND_end
+      LAND_end: t1 = if [entry] false elif LAND_ths toBool1 
+                [addr] = t1
+            });
+
+            Value * toBool = Builder.CreateICmpNE(exclusiveOrExpression->addr, ZeroValue, "toBool");
+            
+            Builder.CreateCondBr(toBool, BB_LAND_rhs, BB_LAND_end);
+
+            // Right-hand Statement
+            SetInsertBlock(BB_LAND_rhs);
+            logicalAndExpression->gen();
+            Value* toBool1 = Builder.CreateICmpNE(logicalAndExpression->addr, ZeroValue, "toBool");
+            Builder.CreateBr(BB_LAND_end);
+
+            // End
+            SetInsertBlock(BB_LAND_end);
+            PHINode* phi = Builder.CreatePHI(Type::getInt8Ty(getGlobalContext()), 2, "");
+            phi->addIncoming(ConstantInt::getFalse(Type::getInt1Ty(getGlobalContext())), BB_entry);
+            phi->addIncoming(toBool1, BB_LAND_rhs);
+
+            addr = Builder.CreateZExt(phi, GetIntNType(32), "landExt");
+        }
+        else {
+            addr = exclusiveOrExpression->addr;
+        }
+    }
+
+    void Arithmetic::gen() {
+        ReturnAddressIfCalculated();
+        expr1->gen();
+        if (expr2 == nullptr) {
+            addr = expr1->addr;
+            return;
+        }
+        expr2->gen();
+
+        // GET LHS and RHS
+        Value *LHS = expr1->addr, *RHS = expr2->addr;
+        // Code Below ensures they are with same type
+        // if LHS or RHS is pointer, cast to integer
+        if (LHS->getType()->isPointerTy()) {
+            LHS = Builder.CreatePointerBitCastOrAddrSpaceCast(LHS, GetIntNType(32), false, "expr_castPtr2Int");
+        }
+        if (RHS->getType()->isPointerTy()) {
+            RHS = Builder.CreatePointerBitCastOrAddrSpaceCast(RHS, GetIntNType(32), false, "expr_castPtr2Int");
+        }
+        // Note: No pointer will be shown below
+        // if as same type
+        Type* ty = nullptr;
+        if (LHS->getType() == RHS->getType()) {
+            ty = LHS->getType();
+        }
+        else {
+            /// TODO: max size of two types
+            ty = TypeUtil::raiseType(LHS->getType(), RHS->getType());
+            
+            // the two type is not compatible
+            if (ty == nullptr) {
+                errorValue("Cannot apply `{0}' to type `{1}' and `{2}'"_format(op->toSourceLiteral(), "LHS", "RHS"), op);
+                addr = ConstantInt::getTrue(GetIntNType(32));
+                return;
+            }
+
+            // cast if one of them is float type
+            if (ty->isFloatTy() || ty->isDoubleTy()) {
+                // if coverted type is float type or double type
+                if (LHS->getType()->isIntegerTy())
+                    LHS = Builder.CreateFPCast(LHS, ty, "expr_fconv");
+                if (RHS->getType()->isIntegerTy())
+                    RHS = Builder.CreateFPCast(RHS, ty, "expr_fconv");
+                
+                // if they are not same type
+                if (LHS->getType() != ty)
+                    LHS = Builder.CreateFPCast(LHS, ty, "expr_fconv");
+                if (RHS->getType() != ty)
+                    RHS = Builder.CreateFPCast(RHS, ty, "expr_fconv");
+
+                // Calculate float value
+                assert(LHS->getType() == RHS->getType() && "LHS and RHS is not with same type");
+
+#define ReportCannotApplyOpOnFloatOperand(op) { errorValue("cannot apply operator '{0}' on float operand"_format(op->toSourceLiteral())); addr = ConstantInt::getIntegerValue(GetIntNType(32), APInt(32, 0, true)); }
+                if (op->is('^'))        ReportCannotApplyOpOnFloatOperand(op)
+                else if (op->is('|'))   ReportCannotApplyOpOnFloatOperand(op)
+                else if (op->is('&'))   ReportCannotApplyOpOnFloatOperand(op)
+                else if (op->is(Tag::Equal))    addr = Builder.CreateFCmpUEQ(LHS, RHS, "expr_feq");
+                else if (op->is(Tag::NotEqual)) addr = Builder.CreateFCmpUNE(LHS, RHS, "expr_ne");
+                else if (op->is('<'))   Builder.CreateFCmpULT(LHS, RHS, "expr_flt");
+                else if (op->is('>'))   Builder.CreateFCmpUGT(LHS, RHS, "expr_fgt");
+                else if (op->is(Tag::GreaterThanEqual))   addr = Builder.CreateFCmpULE(LHS, RHS, "expr_fle");
+                else if (op->is(Tag::LessThanEqual))      addr = Builder.CreateFCmpUGE(LHS, RHS, "expr_fge");
+                else if (op->is(Tag::LeftShift))   ReportCannotApplyOpOnFloatOperand(op)
+                else if (op->is(Tag::RightShift))  ReportCannotApplyOpOnFloatOperand(op)
+                else if (op->is('+'))   addr = Builder.CreateFAdd(LHS, RHS, "expr_add");
+                else if (op->is('-'))   addr = Builder.CreateFSub(LHS, RHS, "expr_sub");
+                else if (op->is('*'))   addr = Builder.CreateFMul(LHS, RHS, "expr_mul");
+                else if (op->is('/'))   addr = Builder.CreateFDiv(LHS, RHS, "expr_udiv");
+                else if (op->is('%'))   ReportCannotApplyOpOnFloatOperand(op)
+                else assert(false && "invalid op token");
+#undef ReportCannotApplyOpOnFloatOperand
+                return;
+            }
+            // else both are integers
+            else if (ty->isIntegerTy()) {
+                IntegerType* LHS_Ty = static_cast<IntegerType*>(LHS->getType()), *RHS_Ty = static_cast<IntegerType*>(RHS->getType());
+                /// check if they are both unsigned
+                bool isUnsigned = LHS_Ty->getSignBit() && RHS_Ty->getSignBit();
+                if (!isUnsigned) {
+                    addr = Builder.CreateSExtOrBitCast(addr, ty, "arith_sext");
+                }
+                else {
+                    addr = Builder.CreateZExtOrBitCast(addr, ty, "arith_zext");
+                }
+
+                // Calculate Integer Value
+                assert(LHS->getType() == RHS->getType() && "LHS and RHS is not with same type");
+                if (op->is('^'))        addr = Builder.CreateXor(LHS, RHS, "bitwise_xor");
+                else if (op->is('|'))   addr = Builder.CreateOr(LHS, RHS, "bitwise_or");
+                else if (op->is('&'))   addr = Builder.CreateAnd(LHS, RHS, "bitwise_and");
+                else if (op->is(Tag::Equal))    addr = Builder.CreateICmpEQ(LHS, RHS, "expr_eq");
+                else if (op->is(Tag::NotEqual)) addr = Builder.CreateICmpNE(LHS, RHS, "expr_ne");
+                else if (op->is('<'))   addr = isUnsigned ? Builder.CreateICmpULT(LHS, RHS, "expr_ult") : Builder.CreateICmpSLT(LHS, RHS, "expr_slt");
+                else if (op->is('>'))   addr = isUnsigned ? Builder.CreateICmpUGT(LHS, RHS, "expr_ugt") : Builder.CreateICmpSGT(LHS, RHS, "expr_sgt");
+                else if (op->is(Tag::GreaterThanEqual))   addr = isUnsigned ? Builder.CreateICmpULE(LHS, RHS, "expr_ule") : Builder.CreateICmpSLE(LHS, RHS, "expr_sle");
+                else if (op->is(Tag::LessThanEqual))      addr = isUnsigned ? Builder.CreateICmpUGE(LHS, RHS, "expr_uge") : Builder.CreateICmpSGE(LHS, RHS, "expr_sge");
+                else if (op->is(Tag::LeftShift))   addr = Builder.CreateShl(LHS, RHS, "expr_shl");
+                else if (op->is(Tag::RightShift))  addr = isUnsigned ? Builder.CreateLShr(LHS, RHS, "shr", false) : Builder.CreateAShr(LHS, RHS, "shr", false);
+                else if (op->is('+'))   addr = Builder.CreateAdd(LHS, RHS, "expr_add");
+                else if (op->is('-'))   addr = Builder.CreateSub(LHS, RHS, "expr_sub");
+                else if (op->is('*'))   addr = Builder.CreateMul(LHS, RHS, "expr_mul");
+                else if (op->is('/'))   addr = isUnsigned ? Builder.CreateUDiv(LHS, RHS, "expr_udiv") : Builder.CreateSDiv(LHS, RHS, "expr_sdiv");
+                else if (op->is('%'))   addr = isUnsigned ? Builder.CreateURem(LHS, RHS, "expr_rem") : Builder.CreateSRem(LHS, RHS, "expr_rem");
+                else assert(false && "invalid op token");
+                
+                return;
+            }
+        }
+        
+        
+        
+    }
+
+    
 }
