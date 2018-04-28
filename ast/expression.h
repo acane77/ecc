@@ -153,7 +153,7 @@ namespace Miyuki::AST {
 
         Unary(const TokenPtr &op, const ExpressionPtr &expr);
 
-        virtual void gen() { assert( false && "unimplemented" ); }
+        virtual void gen();
         int getKind() { return Kind::UNARY; }
 
         virtual void eval() override;

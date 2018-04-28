@@ -4,6 +4,7 @@
 #include "ast/env.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/TypeName.h"
+#include "llvm/ADT/APInt.h"
 
 namespace Miyuki::AST {
 
@@ -537,107 +538,160 @@ namespace Miyuki::AST {
         // GET LHS and RHS
         Value *LHS = expr1->addr, *RHS = expr2->addr;
         // Code Below ensures they are with same type
-        // if LHS or RHS is pointer, cast to integer
-        if (LHS->getType()->isPointerTy()) {
-            LHS = Builder.CreatePointerBitCastOrAddrSpaceCast(LHS, GetIntNType(32), false, "expr_castPtr2Int");
-        }
-        if (RHS->getType()->isPointerTy()) {
-            RHS = Builder.CreatePointerBitCastOrAddrSpaceCast(RHS, GetIntNType(32), false, "expr_castPtr2Int");
-        }
-        // Note: No pointer will be shown below
-        // if as same type
-        Type* ty = nullptr;
-        if (LHS->getType() == RHS->getType()) {
-            ty = LHS->getType();
-        }
-        else {
-            /// TODO: max size of two types
-            ty = TypeUtil::raiseType(LHS->getType(), RHS->getType());
-            
-            // the two type is not compatible
-            if (ty == nullptr) {
+
+        // -- both operands are pointers to qualified or unqualified versions of compatible complete object types
+        if (LHS->getType()->isPointerTy() && RHS->getType()->isPointerTy()) {
+            // if the two types are not compatible
+            // OR is not sub
+            if (LHS->getType() != RHS->getType() || op->isNot('-')) {
                 errorValue("Cannot apply `{0}' to type `{1}' and `{2}'"_format(op->toSourceLiteral(), "LHS", "RHS"), op);
                 addr = ConstantInt::getTrue(GetIntNType(32));
                 return;
             }
-
-            // cast if one of them is float type
-            if (ty->isFloatTy() || ty->isDoubleTy()) {
-                // if coverted type is float type or double type
-                if (LHS->getType()->isIntegerTy())
-                    LHS = Builder.CreateFPCast(LHS, ty, "expr_fconv");
-                if (RHS->getType()->isIntegerTy())
-                    RHS = Builder.CreateFPCast(RHS, ty, "expr_fconv");
-                
-                // if they are not same type
-                if (LHS->getType() != ty)
-                    LHS = Builder.CreateFPCast(LHS, ty, "expr_fconv");
-                if (RHS->getType() != ty)
-                    RHS = Builder.CreateFPCast(RHS, ty, "expr_fconv");
-
-                // Calculate float value
-                assert(LHS->getType() == RHS->getType() && "LHS and RHS is not with same type");
-
-#define ReportCannotApplyOpOnFloatOperand(op) { errorValue("cannot apply operator '{0}' on float operand"_format(op->toSourceLiteral())); addr = ConstantInt::getIntegerValue(GetIntNType(32), APInt(32, 0, true)); }
-                if (op->is('^'))        ReportCannotApplyOpOnFloatOperand(op)
-                else if (op->is('|'))   ReportCannotApplyOpOnFloatOperand(op)
-                else if (op->is('&'))   ReportCannotApplyOpOnFloatOperand(op)
-                else if (op->is(Tag::Equal))    addr = Builder.CreateFCmpUEQ(LHS, RHS, "expr_feq");
-                else if (op->is(Tag::NotEqual)) addr = Builder.CreateFCmpUNE(LHS, RHS, "expr_ne");
-                else if (op->is('<'))   Builder.CreateFCmpULT(LHS, RHS, "expr_flt");
-                else if (op->is('>'))   Builder.CreateFCmpUGT(LHS, RHS, "expr_fgt");
-                else if (op->is(Tag::GreaterThanEqual))   addr = Builder.CreateFCmpULE(LHS, RHS, "expr_fle");
-                else if (op->is(Tag::LessThanEqual))      addr = Builder.CreateFCmpUGE(LHS, RHS, "expr_fge");
-                else if (op->is(Tag::LeftShift))   ReportCannotApplyOpOnFloatOperand(op)
-                else if (op->is(Tag::RightShift))  ReportCannotApplyOpOnFloatOperand(op)
-                else if (op->is('+'))   addr = Builder.CreateFAdd(LHS, RHS, "expr_add");
-                else if (op->is('-'))   addr = Builder.CreateFSub(LHS, RHS, "expr_sub");
-                else if (op->is('*'))   addr = Builder.CreateFMul(LHS, RHS, "expr_mul");
-                else if (op->is('/'))   addr = Builder.CreateFDiv(LHS, RHS, "expr_udiv");
-                else if (op->is('%'))   ReportCannotApplyOpOnFloatOperand(op)
-                else assert(false && "invalid op token");
-#undef ReportCannotApplyOpOnFloatOperand
+            
+            LHS = Builder.CreatePointerBitCastOrAddrSpaceCast(LHS, GetIntNType(32), false, "expr_castPtr2Int");
+            RHS = Builder.CreatePointerBitCastOrAddrSpaceCast(RHS, GetIntNType(32), false, "expr_castPtr2Int");
+            Value * sub = Builder.CreateSub(LHS, RHS, "ptr_sub");
+            Value * count = Builder.CreateUDiv(sub, ConstantInt::getIntegerValue(GetIntNType(32), APInt(32, 4)), "get_count");
+            addr = count;
+            return;
+        }
+        // -- the left operand is a pointer to a complete object type and the right operand has integer type.
+        else if (LHS->getType()->isPointerTy()) {
+            if (!RHS->getType()->isIntegerTy()) {
+                errorValue("Cannot apply `{0}' to pointer type and non-integer"_format(op->toSourceLiteral()), op);
+                addr = ConstantInt::getFalse(GetIntNType(32));
                 return;
             }
-            // else both are integers
-            else if (ty->isIntegerTy()) {
-                IntegerType* LHS_Ty = static_cast<IntegerType*>(LHS->getType()), *RHS_Ty = static_cast<IntegerType*>(RHS->getType());
-                /// check if they are both unsigned
-                bool isUnsigned = LHS_Ty->getSignBit() && RHS_Ty->getSignBit();
-                if (!isUnsigned) {
-                    addr = Builder.CreateSExtOrBitCast(addr, ty, "arith_sext");
-                }
-                else {
-                    addr = Builder.CreateZExtOrBitCast(addr, ty, "arith_zext");
-                }
-
-                // Calculate Integer Value
-                assert(LHS->getType() == RHS->getType() && "LHS and RHS is not with same type");
-                if (op->is('^'))        addr = Builder.CreateXor(LHS, RHS, "bitwise_xor");
-                else if (op->is('|'))   addr = Builder.CreateOr(LHS, RHS, "bitwise_or");
-                else if (op->is('&'))   addr = Builder.CreateAnd(LHS, RHS, "bitwise_and");
-                else if (op->is(Tag::Equal))    addr = Builder.CreateICmpEQ(LHS, RHS, "expr_eq");
-                else if (op->is(Tag::NotEqual)) addr = Builder.CreateICmpNE(LHS, RHS, "expr_ne");
-                else if (op->is('<'))   addr = isUnsigned ? Builder.CreateICmpULT(LHS, RHS, "expr_ult") : Builder.CreateICmpSLT(LHS, RHS, "expr_slt");
-                else if (op->is('>'))   addr = isUnsigned ? Builder.CreateICmpUGT(LHS, RHS, "expr_ugt") : Builder.CreateICmpSGT(LHS, RHS, "expr_sgt");
-                else if (op->is(Tag::GreaterThanEqual))   addr = isUnsigned ? Builder.CreateICmpULE(LHS, RHS, "expr_ule") : Builder.CreateICmpSLE(LHS, RHS, "expr_sle");
-                else if (op->is(Tag::LessThanEqual))      addr = isUnsigned ? Builder.CreateICmpUGE(LHS, RHS, "expr_uge") : Builder.CreateICmpSGE(LHS, RHS, "expr_sge");
-                else if (op->is(Tag::LeftShift))   addr = Builder.CreateShl(LHS, RHS, "expr_shl");
-                else if (op->is(Tag::RightShift))  addr = isUnsigned ? Builder.CreateLShr(LHS, RHS, "shr", false) : Builder.CreateAShr(LHS, RHS, "shr", false);
-                else if (op->is('+'))   addr = Builder.CreateAdd(LHS, RHS, "expr_add");
-                else if (op->is('-'))   addr = Builder.CreateSub(LHS, RHS, "expr_sub");
-                else if (op->is('*'))   addr = Builder.CreateMul(LHS, RHS, "expr_mul");
-                else if (op->is('/'))   addr = isUnsigned ? Builder.CreateUDiv(LHS, RHS, "expr_udiv") : Builder.CreateSDiv(LHS, RHS, "expr_sdiv");
-                else if (op->is('%'))   addr = isUnsigned ? Builder.CreateURem(LHS, RHS, "expr_rem") : Builder.CreateSRem(LHS, RHS, "expr_rem");
-                else assert(false && "invalid op token");
-                
+            GetElementPtrInst* ptrAddSub = nullptr;
+            if (op->is('+')) {
+                /// TODO:  ** The code that may lead to the leakage of the internal training
+                vector<Value*>* v = new vector<Value*>();
+                ArrayRef<Value*>* InxList = new ArrayRef<Value*>(*v);
+                v->push_back(RHS);
+                ptrAddSub = GetElementPtrInst::CreateInBounds(LHS, InxList, "ptr_add", getCurrentBasicBlock());
+            }
+            else if (op->is('-')) {
+                /// TODO:  ** The code that may lead to the leakage of the internal training
+                vector<Value*>* v = new vector<Value*>();
+                ArrayRef<Value*>* InxList = new ArrayRef<Value*>(*v);
+                v->push_back(Builder.CreateSub(ZeroValue, RHS, "neg_rhs"));
+                ptrAddSub = GetElementPtrInst::CreateInBounds(LHS, InxList, "ptr_sub", getCurrentBasicBlock());
+            }
+            else {
+                errorValue("Cannot apply `{0}' to pointer type and integer"_format(op->toSourceLiteral()), op);
+                addr = ConstantInt::getFalse(GetIntNType(32));
+                return;
+            }
+            
+            addr = ptrAddSub;
+            return;
+        }
+        // -- Failure situation: left is arithemetic, and right is Pointer
+        else if (RHS->getType()->isPointerTy()) {
+            if (!RHS->getType()->isIntegerTy()) {
+                errorValue("Cannot apply `{0}' to non-pointer type and pointer"_format(op->toSourceLiteral()), op);
+                addr = ConstantInt::getFalse(GetIntNType(32));
                 return;
             }
         }
-        
-        
-        
+        // -- both operands have arithmetic type;
+        // Note: No pointer will be shown below
+        // if as same type
+        Type* ty = nullptr;
+        /// raised types
+        ty = TypeUtil::raiseType(LHS->getType(), RHS->getType());
+
+        // the two types are not compatible
+        if (ty == nullptr) {
+            errorValue("Cannot apply `{0}' to type `{1}' and `{2}'"_format(op->toSourceLiteral(), "LHS", "RHS"), op);
+            addr = ConstantInt::getTrue(GetIntNType(32));
+            return;
+        }
+
+        // cast if one of them is float type, and calculate as float
+        if (ty->isFloatTy() || ty->isDoubleTy()) {
+            // if coverted type is float type or double type
+            if (LHS->getType()->isIntegerTy())
+                LHS = Builder.CreateFPCast(LHS, ty, "expr_fconv");
+            if (RHS->getType()->isIntegerTy())
+                RHS = Builder.CreateFPCast(RHS, ty, "expr_fconv");
+
+            // if they are not same type
+            if (LHS->getType() != ty)
+                LHS = Builder.CreateFPCast(LHS, ty, "expr_fconv");
+            if (RHS->getType() != ty)
+                RHS = Builder.CreateFPCast(RHS, ty, "expr_fconv");
+
+            // Calculate float value
+            assert(LHS->getType() == RHS->getType() && "LHS and RHS is not with same type");
+
+#define ReportCannotApplyOpOnFloatOperand(op) { errorValue("cannot apply operator '{0}' on float operand"_format(op->toSourceLiteral())); addr = ConstantInt::getIntegerValue(GetIntNType(32), APInt(32, 0, true)); }
+            if (op->is('^'))        ReportCannotApplyOpOnFloatOperand(op)
+            else if (op->is('|'))   ReportCannotApplyOpOnFloatOperand(op)
+            else if (op->is('&'))   ReportCannotApplyOpOnFloatOperand(op)
+            else if (op->is(Tag::Equal))    addr = Builder.CreateFCmpUEQ(LHS, RHS, "expr_feq");
+            else if (op->is(Tag::NotEqual)) addr = Builder.CreateFCmpUNE(LHS, RHS, "expr_ne");
+            else if (op->is('<'))   Builder.CreateFCmpULT(LHS, RHS, "expr_flt");
+            else if (op->is('>'))   Builder.CreateFCmpUGT(LHS, RHS, "expr_fgt");
+            else if (op->is(Tag::GreaterThanEqual))   addr = Builder.CreateFCmpULE(LHS, RHS, "expr_fle");
+            else if (op->is(Tag::LessThanEqual))      addr = Builder.CreateFCmpUGE(LHS, RHS, "expr_fge");
+            else if (op->is(Tag::LeftShift))   ReportCannotApplyOpOnFloatOperand(op)
+            else if (op->is(Tag::RightShift))  ReportCannotApplyOpOnFloatOperand(op)
+            else if (op->is('+'))   addr = Builder.CreateFAdd(LHS, RHS, "expr_add");
+            else if (op->is('-'))   addr = Builder.CreateFSub(LHS, RHS, "expr_sub");
+            else if (op->is('*'))   addr = Builder.CreateFMul(LHS, RHS, "expr_mul");
+            else if (op->is('/'))   addr = Builder.CreateFDiv(LHS, RHS, "expr_udiv");
+            else if (op->is('%'))   ReportCannotApplyOpOnFloatOperand(op)
+            else assert(false && "invalid op token");
+#undef ReportCannotApplyOpOnFloatOperand
+            return;
+        }
+        // else both are integers
+        else if (ty->isIntegerTy()) {
+            IntegerType* LHS_Ty = static_cast<IntegerType*>(LHS->getType()), *RHS_Ty = static_cast<IntegerType*>(RHS->getType());
+            /// check if they are both unsigned
+            bool isUnsigned = LHS_Ty->getSignBit() && RHS_Ty->getSignBit();
+            if (!isUnsigned) {
+                addr = Builder.CreateSExtOrBitCast(addr, ty, "arith_sext");
+            }
+            else {
+                addr = Builder.CreateZExtOrBitCast(addr, ty, "arith_zext");
+            }
+
+            // Calculate Integer Value
+            assert(LHS->getType() == RHS->getType() && "LHS and RHS is not with same type");
+            if (op->is('^'))        addr = Builder.CreateXor(LHS, RHS, "bitwise_xor");
+            else if (op->is('|'))   addr = Builder.CreateOr(LHS, RHS, "bitwise_or");
+            else if (op->is('&'))   addr = Builder.CreateAnd(LHS, RHS, "bitwise_and");
+            else if (op->is(Tag::Equal))    addr = Builder.CreateICmpEQ(LHS, RHS, "expr_eq");
+            else if (op->is(Tag::NotEqual)) addr = Builder.CreateICmpNE(LHS, RHS, "expr_ne");
+            else if (op->is('<'))   addr = isUnsigned ? Builder.CreateICmpULT(LHS, RHS, "expr_ult") : Builder.CreateICmpSLT(LHS, RHS, "expr_slt");
+            else if (op->is('>'))   addr = isUnsigned ? Builder.CreateICmpUGT(LHS, RHS, "expr_ugt") : Builder.CreateICmpSGT(LHS, RHS, "expr_sgt");
+            else if (op->is(Tag::GreaterThanEqual))   addr = isUnsigned ? Builder.CreateICmpULE(LHS, RHS, "expr_ule") : Builder.CreateICmpSLE(LHS, RHS, "expr_sle");
+            else if (op->is(Tag::LessThanEqual))      addr = isUnsigned ? Builder.CreateICmpUGE(LHS, RHS, "expr_uge") : Builder.CreateICmpSGE(LHS, RHS, "expr_sge");
+            else if (op->is(Tag::LeftShift))   addr = Builder.CreateShl(LHS, RHS, "expr_shl");
+            else if (op->is(Tag::RightShift))  addr = isUnsigned ? Builder.CreateLShr(LHS, RHS, "shr", false) : Builder.CreateAShr(LHS, RHS, "shr", false);
+            else if (op->is('+'))   addr = Builder.CreateAdd(LHS, RHS, "expr_add");
+            else if (op->is('-'))   addr = Builder.CreateSub(LHS, RHS, "expr_sub");
+            else if (op->is('*'))   addr = Builder.CreateMul(LHS, RHS, "expr_mul");
+            else if (op->is('/'))   addr = isUnsigned ? Builder.CreateUDiv(LHS, RHS, "expr_udiv") : Builder.CreateSDiv(LHS, RHS, "expr_sdiv");
+            else if (op->is('%'))   addr = isUnsigned ? Builder.CreateURem(LHS, RHS, "expr_rem") : Builder.CreateSRem(LHS, RHS, "expr_rem");
+            else assert(false && "invalid op token");
+
+            return;
+        }
     }
 
-    
+    void Unary::gen() {
+        expr->gen();
+
+        // if is pointer
+        Value * S = expr->addr;
+        if (S->getType()->isPointerTy()) {
+            Type * ty = S->getType();
+            GetElementPtrInst* instPtrIncDec = nullptr;
+
+        }
+    }
 }
