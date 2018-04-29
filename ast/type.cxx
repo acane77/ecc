@@ -135,5 +135,10 @@ namespace Miyuki::AST {
         }
         return nullptr;
     }
+
+    Identifier::Identifier(string n, TypePtr t, StorageClass sc, FunctionSpecifierFlag fs, TypeQualifierFlag tq)
+        : PackedTypeInformation(t, sc, fs, tq) {
+        name = n;
+    }
 }
 

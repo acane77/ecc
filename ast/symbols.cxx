@@ -37,7 +37,17 @@ namespace Miyuki::AST {
         symbolType = type;
     }
 
-    void Miyuki::AST::IEvaluatable::setAddr(Value * _addr) {
+    void Miyuki::AST::IEvaluatable::setAddr(Value * _addr, bool isLV) {
         addr = _addr;
+        isLValue = isLV;
+        symbolType = _addr->getType();
+    }
+
+    void Miyuki::AST::IEvaluatable::lvalue(Value * addr) {
+        setAddr(addr, true);
+    }
+
+    void Miyuki::AST::IEvaluatable::rvalue(Value * addr) {
+        setAddr(addr, false);
     }
 }

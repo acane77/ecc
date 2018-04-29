@@ -16,6 +16,7 @@ namespace Miyuki::AST {
     DEFINE_SHARED_PTR(IndexedTypeInformation)
     DEFINE_SHARED_PTR(StructTy)
     DEFINE_SHARED_PTR(UnionTy)
+    DEFINE_SHARED_PTR(Identifier)
 
     class TypeFactory {
     public:
@@ -125,6 +126,19 @@ namespace Miyuki::AST {
     public:
         static TypePtr raiseType(TypePtr a, TypePtr b);
         static Value*  createConstant(TokenPtr constTok);
+    };
+
+    class Identifier : public PackedTypeInformation {
+    public:
+        string name;
+
+        Identifier(
+            string n,
+            TypePtr t,
+            StorageClass sc,
+            FunctionSpecifierFlag fs,
+            TypeQualifierFlag tq
+         );
     };
 }
 

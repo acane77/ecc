@@ -151,6 +151,9 @@ namespace Miyuki::AST {
         TokenPtr      op;
         ExpressionPtr expr;
 
+        // Check whether the name of the function is addressed (use &)
+        bool          isFunctionDesignatorFetchAddr = false;
+
         Unary(const TokenPtr &op, const ExpressionPtr &expr);
 
         virtual void gen();
@@ -181,7 +184,7 @@ namespace Miyuki::AST {
         // eg token position
         LogicalNot(const TokenPtr &op, const ExpressionPtr &expr) : Unary(op, expr) {}
 
-        void gen() { assert( false && "unimplemented" ); }
+        void gen();
         int getKind() { return Kind::LogicalNot; }
     };
 
@@ -190,7 +193,7 @@ namespace Miyuki::AST {
         TypeNamePtr typeName;
 
         TypeInfoExpression(const TokenPtr &op, const TypeNamePtr &typeName);
-        void gen() { assert( false && "unimplemented" ); }
+        void gen();
         int getKind() { return Kind::typeInfoExpression; }
         virtual void eval() override { /* not evaluatable*/ }
     };
@@ -205,7 +208,7 @@ namespace Miyuki::AST {
         PostfixExpression(const TokenPtr &op, const ExpressionPtr &expr, const PostfixExpressionPtr &postfixExp)
                 : Unary(op, expr), postfixExp(postfixExp) {}
 
-        void gen() { assert( false && "unimplemented" ); }
+        void gen();
         int getKind() { return Kind::postfixExpression; }
         virtual void eval() override { /* not evaluatable*/ }
     };
@@ -217,7 +220,7 @@ namespace Miyuki::AST {
         StructAccess(const TokenPtr &op, const ExpressionPtr &expr,
                      const PostfixExpressionPtr &postfixExp, const WordTokenPtr &identifier);
 
-        void gen() { assert( false && "unimplemented" ); }
+        void gen();
         int getKind() { return Kind::StructAccess; }
     };
 
@@ -261,8 +264,8 @@ namespace Miyuki::AST {
         AnonymousArray(const TypeNamePtr &typeName, const InitializerListPtr &initList);
 
         InitializerListPtr initList;
-        // TODO: implement this after implement Statement (if there are repeat code, try def)
-        void gen() { assert( false && "unimplemented" ); }
+        
+        void gen();
         int getKind() { return Kind::AnonymousArray; }
     };
 

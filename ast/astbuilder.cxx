@@ -229,6 +229,8 @@ namespace Miyuki::AST {
             
             TypeNamePtr typeNam = typeName();
             match(')');
+            /// TODO: 把匿名数组放到这个地方，因为 (type-name) 都是相同内容
+            ///       遇到 '{' 那么是匿名数组，否则是类型转换。
             return make_shared<CastExpression>(typeNam, castExpression());
         }
 
@@ -260,7 +262,11 @@ this_is_an_expression:
         else if ( look->is(Tag::Sizeof) ) {
             next();
             if ( look->is('(') ) {
-                goto SizeOfType;
+                // look ahead 1 token
+                next(); 
+                if (FIRST_TYPE_NAME())
+                    goto SizeOfType;
+                retract();
             }
             // sizeof unary-expression
             return make_shared<Unary>(op, unaryExpression());
@@ -268,8 +274,8 @@ this_is_an_expression:
         else if ( look->is(Tag::Alignof) ) {
             next();
             if ( look->is('(') ) {
-SizeOfType:
                 next();
+SizeOfType:
                 TypeNamePtr typeNam = typeName();
                 match(')');
                 return make_shared<TypeInfoExpression>(op, typeNam);

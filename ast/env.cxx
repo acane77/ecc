@@ -1,8 +1,10 @@
 #include "env.h"
+#include "llvm/IR/Type.h"
 
 namespace Miyuki::AST {
     GlobalScope GlobalScope::instance;
     IRBuilder<>& Builder = GlobalScope::instance.Builder;
+    const size_t PointerSize = 4;
 
     LLVMContext & Miyuki::AST::getGlobalContext() {
         return GlobalScope::getInstance().context;

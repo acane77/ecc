@@ -375,7 +375,7 @@ namespace Miyuki::AST {
         cout << "[CodeGen]\t" << code << "\n";
     }
 
-    Value* errorValue(const string& msg, TokenPtr errTok, bool throwError = false) {
+    Value* errorvalue(const string& msg, TokenPtr errTok, bool throwError = false) {
         Parse::IParser::instance->diagError(string(msg), errTok);
         if (throwError) throw exception(msg.c_str());
         return nullptr;
@@ -384,8 +384,7 @@ namespace Miyuki::AST {
 #define TRY_GEN(x, ...) if(x) x->gen(__VA_ARGS__)
 #define ReturnAddressIfCalculated() \
     if (IsCalculated()) {\
-        setSymbolType(TypeFactory::build(getCalculatedToken()));\
-        addr = ValueFactory::build(getCalculatedToken());\
+        rvalue(ValueFactory::build(getCalculatedToken()));\
         return;\
     }
 #define SetExpressLevel(next, sibling) ExpressionPtr nextLevel = next, siblingLevel = sibling
@@ -394,6 +393,13 @@ namespace Miyuki::AST {
 #define SetInsertBlock(BB) switchBasicBlock(BB)
 #define DefineBasicBlock(name) BasicBlock* BB_##name= NewBasicBlock(#name)
 #define GetIntNType(N) Type::getInt##N##Ty(getGlobalContext())
+#define REPORT_ERROR_V(msg, tok) { \
+        errorvalue(msg, tok);\
+        rvalue(ZeroValue);\
+        return; \
+    }
+#define RequireLValue(expr) { if (!expr->isLValue)  REPORT_ERROR_V("operand of this operator requires lvalue", op) }
+#define RequireNonConst(expr)
 
     Value* ZeroValue = ConstantInt::getIntegerValue(Type::getInt32Ty(getGlobalContext()), APInt(32, (uint64_t)0));
 
@@ -405,11 +411,11 @@ namespace Miyuki::AST {
         TRY_GEN(nextLevel);
         // set symbol type & addr
         if (siblingLevel) {
-            addr = siblingLevel->addr;
+            setAddr(siblingLevel->getAddr(), siblingLevel->isLValue);
             InheritSymbolTypeFrom(siblingLevel);
         }
         else {
-            addr = nextLevel->addr;
+            setAddr(nextLevel->getAddr(), nextLevel->isLValue);
             InheritSymbolTypeFrom(nextLevel);
         }
     }
@@ -424,7 +430,7 @@ namespace Miyuki::AST {
             DefineBasicBlock(CondExpr_rhs);
             DefineBasicBlock(CondExpr_end);
 
-            Builder.CreateCondBr(logicalOrExp->addr, BB_CondExpr_lhs, BB_CondExpr_rhs);
+            Builder.CreateCondBr(logicalOrExp->getAddr(), BB_CondExpr_lhs, BB_CondExpr_rhs);
             // LHS
             SetInsertBlock(BB_CondExpr_lhs);
             exp->gen();
@@ -439,7 +445,7 @@ namespace Miyuki::AST {
             SetInsertBlock(BB_CondExpr_end);
         }
         else {
-            addr = logicalOrExp->addr;
+            setAddr(logicalOrExp->getAddr(), logicalOrExp->isLValue);
         }
         /// TODO: implement after JUMP implemented
         //return logicalOrExp->gen(NewBasicBlock("condExpr"));
@@ -459,13 +465,13 @@ namespace Miyuki::AST {
             DefineBasicBlock(LOR_rhs);
             DefineBasicBlock(LOR_end);
             logicalAndExp->gen();
-            Value * toBool = Builder.CreateICmpNE(logicalAndExp->addr, ZeroValue, "toBool");
+            Value * toBool = Builder.CreateICmpNE(logicalAndExp->getAddr(), ZeroValue, "toBool");
             Builder.CreateCondBr(toBool, BB_LOR_end, BB_LOR_rhs);
             
             // Right-hand Statement
             SetInsertBlock(BB_LOR_rhs);
             logicalOrExp->gen();
-            Value* toBool1 = Builder.CreateICmpNE(logicalOrExp->addr, ZeroValue, "toBool");
+            Value* toBool1 = Builder.CreateICmpNE(logicalOrExp->getAddr(), ZeroValue, "toBool");
             Builder.CreateBr(BB_LOR_end);
 
             // End
@@ -474,10 +480,10 @@ namespace Miyuki::AST {
             phi->addIncoming(ConstantInt::getTrue(Type::getInt1Ty(getGlobalContext())), BB_entry);
             phi->addIncoming(toBool1, BB_LOR_rhs);
             
-            addr = Builder.CreateZExt(phi, GetIntNType(32), "landExt");
+            rvalue(Builder.CreateZExt(phi, GetIntNType(32), "landExt"));
         }
         else {
-            addr = logicalAndExp->addr;
+            setAddr(logicalAndExp->getAddr(), logicalAndExp->isLValue);
         }
     }
 
@@ -503,14 +509,14 @@ namespace Miyuki::AST {
                 [addr] = t1
             });
 
-            Value * toBool = Builder.CreateICmpNE(exclusiveOrExpression->addr, ZeroValue, "toBool");
+            Value * toBool = Builder.CreateICmpNE(exclusiveOrExpression->getAddr(), ZeroValue, "toBool");
             
             Builder.CreateCondBr(toBool, BB_LAND_rhs, BB_LAND_end);
 
             // Right-hand Statement
             SetInsertBlock(BB_LAND_rhs);
             logicalAndExpression->gen();
-            Value* toBool1 = Builder.CreateICmpNE(logicalAndExpression->addr, ZeroValue, "toBool");
+            Value* toBool1 = Builder.CreateICmpNE(logicalAndExpression->getAddr(), ZeroValue, "toBool");
             Builder.CreateBr(BB_LAND_end);
 
             // End
@@ -519,10 +525,10 @@ namespace Miyuki::AST {
             phi->addIncoming(ConstantInt::getFalse(Type::getInt1Ty(getGlobalContext())), BB_entry);
             phi->addIncoming(toBool1, BB_LAND_rhs);
 
-            addr = Builder.CreateZExt(phi, GetIntNType(32), "landExt");
+            rvalue(Builder.CreateZExt(phi, GetIntNType(32), "landExt"));
         }
         else {
-            addr = exclusiveOrExpression->addr;
+            setAddr(exclusiveOrExpression->getAddr(), exclusiveOrExpression->isLValue);
         }
     }
 
@@ -530,71 +536,63 @@ namespace Miyuki::AST {
         ReturnAddressIfCalculated();
         expr1->gen();
         if (expr2 == nullptr) {
-            addr = expr1->addr;
+            setAddr(expr1->getAddr(), expr1->isLValue);
             return;
         }
         expr2->gen();
 
-        // GET LHS and RHS
-        Value *LHS = expr1->addr, *RHS = expr2->addr;
+        // ** GET LHS and RHS address
+        Value *LHS = expr1->getAddr(), *RHS = expr2->getAddr();
+        // ** load value of the rwo operands
+        //  because LHS and RHS are all pointer pointed to their allocated location
+        // so we should load first
+        LHS = Builder.CreateLoad(LHS, "arith_lhs");
+        RHS = Builder.CreateLoad(RHS, "arith_rhs");
+
         // Code Below ensures they are with same type
 
         // -- both operands are pointers to qualified or unqualified versions of compatible complete object types
         if (LHS->getType()->isPointerTy() && RHS->getType()->isPointerTy()) {
             // if the two types are not compatible
             // OR is not sub
-            if (LHS->getType() != RHS->getType() || op->isNot('-')) {
-                errorValue("Cannot apply `{0}' to type `{1}' and `{2}'"_format(op->toSourceLiteral(), "LHS", "RHS"), op);
-                addr = ConstantInt::getTrue(GetIntNType(32));
-                return;
-            }
-            
-            LHS = Builder.CreatePointerBitCastOrAddrSpaceCast(LHS, GetIntNType(32), false, "expr_castPtr2Int");
-            RHS = Builder.CreatePointerBitCastOrAddrSpaceCast(RHS, GetIntNType(32), false, "expr_castPtr2Int");
+            if (LHS->getType() != RHS->getType() || op->isNot('-')) 
+                REPORT_ERROR_V("Cannot apply `{0}' to type `{1}' and `{2}'"_format(op->toSourceLiteral(), "LHS", "RHS"), op)
+
+            LHS = Builder.CreatePointerBitCastOrAddrSpaceCast(LHS, GetIntNType(32), "expr_castPtr2Int");
+            RHS = Builder.CreatePointerBitCastOrAddrSpaceCast(RHS, GetIntNType(32), "expr_castPtr2Int");
             Value * sub = Builder.CreateSub(LHS, RHS, "ptr_sub");
             Value * count = Builder.CreateUDiv(sub, ConstantInt::getIntegerValue(GetIntNType(32), APInt(32, 4)), "get_count");
-            addr = count;
+            rvalue(count);
             return;
         }
         // -- the left operand is a pointer to a complete object type and the right operand has integer type.
         else if (LHS->getType()->isPointerTy()) {
-            if (!RHS->getType()->isIntegerTy()) {
-                errorValue("Cannot apply `{0}' to pointer type and non-integer"_format(op->toSourceLiteral()), op);
-                addr = ConstantInt::getFalse(GetIntNType(32));
-                return;
-            }
+            if (!RHS->getType()->isIntegerTy()) REPORT_ERROR_V("Cannot apply `{0}' to pointer type and non-integer"_format(op->toSourceLiteral()), op)
             GetElementPtrInst* ptrAddSub = nullptr;
             if (op->is('+')) {
                 /// TODO:  ** The code that may lead to the leakage of the internal training
                 vector<Value*>* v = new vector<Value*>();
-                ArrayRef<Value*>* InxList = new ArrayRef<Value*>(*v);
                 v->push_back(RHS);
-                ptrAddSub = GetElementPtrInst::CreateInBounds(LHS, InxList, "ptr_add", getCurrentBasicBlock());
+                ptrAddSub = GetElementPtrInst::CreateInBounds(LHS, ArrayRef<Value*>(*v), "ptr_add", getCurrentBasicBlock());
             }
             else if (op->is('-')) {
                 /// TODO:  ** The code that may lead to the leakage of the internal training
                 vector<Value*>* v = new vector<Value*>();
-                ArrayRef<Value*>* InxList = new ArrayRef<Value*>(*v);
                 v->push_back(Builder.CreateSub(ZeroValue, RHS, "neg_rhs"));
-                ptrAddSub = GetElementPtrInst::CreateInBounds(LHS, InxList, "ptr_sub", getCurrentBasicBlock());
+                ptrAddSub = GetElementPtrInst::CreateInBounds(LHS, ArrayRef<Value*>(*v), "ptr_sub", getCurrentBasicBlock());
             }
-            else {
-                errorValue("Cannot apply `{0}' to pointer type and integer"_format(op->toSourceLiteral()), op);
-                addr = ConstantInt::getFalse(GetIntNType(32));
-                return;
-            }
-            
-            addr = ptrAddSub;
+            else REPORT_ERROR_V("Cannot apply `{0}' to pointer type and integer"_format(op->toSourceLiteral()), op);
+
+            lvalue(ptrAddSub);
             return;
         }
         // -- Failure situation: left is arithemetic, and right is Pointer
         else if (RHS->getType()->isPointerTy()) {
-            if (!RHS->getType()->isIntegerTy()) {
-                errorValue("Cannot apply `{0}' to non-pointer type and pointer"_format(op->toSourceLiteral()), op);
-                addr = ConstantInt::getFalse(GetIntNType(32));
-                return;
-            }
+            if (!RHS->getType()->isIntegerTy()) REPORT_ERROR_V("Cannot apply `{0}' to non-pointer type and pointer"_format(op->toSourceLiteral()), op)
         }
+        // -- Failure situation: one of them has struct type
+        else if (RHS->getType()->isStructTy() || LHS->getType()->isStructTy())
+            REPORT_ERROR_V("cannot apply arithmetic operations on struct type", op);
         // -- both operands have arithmetic type;
         // Note: No pointer will be shown below
         // if as same type
@@ -603,11 +601,7 @@ namespace Miyuki::AST {
         ty = TypeUtil::raiseType(LHS->getType(), RHS->getType());
 
         // the two types are not compatible
-        if (ty == nullptr) {
-            errorValue("Cannot apply `{0}' to type `{1}' and `{2}'"_format(op->toSourceLiteral(), "LHS", "RHS"), op);
-            addr = ConstantInt::getTrue(GetIntNType(32));
-            return;
-        }
+        if (ty == nullptr) REPORT_ERROR_V("Cannot apply `{0}' to type `{1}' and `{2}'"_format(op->toSourceLiteral(), "LHS", "RHS"), op);
 
         // cast if one of them is float type, and calculate as float
         if (ty->isFloatTy() || ty->isDoubleTy()) {
@@ -626,22 +620,22 @@ namespace Miyuki::AST {
             // Calculate float value
             assert(LHS->getType() == RHS->getType() && "LHS and RHS is not with same type");
 
-#define ReportCannotApplyOpOnFloatOperand(op) { errorValue("cannot apply operator '{0}' on float operand"_format(op->toSourceLiteral())); addr = ConstantInt::getIntegerValue(GetIntNType(32), APInt(32, 0, true)); }
+#define ReportCannotApplyOpOnFloatOperand(op) { errorvalue("cannot apply operator '{0}' on float operand"_format(op->toSourceLiteral())); rvalue(ConstantInt::getIntegervalue(GetIntNType(32), APInt(32, 0, true))); }
             if (op->is('^'))        ReportCannotApplyOpOnFloatOperand(op)
             else if (op->is('|'))   ReportCannotApplyOpOnFloatOperand(op)
             else if (op->is('&'))   ReportCannotApplyOpOnFloatOperand(op)
-            else if (op->is(Tag::Equal))    addr = Builder.CreateFCmpUEQ(LHS, RHS, "expr_feq");
-            else if (op->is(Tag::NotEqual)) addr = Builder.CreateFCmpUNE(LHS, RHS, "expr_ne");
-            else if (op->is('<'))   Builder.CreateFCmpULT(LHS, RHS, "expr_flt");
-            else if (op->is('>'))   Builder.CreateFCmpUGT(LHS, RHS, "expr_fgt");
-            else if (op->is(Tag::GreaterThanEqual))   addr = Builder.CreateFCmpULE(LHS, RHS, "expr_fle");
-            else if (op->is(Tag::LessThanEqual))      addr = Builder.CreateFCmpUGE(LHS, RHS, "expr_fge");
+            else if (op->is(Tag::Equal))    rvalue(Builder.CreateFCmpUEQ(LHS, RHS, "expr_feq"));
+            else if (op->is(Tag::NotEqual)) rvalue(Builder.CreateFCmpUNE(LHS, RHS, "expr_ne"));
+            else if (op->is('<'))   Builder.CreateFCmpULT(LHS, RHS, "expr_flt"));
+            else if (op->is('>'))   Builder.CreateFCmpUGT(LHS, RHS, "expr_fgt"));
+            else if (op->is(Tag::GreaterThanEqual))   rvalue(Builder.CreateFCmpULE(LHS, RHS, "expr_fle"));
+            else if (op->is(Tag::LessThanEqual))      rvalue(Builder.CreateFCmpUGE(LHS, RHS, "expr_fge"));
             else if (op->is(Tag::LeftShift))   ReportCannotApplyOpOnFloatOperand(op)
             else if (op->is(Tag::RightShift))  ReportCannotApplyOpOnFloatOperand(op)
-            else if (op->is('+'))   addr = Builder.CreateFAdd(LHS, RHS, "expr_add");
-            else if (op->is('-'))   addr = Builder.CreateFSub(LHS, RHS, "expr_sub");
-            else if (op->is('*'))   addr = Builder.CreateFMul(LHS, RHS, "expr_mul");
-            else if (op->is('/'))   addr = Builder.CreateFDiv(LHS, RHS, "expr_udiv");
+            else if (op->is('+'))   rvalue(Builder.CreateFAdd(LHS, RHS, "expr_add"));
+            else if (op->is('-'))   rvalue(Builder.CreateFSub(LHS, RHS, "expr_sub"));
+            else if (op->is('*'))   rvalue(Builder.CreateFMul(LHS, RHS, "expr_mul"));
+            else if (op->is('/'))   rvalue(Builder.CreateFDiv(LHS, RHS, "expr_udiv"));
             else if (op->is('%'))   ReportCannotApplyOpOnFloatOperand(op)
             else assert(false && "invalid op token");
 #undef ReportCannotApplyOpOnFloatOperand
@@ -652,46 +646,236 @@ namespace Miyuki::AST {
             IntegerType* LHS_Ty = static_cast<IntegerType*>(LHS->getType()), *RHS_Ty = static_cast<IntegerType*>(RHS->getType());
             /// check if they are both unsigned
             bool isUnsigned = LHS_Ty->getSignBit() && RHS_Ty->getSignBit();
-            if (!isUnsigned) {
-                addr = Builder.CreateSExtOrBitCast(addr, ty, "arith_sext");
-            }
-            else {
-                addr = Builder.CreateZExtOrBitCast(addr, ty, "arith_zext");
-            }
+            // covert to same type
+            if (LHS_Ty != ty)  LHS = (isUnsigned ? Builder.CreateZExt(LHS, ty, "conv") : Builder.CreateSExt(LHS, ty, "conv"));
+            else if (RHS_Ty != ty)  RHS = (isUnsigned ? Builder.CreateZExt(RHS, ty, "conv") : Builder.CreateSExt(RHS, ty, "conv"));
 
             // Calculate Integer Value
-            assert(LHS->getType() == RHS->getType() && "LHS and RHS is not with same type");
-            if (op->is('^'))        addr = Builder.CreateXor(LHS, RHS, "bitwise_xor");
-            else if (op->is('|'))   addr = Builder.CreateOr(LHS, RHS, "bitwise_or");
-            else if (op->is('&'))   addr = Builder.CreateAnd(LHS, RHS, "bitwise_and");
-            else if (op->is(Tag::Equal))    addr = Builder.CreateICmpEQ(LHS, RHS, "expr_eq");
-            else if (op->is(Tag::NotEqual)) addr = Builder.CreateICmpNE(LHS, RHS, "expr_ne");
-            else if (op->is('<'))   addr = isUnsigned ? Builder.CreateICmpULT(LHS, RHS, "expr_ult") : Builder.CreateICmpSLT(LHS, RHS, "expr_slt");
-            else if (op->is('>'))   addr = isUnsigned ? Builder.CreateICmpUGT(LHS, RHS, "expr_ugt") : Builder.CreateICmpSGT(LHS, RHS, "expr_sgt");
-            else if (op->is(Tag::GreaterThanEqual))   addr = isUnsigned ? Builder.CreateICmpULE(LHS, RHS, "expr_ule") : Builder.CreateICmpSLE(LHS, RHS, "expr_sle");
-            else if (op->is(Tag::LessThanEqual))      addr = isUnsigned ? Builder.CreateICmpUGE(LHS, RHS, "expr_uge") : Builder.CreateICmpSGE(LHS, RHS, "expr_sge");
-            else if (op->is(Tag::LeftShift))   addr = Builder.CreateShl(LHS, RHS, "expr_shl");
-            else if (op->is(Tag::RightShift))  addr = isUnsigned ? Builder.CreateLShr(LHS, RHS, "shr", false) : Builder.CreateAShr(LHS, RHS, "shr", false);
-            else if (op->is('+'))   addr = Builder.CreateAdd(LHS, RHS, "expr_add");
-            else if (op->is('-'))   addr = Builder.CreateSub(LHS, RHS, "expr_sub");
-            else if (op->is('*'))   addr = Builder.CreateMul(LHS, RHS, "expr_mul");
-            else if (op->is('/'))   addr = isUnsigned ? Builder.CreateUDiv(LHS, RHS, "expr_udiv") : Builder.CreateSDiv(LHS, RHS, "expr_sdiv");
-            else if (op->is('%'))   addr = isUnsigned ? Builder.CreateURem(LHS, RHS, "expr_rem") : Builder.CreateSRem(LHS, RHS, "expr_rem");
+            assert(LHS->getType() == RHS->getType() && "LHS and RHS is not with same type"));
+            if (op->is('^'))        rvalue(Builder.CreateXor(LHS, RHS, "bitwise_xor"));
+            else if (op->is('|'))   rvalue(Builder.CreateOr(LHS, RHS, "bitwise_or"));
+            else if (op->is('&'))   rvalue(Builder.CreateAnd(LHS, RHS, "bitwise_and"));
+            else if (op->is(Tag::Equal))    rvalue(Builder.CreateICmpEQ(LHS, RHS, "expr_eq"));
+            else if (op->is(Tag::NotEqual)) rvalue(Builder.CreateICmpNE(LHS, RHS, "expr_ne"));
+            else if (op->is('<'))   rvalue(isUnsigned ? Builder.CreateICmpULT(LHS, RHS, "expr_ult") : Builder.CreateICmpSLT(LHS, RHS, "expr_slt"));
+            else if (op->is('>'))   rvalue(isUnsigned ? Builder.CreateICmpUGT(LHS, RHS, "expr_ugt") : Builder.CreateICmpSGT(LHS, RHS, "expr_sgt"));
+            else if (op->is(Tag::GreaterThanEqual))   rvalue(isUnsigned ? Builder.CreateICmpULE(LHS, RHS, "expr_ule") : Builder.CreateICmpSLE(LHS, RHS, "expr_sle"));
+            else if (op->is(Tag::LessThanEqual))      rvalue(isUnsigned ? Builder.CreateICmpUGE(LHS, RHS, "expr_uge") : Builder.CreateICmpSGE(LHS, RHS, "expr_sge"));
+            else if (op->is(Tag::LeftShift))   rvalue(Builder.CreateShl(LHS, RHS, "expr_shl"));
+            else if (op->is(Tag::RightShift))  rvalue(isUnsigned ? Builder.CreateLShr(LHS, RHS, "shr", false) : Builder.CreateAShr(LHS, RHS, "shr", false));
+            else if (op->is('+'))   rvalue(Builder.CreateAdd(LHS, RHS, "expr_add"));
+            else if (op->is('-'))   rvalue(Builder.CreateSub(LHS, RHS, "expr_sub"));
+            else if (op->is('*'))   rvalue(Builder.CreateMul(LHS, RHS, "expr_mul"));
+            else if (op->is('/'))   rvalue(isUnsigned ? Builder.CreateUDiv(LHS, RHS, "expr_udiv") : Builder.CreateSDiv(LHS, RHS, "expr_sdiv"));
+            else if (op->is('%'))   rvalue(isUnsigned ? Builder.CreateURem(LHS, RHS, "expr_rem") : Builder.CreateSRem(LHS, RHS, "expr_rem"));
             else assert(false && "invalid op token");
 
             return;
         }
+        
     }
 
     void Unary::gen() {
+        // NOTE: All ID types are saved by their addresses, so the direct return of addresses is taken.
+        /// WARNING: FloatType is NOT ConstantFP, SSA[!]
+        RETURN_IF_CALCULATED();
+
         expr->gen();
 
+        Value * S = expr->getAddr();
+        // S is the address 
+        if (op->is('&')) {
+            RequireLValue(expr)
+            lvalue(S);
+            return;
+        }
+        // Get the actual value of S
+        S = Builder.CreateLoad(S, "exprS");
         // if is pointer
-        Value * S = expr->addr;
         if (S->getType()->isPointerTy()) {
             Type * ty = S->getType();
-            GetElementPtrInst* instPtrIncDec = nullptr;
+            /// TODO:  ** The code that may lead to the leakage of the internal training
+            vector<Value*>* v = new vector<Value*>();
 
+            if (op->is(Tag::Increase)) {
+                RequireLValue(expr)  RequireNonConst(expr)
+                v->push_back(ConstantInt::getIntegerValue(GetIntNType(32), APInt(32, 1, true)));
+            }
+            else if (op->is(Tag::Decrease)) {
+                RequireLValue(expr)  RequireNonConst(expr)
+                v->push_back(ConstantInt::getIntegerValue(GetIntNType(32), APInt(32, -1, true)));
+            }
+            else if (op->is('!')) {
+                S = Builder.CreateICmpNE(S, ConstantPointerNull::get(static_cast<PointerType*>(S->getType())), "toBool");
+                S = Builder.CreateXor(S, ConstantInt::getTrue(GetIntNType(32)), "ptr_lnot");
+                S = Builder.CreateZExt(S, GetIntNType(32), "ptr_zext");
+                rvalue(S);
+                return;
+            }
+            else if (op->is('*')) {
+                S = Builder.CreateLoad(S, "load_ptr");
+                lvalue(S);
+                return;
+            }
+            else REPORT_ERROR_V("cannot apply '{0}' on function designator"_format(op->toSourceLiteral(), op))
+            
+            lvalue(GetElementPtrInst::CreateInBounds(S, ArrayRef<Value*>(*v), "ptr_incdec", getCurrentBasicBlock()));
+            return;
+        }
+        // is function designator
+        else if (S->getType()->isFunctionTy()) {
+            if (op->is('*')) {
+                lvalue(S);
+            }
+            else if (op->is(Tag::Sizeof)) {
+                assert(false && "how will code run here? run TypeInfoExpression::gen() instead");
+                rvalue(ConstantInt::get(GetIntNType(32), 4, false));
+            }
+            else REPORT_ERROR_V("cannot apply '{0}' on function designator"_format(op->toSourceLiteral()), op)
+            return;
+        }
+        // else if is float
+        else if (Type* ty = S->getType(); ty->isFloatTy() || ty->isDoubleTy()) {
+            if (op->is('+')) rvalue(S);
+            else if (op->is('-')) rvalue(Builder.CreateFSub(ConstantFP::get(ty, 0), S, "expr_neg_f"));
+            else if (op->is(Tag::Increase)) {
+                RequireLValue(expr)  RequireNonConst(expr)
+                lvalue(Builder.CreateAdd(S, ConstantFP::get(ty, 1)));
+            }
+            else if (op->is(Tag::Decrease)) {
+                RequireLValue(expr)  RequireNonConst(expr)
+                lvalue(Builder.CreateSub(S, ConstantFP::get(ty, 1)));
+            }
+            else assert(false && "invalid operator");
+            return;
+        }
+        // else if integer
+        else if (Type* ty = S->getType(); ty->isIntegerTy()) {
+            bool isSigned = !static_cast<IntegerType*>(ty)->getSignBit();
+            if (op->is('+')) rvalue(S);
+            else if (op->is('-')) rvalue(Builder.CreateSub(ZeroValue, S, "expr_neg"));
+            else if (op->is('!')) {
+                S = Builder.CreateICmpEQ(S, ZeroValue, "toBool");
+                rvalue(isSigned ? Builder.CreateSExt(S, ty, "sext") : Builder.CreateZExt(S, ty, "zext"));
+            }
+            else if (op->is('~')) rvalue(Builder.CreateXor(S, ConstantInt::get(ty, -1)));
+            else if (op->is('&')) {
+                RequireLValue(expr)
+                rvalue(S);
+            }
+            else if (op->is(Tag::Increase)) { 
+                RequireLValue(expr)  RequireNonConst(expr)
+                Value* inc = Builder.CreateAdd(S, ConstantInt::get(ty, 1, true), "inc");
+                lvalue(Builder.CreateStore(inc, S));
+            }
+            else if (op->is(Tag::Decrease)) { 
+                RequireLValue(expr)  RequireNonConst(expr)
+                    Value* newVal = Builder.CreateSub(S, ConstantInt::get(ty, 1, true));
+                lvalue(newVal); 
+                Builder.CreateStore()
+            }
+            else assert(false && "invalid operator");
+            return;
+        }
+        // else is struct type
+        else if (ty->isStructTy()) {
+            if (op->is('&')) rvalue(S);
+            else if (op->is('*')) REPORT_ERROR_V("Cannot apply dereference on non-pointer type", op)
+            else REPORT_ERROR_V("cannot apply arithemetic operator on struct type", op);
+        }
+        else REPORT_ERROR_V("cannot apply this operator with the operands.", op);
+    }
+
+    void LogicalNot::gen() {
+        Unary::gen();
+    }
+
+    void TypeInfoExpression::gen() {
+        Type* ty = typeName->getType()->type;
+        if (op->is(Tag::Sizeof)) {
+            if (ty->isPointerTy()) {
+                rvalue(ConstantInt::get(GetIntNType(32), PointerSize, false));
+                return;
+            }
+            size_t size = ty->getIntegerBitWidth();
+            rvalue(ConstantInt::get(GetIntNType(32), size / 8, false));
+        }
+        else if (op->is(Tag::Alignof)) {
+            // TOTO: IMPLEMENT THIS.
+            // Note: NOT SUPPORTED UTILL NOW
+            rvalue(ConstantInt::get(GetIntNType(32), PointerSize, false));
+        }
+        else assert("neither sizeof nor alignof");
+    }
+
+    void PostfixExpression::gen() {
+        // Note: only postfix ++ -- generate here
+        assert((op->is(Tag::Increase) || op->is(Tag::Decrease)) && "invalid operators");
+        postfixExp->gen();
+        Value * S = postfixExp->getAddr();
+        // load actual value of S
+        S = Builder.CreateLoad(S, "load_ptr_pe");
+        
+        Type* ty = S->getType();
+        if (ty->isStructTy()) REPORT_ERROR_V("cannot apply this operator on struct type")
+        else if (ty->isIntegerTy()) {
+            if (op->is(Tag::Increase)) {
+                RequireLValue(expr)  RequireNonConst(expr)
+                Value* newVal = Builder.CreateAdd(S, ConstantInt::get(ty, 1, true), "new_val");
+                Builder.CreateStore(newVal, postfixExp->getAddr());
+                rvalue(S);
+            }
+            else if (op->is(Tag::Decrease)) {
+                RequireLValue(expr)  RequireNonConst(expr)
+                Value* newVal = Builder.CreateSub(S, ConstantInt::get(ty, 1, true), "new_val");
+                Builder.CreateStore(newVal, postfixExp->getAddr());
+                rvalue(S);
+            }
+        }
+        else if (ty->isFloatTy()) {
+            if (op->is(Tag::Increase)) {
+                RequireLValue(expr)  RequireNonConst(expr)
+                Value* newVal = Builder.CreateFAdd(S, ConstantFP::get(ty, 1.0), "new_val");
+                Builder.CreateStore(newVal, postfixExp->getAddr());
+                rvalue(S);
+            }
+            else if (op->is(Tag::Decrease)) {
+                RequireLValue(expr)  RequireNonConst(expr)
+                Value* newVal = Builder.CreateFSub(S, ConstantFP::get(ty, 1.0), "new_val");
+                Builder.CreateStore(newVal, postfixExp->getAddr());
+                rvalue(S);
+            }
+        }
+        else if (ty->isPointerTy()) {
+            vector<Value*>* v = new vector<Value*>();
+
+            if (op->is(Tag::Increase)) {
+                RequireLValue(expr)  RequireNonConst(expr)
+                v->push_back(ConstantInt::getIntegerValue(GetIntNType(32), APInt(32, 1, true)));
+            }
+            else if (op->is(Tag::Decrease)) {
+                RequireLValue(expr)  RequireNonConst(expr)
+                v->push_back(ConstantInt::getIntegerValue(GetIntNType(32), APInt(32, -1, true)));
+            }
+            Value* newVal = GetElementPtrInst::CreateInBounds(S, ArrayRef<Value*>(*v), "ptr_incdec", getCurrentBasicBlock());
+            Builder.CreateStore(newVal, postfixExp->getAddr());
+            rvalue(S);
         }
     }
+
+    void StructAccess::gen() {
+        // struct access provide two method of access
+        /// TODO: Implement it
+        assert(!"Unimplemented");
+    }
+
+    void AnonymousArray::gen() {
+        REPORT_ERROR_V("Anonymous array is not supported yet.", getErrorToken());
+    }
 }
+
+/// TODO: In all eval functions, 对于无法求值的情况，如果出现了常量，那么说明尝试对常量进行求值
+///  在这种情况下需要报错对左值进行运算
+///  添加const的测试
+
+// TODO: 在astbuilder中添加适合报错的errortoken

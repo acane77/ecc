@@ -15,8 +15,8 @@ namespace Miyuki::AST {
     using namespace std;
     using namespace llvm;
 
-    typedef Value  Identifier;
-    typedef Value* IdentifierPtr;
+    //typedef Value  Identifier;
+    //typedef Value* IdentifierPtr;
 
     typedef map<string, TypePtr>   TypedefMap;
     typedef map<string, IdentifierPtr> IdentifierMap;
@@ -65,7 +65,8 @@ namespace Miyuki::AST {
     LLVMContext& getGlobalContext();
     BasicBlock* getCurrentBasicBlock();
     Function* getCurrentFunction();
-    static IRBuilder<>& Builder;
+    extern IRBuilder<>& Builder;
+    extern const size_t PointerSize;
 }
 
 #endif

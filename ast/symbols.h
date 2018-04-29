@@ -5,6 +5,7 @@
 #include "common/ptrdef.h"
 #include "ast/type.h"
 #include "llvm/IR/Value.h"
+#include "ast/errtoken.h"
 
 namespace Miyuki::AST {
 
@@ -26,8 +27,11 @@ namespace Miyuki::AST {
         TokenPtr calculatedToken = nullptr;
         // type of this symbol
         TypePtr symbolType = nullptr;
+    private:
         // temporary address
         Value* addr = nullptr;
+    public:
+        bool   isLValue = true;
 
         bool IsCalculated() const;
         void setIsCalculated(bool isCalculated);
@@ -42,10 +46,15 @@ namespace Miyuki::AST {
         virtual void eval() = 0;
 
         // Set address of expression, and its type(?)
-        void setAddr(Value* addr);
+        void setAddr(Value* addr, bool isLV);
+        // Set address as a lvalue
+        void lvalue(Value* addr);
+        // Set address as a rvalue
+        void rvalue(Value* addr);
+        Value* getAddr() const { return addr; }
     };
 
-    class Symbol : public std::enable_shared_from_this<Symbol> {
+    class Symbol : public std::enable_shared_from_this<Symbol>, public ErrorReportSupport {
     public:
         enum Kind {
             SYMBOL = 0,
@@ -73,6 +82,7 @@ namespace Miyuki::AST {
         virtual int getKind() { return Kind::SYMBOL; }
 
         static bool isPreprocessorSymbol;
+
     };
 
 }
