@@ -398,8 +398,14 @@ namespace Miyuki::AST {
         rvalue(ZeroValue);\
         return; \
     }
+#define LoadIfIsPointer(v) {\
+    if (v->getType()->isPointerTy())\
+        v = Builder.CreateLoad(v, "arith_"#v); \
+    }
 #define RequireLValue(expr) { if (!expr->isLValue)  REPORT_ERROR_V("operand of this operator requires lvalue", op) }
 #define RequireNonConst(expr)
+#define AddressOf(x, y)
+#define SetOperatorToken(x) TokenPtr op = x;
 
     Value* ZeroValue = ConstantInt::getIntegerValue(Type::getInt32Ty(getGlobalContext()), APInt(32, (uint64_t)0));
 
@@ -508,15 +514,18 @@ namespace Miyuki::AST {
       LAND_end: t1 = if [entry] false elif LAND_ths toBool1 
                 [addr] = t1
             });
+            Value* LHS = exclusiveOrExpression->getAddr(), *RHS = logicalAndExpression->getAddr();
+            LoadIfIsPointer(LHS)
+            LoadIfIsPointer(RHS)
 
-            Value * toBool = Builder.CreateICmpNE(exclusiveOrExpression->getAddr(), ZeroValue, "toBool");
+            Value * toBool = Builder.CreateICmpNE(LHS, ZeroValue, "toBool");
             
             Builder.CreateCondBr(toBool, BB_LAND_rhs, BB_LAND_end);
 
             // Right-hand Statement
             SetInsertBlock(BB_LAND_rhs);
             logicalAndExpression->gen();
-            Value* toBool1 = Builder.CreateICmpNE(logicalAndExpression->getAddr(), ZeroValue, "toBool");
+            Value* toBool1 = Builder.CreateICmpNE(RHS, ZeroValue, "toBool");
             Builder.CreateBr(BB_LAND_end);
 
             // End
@@ -545,9 +554,9 @@ namespace Miyuki::AST {
         Value *LHS = expr1->getAddr(), *RHS = expr2->getAddr();
         // ** load value of the rwo operands
         //  because LHS and RHS are all pointer pointed to their allocated location
-        // so we should load first
-        LHS = Builder.CreateLoad(LHS, "arith_lhs");
-        RHS = Builder.CreateLoad(RHS, "arith_rhs");
+        // so loading first is required (if they are pointer)
+        LoadIfIsPointer(LHS)
+        LoadIfIsPointer(RHS)
 
         // Code Below ensures they are with same type
 
@@ -690,7 +699,7 @@ namespace Miyuki::AST {
             return;
         }
         // Get the actual value of S
-        S = Builder.CreateLoad(S, "exprS");
+        LoadIfIsPointer(S)
         // if is pointer
         if (S->getType()->isPointerTy()) {
             Type * ty = S->getType();
@@ -801,7 +810,7 @@ namespace Miyuki::AST {
             rvalue(ConstantInt::get(GetIntNType(32), size / 8, false));
         }
         else if (op->is(Tag::Alignof)) {
-            // TOTO: IMPLEMENT THIS.
+            /// TODO: IMPLEMENT THIS.
             // Note: NOT SUPPORTED UTILL NOW
             rvalue(ConstantInt::get(GetIntNType(32), PointerSize, false));
         }
@@ -814,7 +823,7 @@ namespace Miyuki::AST {
         postfixExp->gen();
         Value * S = postfixExp->getAddr();
         // load actual value of S
-        S = Builder.CreateLoad(S, "load_ptr_pe");
+        LoadIfIsPointer(S)
         
         Type* ty = S->getType();
         if (ty->isStructTy()) REPORT_ERROR_V("cannot apply this operator on struct type")
@@ -872,6 +881,156 @@ namespace Miyuki::AST {
     void AnonymousArray::gen() {
         REPORT_ERROR_V("Anonymous array is not supported yet.", getErrorToken());
     }
+
+#define ErrorIfLHSIsPoiner() {\
+    if (cannotDoThisOperation) REPORT_ERROR_V("cannot do this operationn on LHS & RHS", getErrorToken());\
+}
+    void AssignmentExpression::gen() {
+        condExp->gen();
+        if (!assignExp) {
+            setAddr(condExp->getAddr(), condExp->isLValue);
+            return;
+        }
+        assignExp->gen();
+        Value * LHS = condExp->getAddr(), *RHS = assignExp->getAddr();
+        Value * V = nullptr; // Value of calculation result
+        SetOperatorToken(assignOp)
+        LoadIfIsPointer(LHS)
+        LoadIfIsPointer(RHS)
+        RequireLValue(condExp)
+        RequireNonConst(condExp)
+
+        if (PointerType* ty = dyn_cast<PointerType>(LHS->getType())) {
+            // try convert type of rvalue
+            Type * rt = RHS->getType();
+            // only for pointer - poiner,
+            bool cannotDoThisOperation = false;
+            
+            // convert type
+            if (ty == rt); //pass, no conversion required
+            else if (rt->isIntegerTy()) {
+                RHS = Builder.CreateIntCast(RHS, GetIntNType(32), true, "rhs.castToInt");
+            }
+            else if (rt->isFloatingPointTy())  REPORT_ERROR_V("pointer cannot assign floating-point", getErrorToken())
+            else if (rt->isPointerTy()) {
+                // only allowed for minus
+                RHS = Builder.CreateIntCast(RHS, GetIntNType(32), true, "sub.ptr.rhs.castToInt");
+                cannotDoThisOperation = true;
+            }
+            else REPORT_ERROR_V("pointer cannot assign object type", getErrorToken())
+
+            if (op->is('=')) 
+                V = RHS;
+            else if (op->is(Tag::AddAssign)) {
+                ErrorIfLHSIsPoiner();
+                vector<Value*>* v = new vector<Value*>();
+                v->push_back(RHS);
+                V = GetElementPtrInst::Create(ty, condExp->getAddr(), ArrayRef<Value*>(*v), "ptr.add", getCurrentBasicBlock());
+            }
+            else if (op->is(Tag::SubAssign)) {
+                // for pointer minus pointer, 
+                // DIFFERENT FROM OTHERSITUATION:
+                //  result of this operation int32 so convert to pointer type, using int to ptr
+                // TODO:  Generate a warning for ptr-ptr
+                
+                //convert LHS to integer
+                LHS = Builder.CreateIntCast(LHS, GetIntNType(32), true, "sub.ptr.lhs.castToInt");
+                LHS = Builder.CreateSub(LHS, RHS, "ptr.sub");
+                V = Builder.CreateIntToPtr(LHS, ty, "int2ptr");
+            }
+            else REPORT_ERROR_V("cannot perform this operation on the two operands", getErrorToken());
+        }
+        else if (IntegerType* ty = dyn_cast<IntegerType>(LHS->getType())) {
+            // try convert type of rvalue
+            Type * rt = RHS->getType();
+
+            // convert type
+            if (ty == rt); //pass, no conversion required
+            else if (rt->isIntegerTy()) {
+                RHS = Builder.CreateIntCast(RHS, ty, !ty->getSignBit(), "castToInt");
+            }
+            else if (rt->isFloatingPointTy()) {
+                RHS = Builder.CreateIntCast(RHS, ty, !ty->getSignBit(), "castToInt");
+            }
+            else if (rt->isPointerTy()) REPORT_ERROR_V("pointer cannot assign to integer type", getErrorToken())
+            else REPORT_ERROR_V("integer cannot assign object type", getErrorToken())
+
+            if (op->is('='))
+                V = RHS;
+            else if (op->is(Tag::AddAssign)) {
+                V = Builder.CreateAdd(LHS, RHS, "int.add");
+            }
+            else if (op->is(Tag::SubAssign)) {
+                V = Builder.CreateSub(LHS, RHS, "int.sub");
+            }
+            else if (op->is(Tag::MulpileAssign)) {
+                V = Builder.CreateMul(LHS, RHS, "int.mul");
+            }
+            else if (op->is(Tag::DivideAssign)) {
+                V = ty->getSignBit() ? Builder.CreateUDiv(LHS, RHS, "int.udiv") : Builder.CreateSDiv(LHS, RHS, "int.sdiv");
+            }
+            else if (op->id(Tag::ModAssign)) {
+                V = ty->getSignBit() ? Builder.CreateURem(LHS, RHS, "int.urem") : Builder.CreateSRem(LHS, RHS, "int.rem");
+            }
+            else if (op->is(Tag::LeftShiftAssign)) {
+                V = Builder.CreateShl(LHS, RHS, "expr_shl");
+            }
+            else if (op->is(Tag::RightShiftAssign)) {
+                V = ty->getSignBit() ? Builder.CreateLShr(LHS, RHS, "shr", false) : Builder.CreateAShr(LHS, RHS, "shr", false);
+            }
+            else if (op->is(Tag::BitwiseAndAssign)) {
+                V = Builder.CreateAnd(LHS, RHS, "bitwise_and");
+            }
+            else if (op->is(Tag::BitwiseOrAssign)) {
+                V = Builder.CreateOr(LHS, RHS, "bitwise_or");
+            }
+            else if (op->is(Tag::XorAssign)) {
+                V = Builder.CreateXor(LHS, RHS, "bitwise_xor");
+            }
+            else assert(!"unexpected operator");
+        }
+        else if (Type * ty = LHS->getType(); ty->isFloatingPointTy()) {
+            // try convert type of rvalue
+            Type * rt = RHS->getType();
+
+            // convert type
+            if (ty == rt); //pass, no conversion required
+            if (rt->isPointerTy()) REPORT_ERROR_V("cannot assign a pointer to float", getErrorToken())
+            else if (rt->isIntegerTy()) {
+                RHS = static_cast<IntegerType*>(rt)->getSignBit() ? Builder.CreateUIToFP(RHS, ty, "fp.cast") : Builder.CreateUIToFP(RHS, ty, "fp.cast");
+            }
+            else if (rt->isFloatingPointTy()) {
+                RHS = Builder.CreateFPTrunc(RHS, ty, "fp.cast");
+            }
+            else REPORT_ERROR_V("float cannot assign object type", getErrorToken())
+
+            if (op->is('=')) {
+                V = RHS;
+            }
+            else if (op->is(Tag::AddAssign)) {
+                V = Builder.CreateFAdd(LHS, RHS, "int.fadd");
+            }
+            else if (op->is(Tag::SubAssign)) {
+                V = Builder.CreateFSub(LHS, RHS, "int.fsub");
+            }
+            else if (op->is(Tag::MulpileAssign)) {
+                V = Builder.CreateFMul(LHS, RHS, "int.fmul");
+            }
+            else if (op->is(Tag::DivideAssign)) {
+                V = Builder.CreateFDiv(LHS, RHS, "int.fdiv");
+            }
+            else REPORT_ERROR_V("cannot perform this operation on the two operands", getErrorToken());
+        }
+        else REPORT_ERROR_V("cannot assign such type", getErrorToken())
+
+        // store in memory
+        Builder.CreateStore(V, condExp->getAddr());
+        rvalue(V);
+    }
+
+    void Miyuki::AST::PrimaryExpression::gen() {
+
+    }
 }
 
 /// TODO: In all eval functions, 对于无法求值的情况，如果出现了常量，那么说明尝试对常量进行求值
@@ -879,3 +1038,5 @@ namespace Miyuki::AST {
 ///  添加const的测试
 
 // TODO: 在astbuilder中添加适合报错的errortoken
+
+// 任何时候都记住  addr正如其名  是地址

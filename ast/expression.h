@@ -84,7 +84,7 @@ namespace Miyuki::AST {
                              const AssignmentExpressionPtr &assignExp);
         AssignmentExpression(const ConditionalExpressionPtr &condExp);
 
-        void gen() { assert( false && "unimplemented" ); }
+        void gen();
         int getKind() { return Kind::AssignmentExpression; }
 
         virtual void eval();

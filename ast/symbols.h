@@ -31,7 +31,10 @@ namespace Miyuki::AST {
         // temporary address
         Value* addr = nullptr;
     public:
-        bool   isLValue = true;
+        // indicates if the expression is a lvalue
+        bool   isLValue = false;
+        // indicates if the expression is a function designator
+        bool   isFunctionDesignator = false;
 
         bool IsCalculated() const;
         void setIsCalculated(bool isCalculated);

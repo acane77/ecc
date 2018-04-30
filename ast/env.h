@@ -60,13 +60,23 @@ namespace Miyuki::AST {
         GlobalScope(): Builder(context) {}
     };
 
+    /// Global Functions
+    // create new basic block and set as cuurent insert Basic Block
     BasicBlock* switchBasicBlock(string name);
+    // set as current insert Basic Block
     void switchBasicBlock(BasicBlock* BB);
+    // LLVM Global Context
     LLVMContext& getGlobalContext();
+    // get current insert Basic Block
     BasicBlock* getCurrentBasicBlock();
+    // get Current Insert Function
     Function* getCurrentFunction();
+    // IRBuilder instance
     extern IRBuilder<>& Builder;
+    // default platform pointer size
     extern const size_t PointerSize;
+
+    
 }
 
 #endif
