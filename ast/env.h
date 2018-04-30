@@ -50,6 +50,9 @@ namespace Miyuki::AST {
         Function*     globalInitFunction;
         IRBuilder<>   Builder;
 
+        // Type imformation
+        map<Type*, PackedTypeInformationPtr> DetailedTypeInfo;
+
         Parse::IParserPtr parser;
     public:
         // instance
@@ -61,6 +64,7 @@ namespace Miyuki::AST {
     };
 
     /// Global Functions
+    // *** LLVM Related **
     // create new basic block and set as cuurent insert Basic Block
     BasicBlock* switchBasicBlock(string name);
     // set as current insert Basic Block
@@ -75,7 +79,22 @@ namespace Miyuki::AST {
     extern IRBuilder<>& Builder;
     // default platform pointer size
     extern const size_t PointerSize;
-
+    // LLVM Module Instance
+    static Module * TheModule;
+    
+    // ** Compile-Time Information **
+    // get identifier by name
+    IdentifierPtr getIdentifier(string name);
+    // insert identifier to symbol table
+    void addIndentifier(IdentidierPtr id);
+    // check typedef names
+    TypePtr getTypedefTypes(string name);
+    // get detailed type info
+    PackedTypeInformationPtr getDetailedTypeInfo(TypePtr ty);
+    // get type from model
+    TypePtr getTypeFromModel(string name);
+    // add new type into model and map
+    bool addNewTypeIntoModel(TypePtr ty);
     
 }
 

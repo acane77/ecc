@@ -278,7 +278,7 @@ namespace Miyuki::AST {
         PrimaryExpression(const ExpressionPtr &exp);
         PrimaryExpression(const TokenPtr &factor);
 
-        void gen() { assert( false && "unimplemented" ); }
+        void gen();
         int getKind() { return Kind::PrimaryExpression; }
         virtual void eval() override;
     };
