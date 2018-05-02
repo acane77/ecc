@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "ast/type.h"
+#include "ast/typename.h"
 #include "llvm/IR/LLVMContext.h"
 
 TEST(TypeRaiseTest, TypeTest) {
@@ -11,6 +12,12 @@ TEST(TypeRaiseTest, TypeTest) {
     EXPECT_TRUE(TypeUtil::raiseType(Type::getFloatTy(ctx), Type::getDoubleTy(ctx))->isDoubleTy());
     EXPECT_TRUE(TypeUtil::raiseType(Type::getDoubleTy(ctx), Type::getFloatTy(ctx))->isDoubleTy());
     EXPECT_TRUE(TypeUtil::raiseType(Type::getDoubleTy(ctx), Type::getInt32Ty(ctx))->isDoubleTy());
+}
+
+TEST(TypeNameTest, getTypeName) {
+    using namespace Miyuki::AST;
+    using namespace llvm;
+    EXPECT_EQ(WithTypeName::getStructTypeName("Miyuki"), "struct Miyuki");
 }
 
 int main(int argc, char** argv) {

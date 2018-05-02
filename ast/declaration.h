@@ -3,6 +3,7 @@
 
 #include "symbols.h"
 #include "expression.h"
+#include "ast/typename.h"
 
 // Declaration contains compile-time information
 
@@ -95,7 +96,7 @@ namespace Miyuki::AST {
         void _genSpecQualList(SpecifierAndQualifierListPtr lst);
     };
 
-    class SpecifierAndQualifier : public IDeclaration {
+    class SpecifierAndQualifier : public IDeclaration, public WithTypeName {
     public:
         virtual int getKind() { assert( false && "unimplemented" ); }
         virtual void gen() { assert(false && "unimplemented"); }
@@ -326,7 +327,7 @@ namespace Miyuki::AST {
         TypePtr getType(TypePtr baseType);
     };
 
-    class TypeName : public IDeclaration {
+    class TypeName : public IDeclaration, public WithTypeName {
     public:
         SpecifierAndQualifierListPtr specList = nullptr;
         AbstractDeclaratorPtr abstructDecr = nullptr;
