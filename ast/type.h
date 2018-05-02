@@ -56,6 +56,7 @@ namespace Miyuki::AST {
 
     class PackedTypeInformation {
     public:
+        string                typeName;
         TypePtr               type;
         StorageClass          storageClass;
         FunctionSpecifierFlag functionSpec;
@@ -67,6 +68,7 @@ namespace Miyuki::AST {
             TypeQualifierFlag tq);
 
         PackedTypeInformationPtr copy();
+        void setName(string n) { typeName = n; }
     };
 
     class IndexedTypeInformation : public PackedTypeInformation {
@@ -82,20 +84,20 @@ namespace Miyuki::AST {
         IndexedTypeInformation(const PackedTypeInformation& base, IndexType index);
     };
 
-    typedef unordered_map<string, IndexedTypeInformationPtr> TypeMap;
+    typedef unordered_map<string, IndexedTypeInformationPtr> IndexedTypeMap;
     typedef unordered_map<string, PackedTypeInformationPtr> UnindexedTypeMap;
-    typedef shared_ptr<TypeMap> TypeMapPtr;
+    typedef shared_ptr<IndexedTypeMap> IndexedTypeMapPtr;
     typedef shared_ptr<UnindexedTypeMap> UnindexedTypeMapPtr;
 
     class StructTy {
     public:
         StructType* type;
-        TypeMapPtr memberMap;
+        IndexedTypeMapPtr memberMap;
 
         using IndexType = IndexedTypeInformation::IndexType;
 
         template <class... Args>
-        StructTy(const TypeMapPtr& tm, string StructName, Args... paramPassToGet) {
+        StructTy(const IndexedTypeMapPtr& tm, string StructName, Args... paramPassToGet) {
             type = StructType::create(paramPassToGet...);
             type->setName(StructName);
             memberMap = tm;

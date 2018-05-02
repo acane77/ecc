@@ -280,7 +280,7 @@ namespace Miyuki::AST {
             reportError("struct {0} redefined.", id);
             return TY->type;
         }
-        TypeMapPtr TM = make_shared<TypeMap>();
+        IndexedTypeMapPtr TM = make_shared<IndexedTypeMap>();
         vector<Type*> eles;
         for (const StructDeclarationPtr& decl : *declList) {
             decl->getMember(eles, TM, memberIndex);
@@ -309,7 +309,7 @@ namespace Miyuki::AST {
         return string("<no-name>");
     }
 
-    void StructDeclaration::getMember(vector<Type*>& memList, const TypeMapPtr& typeMap, IndexedTypeInformation::IndexType& index) {
+    void StructDeclaration::getMember(vector<Type*>& memList, const IndexedTypeMapPtr& typeMap, IndexedTypeInformation::IndexType& index) {
         PackedTypeInformationPtr typeInfo = getMemberTypeFromSpecifierAndQualifierList(specList);
         static uint32_t unamedMemberID = 1;
         // if has no member names

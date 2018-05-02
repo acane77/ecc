@@ -377,7 +377,7 @@ namespace Miyuki::AST {
 
     Value* errorvalue(const string& msg, TokenPtr errTok, bool throwError = false) {
         Parse::IParser::instance->diagError(string(msg), errTok);
-        if (throwError) throw exception(msg.c_str());
+        if (throwError) throw msg;
         return nullptr;
     }
 
@@ -629,14 +629,14 @@ namespace Miyuki::AST {
             // Calculate float value
             assert(LHS->getType() == RHS->getType() && "LHS and RHS is not with same type");
 
-#define ReportCannotApplyOpOnFloatOperand(op) { errorvalue("cannot apply operator '{0}' on float operand"_format(op->toSourceLiteral())); rvalue(ConstantInt::getIntegervalue(GetIntNType(32), APInt(32, 0, true))); }
+#define ReportCannotApplyOpOnFloatOperand(op) { errorvalue("cannot apply operator '{0}' on float operand"_format(op->toSourceLiteral()), op); rvalue(ConstantInt::getIntegerValue(GetIntNType(32), APInt(32, 0, true))); }
             if (op->is('^'))        ReportCannotApplyOpOnFloatOperand(op)
             else if (op->is('|'))   ReportCannotApplyOpOnFloatOperand(op)
             else if (op->is('&'))   ReportCannotApplyOpOnFloatOperand(op)
             else if (op->is(Tag::Equal))    rvalue(Builder.CreateFCmpUEQ(LHS, RHS, "expr_feq"));
             else if (op->is(Tag::NotEqual)) rvalue(Builder.CreateFCmpUNE(LHS, RHS, "expr_ne"));
-            else if (op->is('<'))   Builder.CreateFCmpULT(LHS, RHS, "expr_flt"));
-            else if (op->is('>'))   Builder.CreateFCmpUGT(LHS, RHS, "expr_fgt"));
+            else if (op->is('<'))   rvalue(Builder.CreateFCmpULT(LHS, RHS, "expr_flt"));
+            else if (op->is('>'))   rvalue(Builder.CreateFCmpUGT(LHS, RHS, "expr_fgt"));
             else if (op->is(Tag::GreaterThanEqual))   rvalue(Builder.CreateFCmpULE(LHS, RHS, "expr_fle"));
             else if (op->is(Tag::LessThanEqual))      rvalue(Builder.CreateFCmpUGE(LHS, RHS, "expr_fge"));
             else if (op->is(Tag::LeftShift))   ReportCannotApplyOpOnFloatOperand(op)
@@ -660,7 +660,7 @@ namespace Miyuki::AST {
             else if (RHS_Ty != ty)  RHS = (isUnsigned ? Builder.CreateZExt(RHS, ty, "conv") : Builder.CreateSExt(RHS, ty, "conv"));
 
             // Calculate Integer Value
-            assert(LHS->getType() == RHS->getType() && "LHS and RHS is not with same type"));
+            assert(LHS->getType() == RHS->getType() && "LHS and RHS is not with same type");
             if (op->is('^'))        rvalue(Builder.CreateXor(LHS, RHS, "bitwise_xor"));
             else if (op->is('|'))   rvalue(Builder.CreateOr(LHS, RHS, "bitwise_or"));
             else if (op->is('&'))   rvalue(Builder.CreateAnd(LHS, RHS, "bitwise_and"));
@@ -726,7 +726,7 @@ namespace Miyuki::AST {
                 lvalue(S);
                 return;
             }
-            else REPORT_ERROR_V("cannot apply '{0}' on function designator"_format(op->toSourceLiteral(), op))
+            else REPORT_ERROR_V("cannot apply '{0}' on function designator"_format(op->toSourceLiteral()), op)
             
             lvalue(GetElementPtrInst::CreateInBounds(S, ArrayRef<Value*>(*v), "ptr_incdec", getCurrentBasicBlock()));
             return;
@@ -775,13 +775,14 @@ namespace Miyuki::AST {
             else if (op->is(Tag::Increase)) { 
                 RequireLValue(expr)  RequireNonConst(expr)
                 Value* inc = Builder.CreateAdd(S, ConstantInt::get(ty, 1, true), "inc");
-                lvalue(Builder.CreateStore(inc, S));
+                lvalue(inc);
+                Builder.CreateStore(inc, S);
             }
             else if (op->is(Tag::Decrease)) { 
                 RequireLValue(expr)  RequireNonConst(expr)
-                    Value* newVal = Builder.CreateSub(S, ConstantInt::get(ty, 1, true));
+                Value* newVal = Builder.CreateSub(S, ConstantInt::get(ty, 1, true));
                 lvalue(newVal); 
-                Builder.CreateStore()
+                Builder.CreateStore(newVal, S);
             }
             else assert(false && "invalid operator");
             return;
@@ -826,7 +827,7 @@ namespace Miyuki::AST {
         LoadIfIsPointer(S)
         
         Type* ty = S->getType();
-        if (ty->isStructTy()) REPORT_ERROR_V("cannot apply this operator on struct type")
+        if (ty->isStructTy()) REPORT_ERROR_V("cannot apply this operator on struct type", op)
         else if (ty->isIntegerTy()) {
             if (op->is(Tag::Increase)) {
                 RequireLValue(expr)  RequireNonConst(expr)
@@ -969,7 +970,7 @@ namespace Miyuki::AST {
             else if (op->is(Tag::DivideAssign)) {
                 V = ty->getSignBit() ? Builder.CreateUDiv(LHS, RHS, "int.udiv") : Builder.CreateSDiv(LHS, RHS, "int.sdiv");
             }
-            else if (op->id(Tag::ModAssign)) {
+            else if (op->is(Tag::ModAssign)) {
                 V = ty->getSignBit() ? Builder.CreateURem(LHS, RHS, "int.urem") : Builder.CreateSRem(LHS, RHS, "int.rem");
             }
             else if (op->is(Tag::LeftShiftAssign)) {

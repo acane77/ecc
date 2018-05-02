@@ -184,7 +184,7 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::structDeclaration; }
         virtual void gen() {}
-        void getMember(vector<Type*>& memList, const TypeMapPtr& typeMap, IndexedTypeInformation::IndexType& index);
+        void getMember(vector<Type*>& memList, const IndexedTypeMapPtr& typeMap, IndexedTypeInformation::IndexType& index);
     };
 
     class StructDeclarator : public IDeclaration {
