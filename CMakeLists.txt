@@ -12,24 +12,25 @@ set(LLVM_LIBS -lLLVMCore -lLLVMSupport -lLLVMTarget -lLLVMTransformUtils -lLLVMC
 set(LINK_LIBS -lstdc++ -lfmt ${LLVM_LIBS})
 
 # Add header file include directories
-include_directories(./ ./bytecode ./lex, ./parse, ./codeg ./include ./common ./ast ./llvm)
+include_directories(./src/ ./src/bytecode ./src/lex, ./src/parse, ./src/codeg ./include ./src/common ./src/ast ./src/startup ./include/llvm)
 
 # Add block directories
-add_subdirectory(bytecode)
-add_subdirectory(parse)
-add_subdirectory(lex)
-add_subdirectory(codeg)
-add_subdirectory(common)
-add_subdirectory(ast)
-add_subdirectory(test)
+add_subdirectory(src/bytecode)
+add_subdirectory(src/parse)
+add_subdirectory(src/lex)
+add_subdirectory(src/codeg)
+add_subdirectory(src/common)
+add_subdirectory(src/ast)
+add_subdirectory(src/test)
+add_subdirectory(src/startup)
 
 # Main program
-aux_source_directory(. ECC_SOURCE)	
+aux_source_directory(src ECC_SOURCE)	
 if (WIN32)
-	add_executable("ecc" "res.rc" ${ECC_SOURCE})
+	add_executable("ecc" "resources/res.rc" ${ECC_SOURCE})
 else()
 	add_executable("ecc" ${ECC_SOURCE})
 endif()
-target_link_libraries("ecc" bytecode parse lex codeg common ast ${LINK_LIBS})
+target_link_libraries("ecc" eccstartup bytecode parse lex codeg common ast ${LINK_LIBS})
 
 message("libs:${LINK_INTERFACE_LIBRARIES}")
