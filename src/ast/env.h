@@ -39,7 +39,7 @@ namespace Miyuki::AST {
 
         // for struct/union defines in this scope
         TypeMap       scopedTypes;
-        DetailedTypeInfo typeDetail;
+        static DetailedTypeInfo typeDetail;
 
         // alias names by typedef
         //   I put alias type names in 2 places - both type info and typedef names
@@ -58,7 +58,7 @@ namespace Miyuki::AST {
         TypeMap::value_type::second_type getTypeFromThisScope(string name);
         TypedefMap::value_type::second_type getTypedefTy(string name);
         void setTypedefTy(string name, TypedefMap::value_type::second_type ty);
-        DetailedTypeInfo::value_type::second_type getDetail(DetailedTypeInfo::key_type ty);
+        static DetailedTypeInfo::value_type::second_type getDetail(DetailedTypeInfo::key_type ty);
         static Scope* getCuurentScope();
     private:
         //template <class TKey, class TVal>

@@ -60,12 +60,12 @@ namespace Miyuki::AST {
         virtual void gen() { assert(false && "IDeclaration::gen():  unimplemented"); }
     };
 
-    class IDeclarator : public IDeclaration {
+    class IDeclarator : public IDeclaration, public WithTypeName {
     public:
         virtual void gen() { assert(false && "not implemented"); }
     };
 
-    class IDirectDeclarator : public IDeclaration {
+    class IDirectDeclarator : public IDeclaration, public WithTypeName {
     public:
         virtual void gen() { assert(false && "not implemented"); }
     };
@@ -91,6 +91,7 @@ namespace Miyuki::AST {
 
         int getKind() override { return Kind::declarationSpecifier; }
         virtual void gen() {}
+        virtual TypePtr getType();
 
         SpecifierAndQualifierListPtr generateSpecifierQualifierList();
         void _genSpecQualList(SpecifierAndQualifierListPtr lst);
@@ -103,7 +104,7 @@ namespace Miyuki::AST {
 
         virtual StorageClass getStorageClass() { assert(false && "is not a storage-class"); }
         virtual void getTypeQualifier(TypeQualifierFlag& flag) { assert(false && "unimplemented"); }
-        virtual TypePtr getType() { assert(false && "unimplemented"); }
+        virtual TypePtr getType() { assert(false && "implemented in subclasses"); }
         virtual bool isStorageClassSpecifier() { return false; }
         virtual bool isTypeQualifier() { return false; }
         virtual bool isFunctionSpecifier() { return false; }
@@ -128,6 +129,11 @@ namespace Miyuki::AST {
         TokenPtr tok = nullptr; // INCLUDE typedef-name
         // OR
         // is enum or struxt or union (derived class)
+
+        // Specify if the SIGNED/UNSIGNED/LONG keyword is adjective
+        bool   isAdjective = false;
+        // has signed mark
+        bool   hasSignMark = false;
 
         explicit TypeSpecifier(const TokenPtr &tok);
         explicit TypeSpecifier();
@@ -210,6 +216,7 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::enumSpecifier; }
         virtual void gen() {}
+        virtual TypePtr getType();
     };
 
     class Enumerator : public IDeclaration {

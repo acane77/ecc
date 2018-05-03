@@ -126,9 +126,12 @@ namespace Miyuki::AST {
 
     InitDeclarator::InitDeclarator(const DeclaratorPtr &desOr, const InitializerPtr &init) : desOr(desOr), init(init) {}
 
+    const char* MSG_ERROR_TYPE = "<error-type>";
+
     /// Reprot error
-    void reportError(string errMsg, TokenPtr tok) {
-        cout << "find error :" << errMsg << endl;
+    void reportError(const string& msg, TokenPtr errTok, bool throwError = false) {
+        Parse::IParser::instance->diagError(string(msg), errTok);
+        if (throwError) throw msg;
     }
 
     /// Type Related Function
@@ -210,15 +213,189 @@ namespace Miyuki::AST {
 
     /// * Type Specifier
     TypePtr TypeSpecifier::getType() {
-        // QUESTION: only for typedef names?
         if (!tok) {
-            assert(0 && "invalid typedef-name");
+            assert(0 && "invalid type-specifier");
             return nullptr;
         }
-        auto it = GlobalScope::getInstance().typedefs.find( static_pointer_cast<WordToken>(tok)->name );
-        if (it == GlobalScope::getInstance().typedefs.end())
-            assert(0 && "invalid typedef name");
-        return it->second; //TODO: reconize typedef name in typedefs
+        TypePtr ty = nullptr;
+        if (tok->is(Tag::Identifier)) {
+            // if token is identifier, then it is a  typedef name
+            ty = getTypedefType(static_pointer_cast<WordToken>(tok)->name);
+            if (!ty) reportError("'{0}' does not name a type."_format(static_pointer_cast<WordToken>(tok)->name), tok);
+        }
+        else if (tok->is(Tag::Void)) {
+            ty = Type::getVoidTy(getGlobalContext());
+            setTypeName("void");
+        }
+        else if (tok->is(Tag::Int)) {
+            ty = Type::getInt32Ty(getGlobalContext());
+            setTypeName("int");
+        }
+        else if (tok->is(Tag::Char)) {
+            ty = Type::getInt8Ty(getGlobalContext());
+            setTypeName("char");
+        }
+        else if (tok->is(Tag::Long)) {
+            isAdjective = true;
+            ty = Type::getInt32Ty(getGlobalContext());
+            setTypeName("long");
+        }
+        else if (tok->is(Tag::Short)) {
+            ty = Type::getInt16Ty(getGlobalContext());
+            setTypeName("short");
+        }
+        else if (tok->is(Tag::Float)) {
+            ty = Type::getFloatTy(getGlobalContext());
+            setTypeName("float");
+        }
+        else if (tok->is(Tag::Double)) {
+            ty = Type::getDoubleTy(getGlobalContext());
+            setTypeName("double");
+        }
+        else if (tok->is(Tag::Signed)) {
+            ty = Type::getInt32Ty(getGlobalContext());
+            isAdjective = true;  hasSignMark = true;
+            setTypeName("int");
+        }
+        else if (tok->is(Tag::Unsigned)) {
+            ty = Type::getInt32Ty(getGlobalContext());
+            isAdjective = true;  hasSignMark = true;
+            setTypeName("unsigned int");
+        }
+        else if (tok->is(Tag::KBool)) {
+            reportError("unsupported type _Bool", tok);
+            ty = Type::getInt32Ty(getGlobalContext());
+            setTypeName("<unsupport>");
+        }
+        else if (tok->is(Tag::KComplex)) {
+            reportError("unsupported type _Complex", tok);
+            ty = Type::getInt32Ty(getGlobalContext());
+            setTypeName("<unsupport>");
+        }
+        else {
+            reportError("unknown type", tok);
+            setTypeName("<unknown-type>");
+        }
+        return ty;
+    }
+
+    ///  * DeclarationSpecifier
+    TypePtr DeclarationSpecifier::getType() {
+        // NOTE: setTypeName in this function means UPDATE type name
+        assert(spec && "spec == nullptr");
+
+        TypePtr ty = nullptr;
+        // if is type specifier then merge types
+        if (spec->isTypeSpecifier()) {
+            ty = spec->getType();
+        }
+        
+        // if another type connected
+        if (decSpec) {
+            ///  (long/signed) (int)
+            ///  decSpec       spec  (Symbol)
+            ///  ts            tsp   (Converted Symbol)
+            ///  dt            ty    (Type)
+
+            // <other-spec-or-qual> type = type
+            // if next desinator is not a type-specifier, it must be a trorage-class or type-qualifier,
+            // which is noirrelevant.
+            if (!decSpec->spec || !decSpec->spec->isTypeSpecifier()) {
+                // Just inherit Type from parent node
+                // for example: static unsigned int
+                //     [static] is [decSpec->spec], and it's not a type-specifier, so return direcly
+                return ty;
+            }
+
+            // if no type specified,
+            // for example: static (const)
+            //  aka.  The last declarator is not specifier-type, which is not allowed
+            //   then report error
+            if (!ty) {
+                reportError("no type-specifier specified", tok);
+                spec->setTypeName(MSG_ERROR_TYPE);
+                return Type::getInt32Ty(getGlobalContext());
+            }
+            TypePtr dt = decSpec->getType();
+            
+            TypeSpecifierPtr ts = static_pointer_cast<TypeSpecifier>(decSpec);
+            TypeSpecifierPtr tsp = static_pointer_cast<TypeSpecifier>(spec);
+
+            // to ensure signed/unsigned is at first
+            if (tsp->hasSignMark) {
+                reportError("signed/unsigned must specified at first", tok);
+                spec->setTypeName(MSG_ERROR_TYPE);
+                return dt;
+            }
+
+            // TODO: Differentiate between unsigned and signed
+            // unsigned/signed *
+            if (ts->hasSignMark) {
+                // signed char, unsigned char
+                // signed short, or signed (short int)
+                // signed
+                tsp->hasSignMark = true;
+                if (ty->isIntegerTy(8) && ty->isIntegerTy(16) && ty->isIntegerTy(32) && !tsp->hasSignMark) {
+                    /// TODO: differentiabte between u/s
+                    spec->setTypeName(tsp->getTypeName());
+                    return ty;
+                }
+                else if (tsp->hasSignMark)
+                    reportError("multiply signed/unsigned specified.", tok);
+                else 
+                    reportError("signed/unsigned can only designate integer types", tok);
+                spec->setTypeName(MSG_ERROR_TYPE);
+                return dt;
+            }
+            // short *
+            if (dt->isIntegerTy(16)) {
+                // short int
+                if (ty->isIntegerTy(32) && !tsp->isAdjective) {
+                    spec->setTypeName("short int");
+                    return dt;
+                }
+                spec->setTypeName(MSG_ERROR_TYPE);
+                reportError("invalid type 'short {0}'"_format(ts->getTypeName()), tok);
+                return dt;
+            }
+            // long *
+            if (dt->isIntegerTy(32) && ts->isAdjective) {
+                if (dt->isIntegerTy(32)) {
+                    // long long int
+                    if (tsp->isAdjective) {
+                        spec->setTypeName("long long int");
+                        return Type::getInt64Ty(getGlobalContext());
+                    }
+                    // long int
+                    spec->setTypeName("long int");
+                    return dt;
+                }
+                else if (dt->isDoubleTy()) {
+                    // long double
+                    spec->setTypeName("long double");
+                    return Type::getFP128Ty(getGlobalContext());
+                }
+                else {
+                    reportError("invalid type 'short {0}'"_format(ts->getTypeName()), tok);
+                    return dt;
+                }
+            }
+            else {
+                reportError("invalid type 'short {0}'"_format(ts->getTypeName()), tok);
+                return dt;
+            }
+        }
+        // No follow-up symbols
+        else {
+            // neither type nor follow-up symbols specified
+            if (!ty) {
+                reportError("no type specified. tok is '{0}'"_format(ts->getTypeName()), tok);
+                return Type::getInt32Ty(getGlobalContext());
+            }
+            // other spec & qualifier
+            // or just a typeSpec
+            return ty;
+        }
     }
 
     ///   * Storage Class Specifier
@@ -271,22 +448,23 @@ namespace Miyuki::AST {
 
     TypePtr StructOrUnionSpecifier::getStructTy() {
         IndexedTypeInformation::IndexType memberIndex = 0;
-        static int unnamedStructID = 0;
         string structName = id ?
             static_pointer_cast<WordToken>(id)->name :
-            "<unnamed-struct-{0}>"_format(unnamedStructID++);
+            "unnamed.struct";
         StructTyPtr TY = nullptr;
-        if (TY = StructTy::get(structName)) {
-            reportError("struct {0} redefined.", id);
-            return TY->type;
+        if (PackedTypeInformationPtr PT = getCurrentScope()->getTypeFromThisScope(structName); PT) {
+            reportError("struct {0} redefined."_format(structName), id);
+            return PT->type;
         }
         IndexedTypeMapPtr TM = make_shared<IndexedTypeMap>();
         vector<Type*> eles;
         for (const StructDeclarationPtr& decl : *declList) {
             decl->getMember(eles, TM, memberIndex);
         }
+        
         TY = make_shared<StructTy>(TM, structName, eles);
-        StructTy::saveStruct(TY);
+        addNewType(TY);
+        setTypeName(getStructTypeName(structName));
         return TY->type;
     }
 
@@ -318,7 +496,7 @@ namespace Miyuki::AST {
             //StructDef::StructMemberPtr member = make_shared<StructDef::StructMember>("<unnamed_member_{0}>"_format(unamedMemberID), typeInfo);
             memList.push_back(typeInfo->type);
             IndexedTypeInformationPtr IT = make_shared<IndexedTypeInformation>(*typeInfo, index++);
-            (*typeMap)["<unnamed-member-{0}>"_format(unamedMemberID)] = IT;
+            (*typeMap)[".unamed.{0}"_format(unamedMemberID)] = IT;
         }
 
         /// reconize members
@@ -334,6 +512,9 @@ namespace Miyuki::AST {
 
     // Struct declarator
     TypePtr StructDeclarator::getType(TypePtr basetype) {
+        /// TODO: evaluate const expr, and set as it's bitwidth(with new type)
+        if (constExpr)
+            printf("[Warning]1501  bitfield not supported\n");
         return decr->getType(basetype);
     }
 
@@ -372,6 +553,7 @@ namespace Miyuki::AST {
         }
         // if is declarator
         else if (decl) {
+            setTypeName(decl->getTypeName());
             return decl->getType(baseType);
         }
         // is-array
@@ -379,6 +561,7 @@ namespace Miyuki::AST {
             /// NOTE: ignore static and type-qualifier
             /// In order to simplify, I completely process [ expression ] like a pointer,
             /// and varible-length array is not allowed
+            setTypeName(getPointerTypeName());
             return PointerType::get(directDecl->getType(baseType), 0);
         }
         // is function definition
@@ -386,10 +569,13 @@ namespace Miyuki::AST {
             vector<TypePtr> params;
             paramList->generateTypeList(params);
             FunctionType* FT = FunctionType::get(baseType, params, paramList->isParameterVarible);
+            /// TODO: set function type name
+            setTypeName("<function>");
             return FT;
         }
         else if (isOldStyleFunctionPrototypeDeclaration) {
             reportError("K&R C Grammar is not supported.", nullptr);
+            return Type::getInt32PtrTy(getGlobalContext());
         }
     }
 
@@ -442,6 +628,7 @@ namespace Miyuki::AST {
     TypePtr Miyuki::AST::DirectAbstractDeclarator::getType(TypePtr baseType) {
         // if is declarator
         if (abstracrDecr) {
+            setTypeName(abstracrDecr->getTypeName());
             return abstracrDecr->getType(baseType);
         }
         // is-array
@@ -449,20 +636,24 @@ namespace Miyuki::AST {
             /// NOTE: ignore static and type-qualifier
             /// In order to simplify, I completely process [ expression ] like a pointer,
             /// and varible-length array is not allowed
+            setTypeName(directAbstractDecr->getPointerTypeName());
             return PointerType::get(directAbstractDecr->getType(baseType), 0);
         }
         // is function definition
         else if (isFunctionPrototypeDeclaration) {
             vector<TypePtr> params;
             paramList->generateTypeList(params);
+            setTypeName("<function>");
             FunctionType* FT = FunctionType::get(baseType, params, paramList->isParameterVarible);
             return FT;
         }
         else if (isOldStyleFunctionPrototypeDeclaration) {
+            setTypeName("<function>");
             reportError("K&R C Grammar is not supported.", nullptr);
+            return Type::getInt32PtrTy(getGlobalContext());
         }
     }
-
+    
     // TypeName
     PackedTypeInformationPtr Miyuki::AST::TypeName::getType() {
         PackedTypeInformationPtr typeInfo = getMemberTypeFromSpecifierAndQualifierList(specList);

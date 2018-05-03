@@ -62,13 +62,16 @@ namespace Miyuki::AST {
         FunctionSpecifierFlag functionSpec;
         TypeQualifierFlag     typeQual;
 
+        virtual bool isStructTy() { return false; }
+
         PackedTypeInformation(TypePtr t,
             StorageClass sc,
             FunctionSpecifierFlag fs,
             TypeQualifierFlag tq);
-
+        PackedTypeInformation() {}
         PackedTypeInformationPtr copy();
         void setName(string n) { typeName = n; }
+        virtual string getName() { return typeName; }
     };
 
     class IndexedTypeInformation : public PackedTypeInformation {
@@ -89,7 +92,7 @@ namespace Miyuki::AST {
     typedef shared_ptr<IndexedTypeMap> IndexedTypeMapPtr;
     typedef shared_ptr<UnindexedTypeMap> UnindexedTypeMapPtr;
 
-    class StructTy {
+    class StructTy : public PackedTypeInformation {
     public:
         StructType* type;
         IndexedTypeMapPtr memberMap;
@@ -97,9 +100,12 @@ namespace Miyuki::AST {
         using IndexType = IndexedTypeInformation::IndexType;
 
         template <class... Args>
-        StructTy(const IndexedTypeMapPtr& tm, string StructName, Args... paramPassToGet) {
+        StructTy(const IndexedTypeMapPtr& tm, string StructName, Args... paramPassToGet):
+            PackedTypeInformation(nullptr, 3)
+        {
             type = StructType::create(paramPassToGet...);
             type->setName(StructName);
+            setName(StructName);
             memberMap = tm;
         }
         IndexType getIndex(string memberName);
@@ -107,6 +113,11 @@ namespace Miyuki::AST {
         static map<string, shared_ptr<StructTy>> structs;
         static void saveStruct(shared_ptr<StructTy> ty);
         static shared_ptr<StructTy> get(const string& name);
+        bool isStructTy() { return true; }
+
+        // NOTE: struct name is not the name in StructType
+        //    we search struct name in type list,
+        //    and name in StructType is used in IR represent
     };
 
     class UnionTy {

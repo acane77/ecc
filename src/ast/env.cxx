@@ -43,6 +43,7 @@ namespace Miyuki::AST {
     // Scope
     uint32_t Scope::__scopeID = 0;
     Scope* Scope::__currentScope = &GlobalScope::instance;
+    DetailedTypeInfo Scope::typeDetail;
 
     Miyuki::AST::Scope::Scope() {
         scopeID = __scopeID++;
