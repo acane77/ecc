@@ -69,6 +69,10 @@ namespace Miyuki::AST {
             FunctionSpecifierFlag fs,
             TypeQualifierFlag tq);
         PackedTypeInformation() {}
+        PackedTypeInformation(string name, TypePtr ty) {
+            typeName = name;
+            type = ty;
+        }
         PackedTypeInformationPtr copy();
         void setName(string n) { typeName = n; }
         virtual string getName() { return typeName; }
@@ -100,9 +104,7 @@ namespace Miyuki::AST {
         using IndexType = IndexedTypeInformation::IndexType;
 
         template <class... Args>
-        StructTy(const IndexedTypeMapPtr& tm, string StructName, Args... paramPassToGet):
-            PackedTypeInformation(nullptr, 3)
-        {
+        StructTy(const IndexedTypeMapPtr& tm, string StructName, Args... paramPassToGet) {
             type = StructType::create(paramPassToGet...);
             type->setName(StructName);
             setName(StructName);
@@ -152,6 +154,8 @@ namespace Miyuki::AST {
             FunctionSpecifierFlag fs,
             TypeQualifierFlag tq
          );
+
+        Identifier(string n, TypePtr ty, bool isConst = false);
     };
 }
 

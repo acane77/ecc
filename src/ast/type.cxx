@@ -140,5 +140,11 @@ namespace Miyuki::AST {
         : PackedTypeInformation(t, sc, fs, tq) {
         name = n;
     }
+
+    Identifier::Identifier(string n, TypePtr ty, bool isConst) {
+        name = n;
+        type = ty;
+        typeQual.isConst = isConst;
+    }
 }
 

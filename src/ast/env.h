@@ -123,7 +123,7 @@ namespace Miyuki::AST {
     // get identifier by name
     IdentifierPtr getIdentifier(string name);
     // insert identifier to symbol table
-    bool addIndentifier(IdentifierPtr id);
+    bool addIdentifier(IdentifierPtr id);
     // check typedef names
     TypedefMap::value_type::second_type getTypedefType(string name);
     // set as typedef ty
@@ -148,6 +148,8 @@ namespace Miyuki::AST {
         }
         return theValue;
     }*/
+	// Initialize
+	//void initializeEnvironment();
     
 }
 

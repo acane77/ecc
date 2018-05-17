@@ -47,6 +47,10 @@ namespace Miyuki::AST {
                                                                                              exp(exp),
                                                                                              condExpr(condExpr) {}
 
+    bool ConditionalExpression::isConstantExpression() {
+        return IsCalculated();
+    }
+
     void ConditionalExpression::eval() {
         PRINT_FUNCTION_NAME();
         RETURN_IF_CALCULATED();
@@ -406,8 +410,7 @@ namespace Miyuki::AST {
 #define RequireNonConst(expr)
 #define AddressOf(x, y)
 #define SetOperatorToken(x) TokenPtr op = x;
-
-    Value* ZeroValue = ConstantInt::getIntegerValue(Type::getInt32Ty(getGlobalContext()), APInt(32, (uint64_t)0));
+#define ZeroValue ConstantInt::getIntegerValue(Type::getInt32Ty(getGlobalContext()), APInt(32, (uint64_t)0))
 
     void CommaExpression::gen() {
         ReturnAddressIfCalculated();
@@ -895,6 +898,7 @@ namespace Miyuki::AST {
         assignExp->gen();
         Value * LHS = condExp->getAddr(), *RHS = assignExp->getAddr();
         Value * V = nullptr; // Value of calculation result
+        
         SetOperatorToken(assignOp)
         LoadIfIsPointer(LHS)
         LoadIfIsPointer(RHS)

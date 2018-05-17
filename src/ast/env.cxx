@@ -136,7 +136,7 @@ namespace Miyuki::AST {
         return getCurrentScope()->getIndentifier(name);
     }
 
-    bool addIndentifier(IdentifierPtr id) {
+    bool addIdentifier(IdentifierPtr id) {
         return getCurrentScope()->addIdentifier(id);
     }
 

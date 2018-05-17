@@ -318,7 +318,7 @@ namespace Miyuki::AST {
             }
             TypePtr dt = decSpec->getType();
             
-            TypeSpecifierPtr ts = static_pointer_cast<TypeSpecifier>(decSpec);
+            TypeSpecifierPtr ts = static_pointer_cast<TypeSpecifier>(decSpec->spec);
             TypeSpecifierPtr tsp = static_pointer_cast<TypeSpecifier>(spec);
 
             // to ensure signed/unsigned is at first
@@ -389,7 +389,7 @@ namespace Miyuki::AST {
         else {
             // neither type nor follow-up symbols specified
             if (!ty) {
-                reportError("no type specified. tok is '{0}'"_format(ts->getTypeName()), tok);
+                reportError("no type specified. tok is '{0}'"_format(static_pointer_cast<TypeSpecifier>(decSpec->spec)->getTypeName()), tok);
                 return Type::getInt32Ty(getGlobalContext());
             }
             // other spec & qualifier
@@ -465,6 +465,8 @@ namespace Miyuki::AST {
         TY = make_shared<StructTy>(TM, structName, eles);
         addNewType(TY);
         setTypeName(getStructTypeName(structName));
+
+        // because an unamed struct can only got vis typedef name. so just map it in <Type->TypeDetail> 
         return TY->type;
     }
 
@@ -528,6 +530,11 @@ namespace Miyuki::AST {
         return directDecl->getType(baseType);
     }
 
+    void PointerDecl::gen() {
+        if (pointerDecl)
+            pointerDecl->gen();
+    }
+
     // Pointer
     TypePtr PointerDecl::getType(TypePtr baseType) {
         if (typeQualList) {
@@ -541,8 +548,10 @@ namespace Miyuki::AST {
             }
         }
         baseType = PointerType::get(baseType, 0);
-        if (pointerDecl)
+        if (pointerDecl) {
+            setTypeName(pointerDecl->getPointerTypeName());
             baseType = pointerDecl->getType(baseType);
+        }
         return baseType;
     }
 
@@ -658,6 +667,7 @@ namespace Miyuki::AST {
     PackedTypeInformationPtr Miyuki::AST::TypeName::getType() {
         PackedTypeInformationPtr typeInfo = getMemberTypeFromSpecifierAndQualifierList(specList);
         typeInfo->type = abstructDecr->getType(typeInfo->type);
+        setTypeName(abstructDecr->getTypeName());
         return typeInfo;
     }
 
@@ -666,5 +676,37 @@ namespace Miyuki::AST {
         if (assignExpr)
             return assignExpr->getSymbolType();
         return initList->getType();
+    }
+
+   // Enum
+    TypePtr EnumSpecifier::getType() {
+        TypePtr ty = Type::getInt32Ty(getGlobalContext());
+        PackedTypeInformationPtr T = make_shared<PackedTypeInformation>(getEnumName(), ty);
+        addNewType(T);
+        return ty;
+    }
+
+    string EnumSpecifier::getEnumName() {
+        return id ? id->toSourceLiteral() : ".unamed.enum";
+    }
+
+    void EnumSpecifier::gen() {
+        if (!enumList)  return;
+        for (auto er : *enumList) {
+            er->gen();
+        }
+    }
+
+    void Enumerator::gen() {
+        expr->eval();
+        if (!expr->isConstantExpression()) {
+            reportError("enumerator must be a constant", enumConstant);
+        }
+        TypePtr ty = Type::getInt32Ty(getGlobalContext());
+        IntegerLiteralType intval = expr->getCalculatedToken()->toInt();
+        string name = static_pointer_cast<WordToken>(enumConstant)->name;
+        IdentifierPtr ID = make_shared<Identifier>(name, ty, true);
+        addIdentifier(ID);
+        cout << "[Add Enumerator] " << name << ": " << intval;
     }
 }

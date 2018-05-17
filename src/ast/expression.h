@@ -102,6 +102,8 @@ namespace Miyuki::AST {
         void gen();
         int getKind() { return Kind::ConditionalExpression; }
 
+        bool isConstantExpression();
+
         virtual void eval();
     };
 
