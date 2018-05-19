@@ -1,4 +1,6 @@
 #include "ast/statements.h"
+#include "ast/env.h"
+#include "ast/irutils.h"
 
 namespace Miyuki::AST {
 
@@ -35,4 +37,38 @@ namespace Miyuki::AST {
     Goto::Goto(const TokenPtr &id) : id(id) {}
 
     Return::Return(const ExpressionPtr &expr) : expr(expr) {}
+
+	/// --------  Code Generation --------
+
+	void CompoundStatement::gen() {
+		getCurrentScope()->enterScope();
+
+		for (BlockItemPtr BI : *blkItemLst)
+			BI->gen();
+
+		getCurrentScope()->leaveScope();
+	}
+
+	void BlockItem::gen() {
+		if (decl)
+			decl->gen();
+		else if (stmt)
+			stmt->gen();
+		else
+			assert(!"both decl and stmt are nullptr");
+	}
+
+	void ExpressionStatement::gen() {
+		expr->gen();
+	}
+
+	void If::gen() {
+		DefineBasicBlock(True);
+		DefineBasicBlock(False);
+
+		condExpr->gen();
+		Value * cond = condExpr->getAddr();
+		cond = Builder.CreateFC
+	}
+
 }

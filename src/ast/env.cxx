@@ -88,13 +88,19 @@ namespace Miyuki::AST {
         Scope::__currentScope = c.get();
     }
 
+	ScopePtr Miyuki::AST::Scope::enterScope() {
+		ScopePtr c = make_shared<Scope>();
+		enterScope(c);
+		return c;
+	}
+
     void Miyuki::AST::Scope::leaveScope() {
         child->parent = nullptr;
         child = nullptr;
         Scope::__currentScope = this;
     }
 
-    Scope * Miyuki::AST::Scope::getCuurentScope() {
+    ScopePtr Miyuki::AST::Scope::getCuurentScope() {
         return Scope::__currentScope;
     }
 

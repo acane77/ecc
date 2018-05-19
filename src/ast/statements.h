@@ -31,7 +31,7 @@ namespace Miyuki::AST {
     class Statement : public Symbol {
     public:
         Label lblNext;
-        virtual void gen(int next) { assert( false && "not implemented" ); }
+        virtual void gen() { assert( false && "not implemented" ); }
         virtual int getKind() override { return Kind::statement; }
     };
 
@@ -49,7 +49,7 @@ namespace Miyuki::AST {
         LabeledStatement(const StatementPtr &stmt, const ConstantExpressionPtr &constExpr);
         explicit LabeledStatement(const StatementPtr &stmt);
 
-        virtual void gen(int next) override{}
+		virtual void gen() override { }
         virtual int getKind() override { return Kind::labeledStatement; }
     };
 
@@ -59,7 +59,7 @@ namespace Miyuki::AST {
 
         CompoundStatement(const BlockItemListPtr &blkItemLst);
 
-        virtual void gen(int next) override{}
+		virtual void gen() override;
         virtual int getKind() override { return Kind::compoundStatement; }
     };
 
@@ -72,7 +72,7 @@ namespace Miyuki::AST {
         explicit BlockItem(const StatementPtr &stmt);
         explicit BlockItem(const DeclarationPtr &decl);
 
-        virtual void gen(int next) override{}
+		virtual void gen() override;
         virtual int getKind() override { return Kind::blockItem; }
     };
 
@@ -82,7 +82,7 @@ namespace Miyuki::AST {
 
         explicit ExpressionStatement(const ExpressionPtr &expr);
 
-        virtual void gen(int next) override{}
+		virtual void gen() override;
         virtual int getKind() override { return Kind::expressionStatement; }
     };
 
@@ -95,7 +95,7 @@ namespace Miyuki::AST {
 
         If(const ExpressionPtr &condExpr, const StatementPtr &stmt, const ElsePtr &elseStmt = nullptr);
 
-        virtual void gen(int next) override{}
+		virtual void gen() override;
         virtual int getKind() override { return Kind::_if; }
     };
 
@@ -105,7 +105,7 @@ namespace Miyuki::AST {
 
         explicit Else(const StatementPtr &stmt);
 
-        virtual void gen(int next) override{}
+        virtual void gen() override{}
         virtual int getKind() override { return Kind::_else; }
     };
 
@@ -116,7 +116,7 @@ namespace Miyuki::AST {
 
         Switch(const ExpressionPtr &expr, const StatementPtr &stmt);
 
-        virtual void gen(int next) override{}
+        virtual void gen() override{}
         virtual int getKind() override { return Kind::_switch; }
     };
 
@@ -128,7 +128,7 @@ namespace Miyuki::AST {
 
         While(const ExpressionPtr &condExpr, const StatementPtr &stmt);
 
-        virtual void gen(int next) override{}
+        virtual void gen() override{}
         virtual int getKind() override { return Kind::_while; }
     };
 
@@ -139,7 +139,7 @@ namespace Miyuki::AST {
 
         DoWhile(const ExpressionPtr &condExpr, const StatementPtr &stmt);
 
-        virtual void gen(int next) override{}
+        virtual void gen() override{}
         virtual int getKind() override { return Kind::doWile; }
     };
 
@@ -155,7 +155,7 @@ namespace Miyuki::AST {
             const StatementPtr &stmt);
         For(const ExpressionPtr &init, const ExpressionPtr &cond, const ExpressionPtr &inc, const StatementPtr &stmt);
 
-        virtual void gen(int next) override{}
+        virtual void gen() override{}
         virtual int getKind() override { return Kind::_for; }
     };
 
@@ -166,21 +166,21 @@ namespace Miyuki::AST {
 
         explicit Goto(const TokenPtr &id);
 
-        virtual void gen(int next) override{}
+        virtual void gen() override{}
         virtual int getKind() override { return Kind::_goto; }
     };
 
     class Continue : public Statement {
     public:
 
-        virtual void gen(int next) override{}
+        virtual void gen() override{}
         virtual int getKind() override { return Kind::_continue; }
     };
 
     class Break : public Statement {
     public:
 
-        virtual void gen(int next) override{}
+        virtual void gen() override{}
         virtual int getKind() override { return Kind::_break; }
     };
 
@@ -190,7 +190,7 @@ namespace Miyuki::AST {
 
         explicit Return(const ExpressionPtr &expr);
 
-        virtual void gen(int next) override{}
+        virtual void gen() override{}
         virtual int getKind() override { return Kind::_return; }
     };
 }

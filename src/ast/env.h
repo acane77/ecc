@@ -50,6 +50,7 @@ namespace Miyuki::AST {
         IdentifierPtr getIndentifier(string name);
         bool addIdentifier(const IdentifierPtr& id);
         void enterScope(ScopePtr child);
+		ScopePtr enterScope();
         void leaveScope();
         IdentifierPtr getIndentifierFromThisScope(string name);
         uint32_t getScopeID();
@@ -151,6 +152,14 @@ namespace Miyuki::AST {
 	// Initialize
 	//void initializeEnvironment();
     
+#define NewBasicBlock(name) BasicBlock::Create(getGlobalContext(), name)
+#define SetInsertBlock(BB) switchBasicBlock(BB)
+#define DefineBasicBlock(name) BasicBlock* BB_##name= NewBasicBlock(#name)
+#define GetIntNType(N) Type::getInt##N##Ty(getGlobalContext())
+#define ZeroValueN(n) ConstantInt::getIntegerValue(Type::getIntNTy(getGlobalContext(), n), APInt(n, (uint64_t)0))
+#define ZeroValue ZeroValueN(32)
+#define ZeroValue64 ZeroValueN(64)
+
 }
 
 #endif

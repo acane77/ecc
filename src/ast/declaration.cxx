@@ -1,5 +1,6 @@
 #include "declaration.h"
 #include "ast/env.h"
+#include "ast/irutils.h"
 
 namespace Miyuki::AST {
 
@@ -127,12 +128,6 @@ namespace Miyuki::AST {
     InitDeclarator::InitDeclarator(const DeclaratorPtr &desOr, const InitializerPtr &init) : desOr(desOr), init(init) {}
 
     const char* MSG_ERROR_TYPE = "<error-type>";
-
-    /// Reprot error
-    void reportError(const string& msg, TokenPtr errTok, bool throwError = false) {
-        Parse::IParser::instance->diagError(string(msg), errTok);
-        if (throwError) throw msg;
-    }
 
     /// Type Related Function
     // Generate type information including storage class, specifiers and qualifiers and its return type

@@ -393,10 +393,7 @@ namespace Miyuki::AST {
     }
 #define SetExpressLevel(next, sibling) ExpressionPtr nextLevel = next, siblingLevel = sibling
 #define InheritSymbolTypeFrom(x) setSymbolType(x->getSymbolType());
-#define NewBasicBlock(name) BasicBlock::Create(getGlobalContext(), name)
-#define SetInsertBlock(BB) switchBasicBlock(BB)
-#define DefineBasicBlock(name) BasicBlock* BB_##name= NewBasicBlock(#name)
-#define GetIntNType(N) Type::getInt##N##Ty(getGlobalContext())
+
 #define REPORT_ERROR_V(msg, tok) { \
         errorvalue(msg, tok);\
         rvalue(ZeroValue);\
@@ -410,7 +407,6 @@ namespace Miyuki::AST {
 #define RequireNonConst(expr)
 #define AddressOf(x, y)
 #define SetOperatorToken(x) TokenPtr op = x;
-#define ZeroValue ConstantInt::getIntegerValue(Type::getInt32Ty(getGlobalContext()), APInt(32, (uint64_t)0))
 
     void CommaExpression::gen() {
         ReturnAddressIfCalculated();
@@ -474,6 +470,9 @@ namespace Miyuki::AST {
             DefineBasicBlock(LOR_rhs);
             DefineBasicBlock(LOR_end);
             logicalAndExp->gen();
+
+			// Convert to int
+
             Value * toBool = Builder.CreateICmpNE(logicalAndExp->getAddr(), ZeroValue, "toBool");
             Builder.CreateCondBr(toBool, BB_LOR_end, BB_LOR_rhs);
             
