@@ -105,7 +105,7 @@ namespace Miyuki::AST {
 
         explicit Else(const StatementPtr &stmt);
 
-        virtual void gen() override{}
+		virtual void gen() override;
         virtual int getKind() override { return Kind::_else; }
     };
 
@@ -128,7 +128,7 @@ namespace Miyuki::AST {
 
         While(const ExpressionPtr &condExpr, const StatementPtr &stmt);
 
-        virtual void gen() override{}
+		virtual void gen() override;
         virtual int getKind() override { return Kind::_while; }
     };
 
@@ -139,7 +139,7 @@ namespace Miyuki::AST {
 
         DoWhile(const ExpressionPtr &condExpr, const StatementPtr &stmt);
 
-        virtual void gen() override{}
+		virtual void gen() override;
         virtual int getKind() override { return Kind::doWile; }
     };
 
@@ -155,7 +155,7 @@ namespace Miyuki::AST {
             const StatementPtr &stmt);
         For(const ExpressionPtr &init, const ExpressionPtr &cond, const ExpressionPtr &inc, const StatementPtr &stmt);
 
-        virtual void gen() override{}
+		virtual void gen() override;
         virtual int getKind() override { return Kind::_for; }
     };
 
@@ -166,14 +166,14 @@ namespace Miyuki::AST {
 
         explicit Goto(const TokenPtr &id);
 
-        virtual void gen() override{}
+		virtual void gen() override {}
         virtual int getKind() override { return Kind::_goto; }
     };
 
     class Continue : public Statement {
     public:
 
-        virtual void gen() override{}
+        virtual void gen() override;
         virtual int getKind() override { return Kind::_continue; }
     };
 
@@ -190,7 +190,7 @@ namespace Miyuki::AST {
 
         explicit Return(const ExpressionPtr &expr);
 
-        virtual void gen() override{}
+		virtual void gen() override;
         virtual int getKind() override { return Kind::_return; }
     };
 }

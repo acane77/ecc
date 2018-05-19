@@ -1,0 +1,4 @@
+  TODOS:
+
+1. constexpr 单独分开，并在需要判断是否完全计算的地方判断
+2. 实现switch
