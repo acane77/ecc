@@ -21,7 +21,7 @@ namespace Miyuki::AST {
 
         TranslationUnit(const ExternalDeclarationPtr &extDecl, const TranslationUnitPtr &unit);
 
-        virtual void gen() {}
+		virtual void gen();
         virtual int getKind() override { return Kind::translationUnit; }
     };
 
@@ -34,7 +34,7 @@ namespace Miyuki::AST {
         ExternalDeclaration(const FunctionDefinitionPtr &funcDef);
         ExternalDeclaration(const DeclarationPtr &decl);
 
-        virtual void gen() {}
+		virtual void gen();
         virtual int getKind() override { return Kind::externalDeclaration; }
     };
 
@@ -48,7 +48,7 @@ namespace Miyuki::AST {
         FunctionDefinition(const DeclarationSpecifierPtr &spec, const DeclaratorPtr &decr,
                            const DeclarationListPtr &lst, const CompoundStatementPtr &stmt);
 
-        virtual void gen() {}
+		virtual void gen();
         virtual int getKind() override { return Kind::functionDefinition; }
     };
 

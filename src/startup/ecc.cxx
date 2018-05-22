@@ -19,12 +19,14 @@ int main(int argc, const char ** argv) {
     const char * file_name = "test.c";
     if (argc > 1) file_name = argv[1];
 
-    try {
+    //try {
         Parser parser(file_name);
         parser.parse();
-    }
-    catch (exception& e) {
-        cout << Miyuki::Console::Error("fatal:") << e.what() << endl << endl;
-    }
+		AST::TranslationUnitPtr AST = parser.getAST();
+		AST->gen();
+    //}
+    //catch (exception& e) {
+    //    cout << Miyuki::Console::Error("fatal:") << e.what() << endl << endl;
+   // }
 
 }

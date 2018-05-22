@@ -704,4 +704,8 @@ namespace Miyuki::AST {
         addIdentifier(ID);
         cout << "[Add Enumerator] " << name << ": " << intval;
     }
+
+	void Declaration::gen() {
+		cout << "Generating Declaration\n";
+	}
 }

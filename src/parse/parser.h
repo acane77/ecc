@@ -3,6 +3,7 @@
 
 #include "ast/astbuilder.h"
 #include "parse/ppparser.h"
+#include "ast/extdefinitions.h"
 
 namespace Miyuki::Parse {
 
@@ -14,9 +15,13 @@ namespace Miyuki::Parse {
         // generated AST
         AST::SymbolPtr  M_ast = nullptr;
 
+		// Root of AST
+		AST::TranslationUnitPtr M_ASTRoot = nullptr;
+
         // get next token
         //    get token from preprocessor
         TokenPtr next() override;
+
 
     public:
         explicit  Parser(const char * path);
@@ -27,6 +32,9 @@ namespace Miyuki::Parse {
 
         // get preprocessed source file
         TokenSequencePtr getPreprocessedSource();
+
+		// get AST
+		AST::TranslationUnitPtr getAST() { return M_ASTRoot; }
     };
 
 }

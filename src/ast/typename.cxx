@@ -40,7 +40,7 @@ namespace Miyuki::AST {
 
     string Miyuki::AST::WithTypeName::_getCompName(string name, string inWhich) {
         Function* F = getCurrentFunction();
-        Scope* S = getCurrentScope();
+        ScopePtr S = getCurrentScope();
         string FN = F ? F->getName().str() + "::" : string("");
         string SN = F && S ? "${0}"_format(S->getScopeID()) : "";
         return inWhich + " " + name + SN;

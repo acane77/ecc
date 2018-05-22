@@ -19,9 +19,9 @@ namespace Miyuki::AST {
 			return Builder.CreateIntCast(Val, intTy, true, "conv_to_int");
 		}
 		else if (T->isPointerTy()) {
-			return Builder.CreatePointerBitCastOrAddrSpaceCast(L, intTy, "castPtr2Int");
+			return Builder.CreatePointerBitCastOrAddrSpaceCast(Val, intTy, "castPtr2Int");
 		}
-		else if (T->isIntegerTy*()) {
+		else if (T->isIntegerTy()) {
 			return Val;
 		}
 		reportError("cannot convert to int", __irutils_err_token);
@@ -42,7 +42,7 @@ namespace Miyuki::AST {
 		}
 		else {
 			reportError("cannot compare to int", __irutils_err_token);
-			L = ConstantInt::get(Type::getInt1Ty(), APInt(1, 0));
+			L = ConstantInt::get(Type::getInt1Ty(getGlobalContext()), APInt(1, 0));
 		}
 		return L;
 	}

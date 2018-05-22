@@ -49,7 +49,7 @@ namespace Miyuki::AST {
         LabeledStatement(const StatementPtr &stmt, const ConstantExpressionPtr &constExpr);
         explicit LabeledStatement(const StatementPtr &stmt);
 
-		virtual void gen() override { }
+		virtual void gen() override;
         virtual int getKind() override { return Kind::labeledStatement; }
     };
 
@@ -166,7 +166,7 @@ namespace Miyuki::AST {
 
         explicit Goto(const TokenPtr &id);
 
-		virtual void gen() override {}
+		virtual void gen() override;
         virtual int getKind() override { return Kind::_goto; }
     };
 
@@ -180,7 +180,7 @@ namespace Miyuki::AST {
     class Break : public Statement {
     public:
 
-        virtual void gen() override{}
+		virtual void gen() override;
         virtual int getKind() override { return Kind::_break; }
     };
 

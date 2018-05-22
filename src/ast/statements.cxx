@@ -101,10 +101,12 @@ namespace Miyuki::AST {
 
 	void CompoundStatement::gen() {
 		getCurrentScope()->enterScope();
-
-		for (BlockItemPtr BI : *blkItemLst)
-			BI->gen();
-
+		
+		if (blkItemLst) {
+			for (BlockItemPtr BI : *blkItemLst)
+				BI->gen();
+		}
+			
 		getCurrentScope()->leaveScope();
 	}
 

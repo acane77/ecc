@@ -73,13 +73,13 @@ namespace Miyuki::AST {
     class Declaration : public IDeclaration {
     public:
         DeclarationSpecifierPtr decSpec = nullptr;
-        InitDeclaratorListPtr    initDeclList = nullptr;
+        InitDeclaratorListPtr   initDeclList = nullptr;
 
         Declaration(const DeclarationSpecifierPtr &decSpec, const InitDeclaratorListPtr &initDeclList);
 
         // do not support static_assert
         int getKind() override { return Kind::declaration; }
-        virtual void gen() {}
+		virtual void gen();
     };
 
     class DeclarationSpecifier : public IDeclaration {

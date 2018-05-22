@@ -46,7 +46,7 @@ namespace Miyuki::Parse {
 
         M_proc->finish(); // finish preprocess*/
         try {
-            translationUnit();
+            M_ast = M_ASTRoot = translationUnit();
         }
         catch (exception& e) {
             cout << "Exception occurred: " << e.what();

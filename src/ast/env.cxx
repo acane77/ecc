@@ -2,14 +2,14 @@
 #include "llvm/IR/Type.h"
 
 namespace Miyuki::AST {
-    GlobalScope GlobalScope::instance;
-    IRBuilder<>& Builder = GlobalScope::instance.Builder;
+    GlobalScopePtr GlobalScope::instance = make_shared<GlobalScope>();
+    IRBuilder<>& Builder = GlobalScope::instance->Builder;
     const size_t PointerSize = 4;
     Module __M_CXX_Model("ecc", getGlobalContext());
-    const Module* TheModule = &__M_CXX_Model;
+    Module* const TheModule = &__M_CXX_Model;
 
-    GlobalScope & getGlobalScope() {
-        return GlobalScope::instance;
+    GlobalScope& getGlobalScope() {
+        return *GlobalScope::instance;
     }
 
     LLVMContext & getGlobalContext() {
@@ -42,7 +42,7 @@ namespace Miyuki::AST {
 
     // Scope
     uint32_t Scope::__scopeID = 0;
-    Scope* Scope::__currentScope = &GlobalScope::instance;
+    ScopePtr Scope::__currentScope = GlobalScope::instance;
     DetailedTypeInfo Scope::typeDetail;
 
     Miyuki::AST::Scope::Scope() {
@@ -85,7 +85,7 @@ namespace Miyuki::AST {
     void Miyuki::AST::Scope::enterScope(ScopePtr c) {
         c->parent = shared_from_this();
         child = c;
-        Scope::__currentScope = c.get();
+        Scope::__currentScope = c;
     }
 
 	ScopePtr Miyuki::AST::Scope::enterScope() {
@@ -97,15 +97,15 @@ namespace Miyuki::AST {
     void Miyuki::AST::Scope::leaveScope() {
         child->parent = nullptr;
         child = nullptr;
-        Scope::__currentScope = this;
+        Scope::__currentScope = shared_from_this();
     }
 
-    ScopePtr Miyuki::AST::Scope::getCuurentScope() {
+    ScopePtr Miyuki::AST::Scope::getCurrentScope() {
         return Scope::__currentScope;
     }
 
-    Scope * getCurrentScope() {
-        return Scope::getCuurentScope();
+	ScopePtr getCurrentScope() {
+        return Scope::getCurrentScope();
     }
 
     TypeMap::value_type::second_type Miyuki::AST::Scope::getTypeFromThisScope(string name) {

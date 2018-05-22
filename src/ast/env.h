@@ -28,7 +28,8 @@ namespace Miyuki::AST {
     typedef map<TypePtr, PackedTypeInformationPtr>  DetailedTypeInfo;
     typedef shared_ptr<TypeMap>    TypeMapPtr;
 
-    DEFINE_SHARED_PTR(Scope);
+	DEFINE_SHARED_PTR(Scope);
+	DEFINE_SHARED_PTR(GlobalScope);
 
     class Scope : public enable_shared_from_this<Scope> {
         uint32_t      scopeID;
@@ -60,7 +61,7 @@ namespace Miyuki::AST {
         TypedefMap::value_type::second_type getTypedefTy(string name);
         void setTypedefTy(string name, TypedefMap::value_type::second_type ty);
         static DetailedTypeInfo::value_type::second_type getDetail(DetailedTypeInfo::key_type ty);
-        static Scope* getCuurentScope();
+        static ScopePtr getCurrentScope();
     private:
         //template <class TKey, class TVal>
         //TVal _getElementByName(TKey key);
@@ -68,7 +69,7 @@ namespace Miyuki::AST {
         TypeMap::value_type::second_type _getType(string name);
         
         static uint32_t __scopeID;
-        static Scope* __currentScope;
+        static ScopePtr __currentScope;
     };
 
     class GlobalScope : public Scope {
@@ -86,11 +87,15 @@ namespace Miyuki::AST {
         Function*     globalInitFunction;
         IRBuilder<>   Builder;
 
+		// SPECIFIY if currently is in prototype part of
+		// a function definition
+		bool isInFunctionDefPrototypePart = false;
+
         Parse::IParserPtr parser;
     public:
         // instance
-        static GlobalScope instance;
-        static GlobalScope& getInstance() { return instance; }
+        static GlobalScopePtr instance;
+        static GlobalScope& getInstance() { return *instance; }
 
     public:
         GlobalScope(): Builder(context) {}
@@ -100,7 +105,7 @@ namespace Miyuki::AST {
     // get global scope ref
     GlobalScope& getGlobalScope();
     // get current scope
-    Scope* getCurrentScope();
+    ScopePtr getCurrentScope();
 
     // *** LLVM Related **
     // create new basic block and set as cuurent insert Basic Block
@@ -118,7 +123,7 @@ namespace Miyuki::AST {
     // default platform pointer size
     extern const size_t PointerSize;
     // LLVM Module Instance
-    extern const Module * TheModule;
+    extern Module * const TheModule;
     
     // ** Compile-Time Information **
     // get identifier by name
