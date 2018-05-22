@@ -19,34 +19,34 @@
 #define _MIYUKI_LOG_OUTPUT(msg, title, os) (os << "[" << (title) << "]  " << (msg))
 #define _MIYUKI_LOG_STDOUT(msg, title) _MIYUKI_LOG_OUTPUT(msg, title, std::cout)
 
-#if _MIYUKI_DEBUG_FLAG | _MIYUKI_DEBUG_LEVEL__SRCMGR
+#if _MIYUKI_DEBUG_FLAG & _MIYUKI_DEBUG_LEVEL__SRCMGR
 #define DebugSM(msg, title) _MIYUKI_LOG_STDOUT(msg, title)
 #else
 #define DebugSM(msg, title) 
-#endif // _MIYUKI_DEBUG_FLAG | _MIYUKI_DEBUG_LEVEL__SRCMGR
+#endif // _MIYUKI_DEBUG_FLAG & _MIYUKI_DEBUG_LEVEL__SRCMGR
 
-#if _MIYUKI_DEBUG_FLAG | _MIYUKI_DEBUG_LEVEL__LEXER
+#if _MIYUKI_DEBUG_FLAG & _MIYUKI_DEBUG_LEVEL__LEXER
 #define LogLexer(msg, title) _MIYUKI_LOG_STDOUT(msg, title)
 #else
 #define LogLexer(msg, title) 
-#endif // _MIYUKI_DEBUG_FLAG | _MIYUKI_DEBUG_LEVEL__LEXER
+#endif // _MIYUKI_DEBUG_FLAG & _MIYUKI_DEBUG_LEVEL__LEXER
 
-#if _MIYUKI_DEBUG_FLAG | _MIYUKI_DEBUG_LEVEL__PARSER
+#if _MIYUKI_DEBUG_FLAG & _MIYUKI_DEBUG_LEVEL__PARSER
 #define LogParser(msg, title) _MIYUKI_LOG_STDOUT(msg, title)
 #else
 #define LogParser(msg, title) 
-#endif // _MIYUKI_DEBUG_FLAG | _MIYUKI_DEBUG_LEVEL__PARSER
+#endif // _MIYUKI_DEBUG_FLAG & _MIYUKI_DEBUG_LEVEL__PARSER
 
-#if _MIYUKI_DEBUG_FLAG | _MIYUKI_DEBUG_LEVEL__AST
+#if _MIYUKI_DEBUG_FLAG & _MIYUKI_DEBUG_LEVEL__AST
 #define LogAST(msg, title) _MIYUKI_LOG_STDOUT(msg, title)
 #else
 #define LogAST(msg, title) 
-#endif // _MIYUKI_DEBUG_FLAG | _MIYUKI_DEBUG_LEVEL__AST
+#endif // _MIYUKI_DEBUG_FLAG & _MIYUKI_DEBUG_LEVEL__AST
 
-#if _MIYUKI_DEBUG_FLAG | _MIYUKI_DEBUG_LEVEL__COMMON
+#if _MIYUKI_DEBUG_FLAG & _MIYUKI_DEBUG_LEVEL__COMMON
 #define DebugLog(msg, title) _MIYUKI_LOG_STDOUT(msg, title)
 #else
 #define DebugLog(msg, title) 
-#endif // _MIYUKI_DEBUG_FLAG | _MIYUKI_DEBUG_LEVEL__COMMON
+#endif // _MIYUKI_DEBUG_FLAG & _MIYUKI_DEBUG_LEVEL__COMMON
 
 #endif
