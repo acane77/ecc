@@ -1,3 +1,4 @@
+#include "i:\git\ecc\src\ast\type.h"
 #include "ast/type.h"
 #include "ast/env.h"
 
@@ -136,14 +137,42 @@ namespace Miyuki::AST {
         return nullptr;
     }
 
-    Identifier::Identifier(string n, TypePtr t, StorageClass sc, FunctionSpecifierFlag fs, TypeQualifierFlag tq)
-        : PackedTypeInformation(t, sc, fs, tq) {
+	Value * TypeUtil::createConstant(TokenPtr constTok) {
+		if (IntTokenPtr I = dynamic_pointer_cast<IntToken>(constTok)) {
+			return ConstantInt::get(IntegerType::getIntNTy(getGlobalContext(), I->bit), APInt(I->bit, I->value));
+		}
+		else if (FloatTokenPtr F = dynamic_pointer_cast<FloatToken>(constTok)) {
+			Type* ty;
+			if (F->bit == 32)
+				ty = Type::getFloatTy(getGlobalContext());
+			else if (F->bit == 64)
+				ty = Type::getDoubleTy(getGlobalContext());
+			else if (F->bit == 128)
+				ty = Type::getFP128Ty(getGlobalContext());
+			else
+				assert(!"invalid FP size in bit");
+			return ConstantFP::get(ty, F->value);
+		}
+		else if (CharTokenPtr C = dynamic_pointer_cast<CharToken>(constTok)) {
+			return ConstantInt::get(GetIntNType(8), APInt(8, I->value));
+		}
+		else if (StringTokenPtr S = dynamic_pointer_cast<StringToken>(constTok)) {
+			GlobalVariable* GV = new GlobalVariable(ArrayType::get(GetIntNType(8), S->value.size() + 1),
+				true, GlobalValue::LinkageTypes::InternalLinkage, ConstantDataArray::getString(getGlobalContext(), S->value), ".str");
+			return GV;
+		}
+		assert(!"invalid constant");
+	}
+
+    Identifier::Identifier(string n, TypePtr t, StorageClass sc, FunctionSpecifierFlag fs, TypeQualifierFlag tq, Value* v)
+        : PackedTypeInformation(t, sc, fs, tq), addr(v) {
         name = n;
     }
 
-    Identifier::Identifier(string n, TypePtr ty, bool isConst) {
+    Identifier::Identifier(string n, TypePtr ty, bool isConst, Value* v) {
         name = n;
         type = ty;
+		addr = v;
         typeQual.isConst = isConst;
     }
 }

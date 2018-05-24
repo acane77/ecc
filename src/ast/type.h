@@ -146,16 +146,21 @@ namespace Miyuki::AST {
     class Identifier : public PackedTypeInformation {
     public:
         string name;
+		Value* addr = nullptr;
 
         Identifier(
             string n,
             TypePtr t,
             StorageClass sc,
             FunctionSpecifierFlag fs,
-            TypeQualifierFlag tq
+            TypeQualifierFlag tq,
+			Value* v
          );
 
-        Identifier(string n, TypePtr ty, bool isConst = false);
+        Identifier(string n, TypePtr ty, bool isConst = false, Value* v = nullptr);
+
+		Value* getAddr() { return addr; }
+		bool isConstant() { return addr == nullptr; }
     };
 }
 

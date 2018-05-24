@@ -491,6 +491,7 @@ namespace Miyuki::AST {
             rvalue(Builder.CreateZExt(phi, GetIntNType(32), "landExt"));
         }
         else {
+			logicalAndExp->gen();
             setAddr(logicalAndExp->getAddr(), logicalAndExp->isLValue);
         }
     }
@@ -539,6 +540,7 @@ namespace Miyuki::AST {
             rvalue(Builder.CreateZExt(phi, GetIntNType(32), "landExt"));
         }
         else {
+			exclusiveOrExpression->gen();
             setAddr(exclusiveOrExpression->getAddr(), exclusiveOrExpression->isLValue);
         }
     }
@@ -1032,9 +1034,55 @@ namespace Miyuki::AST {
         rvalue(V);
     }
 
-    void Miyuki::AST::PrimaryExpression::gen() {
+	void Miyuki::AST::PrimaryExpression::gen() {
+		if (factor) {
+			// identifier
+			if (WordTokenPtr id = dynamic_pointer_cast<WordToken>(factor)) {
+				if (IdentifierPtr ID = getIdentifier(id->name)) {
+					lvalue(ID->getAddr()); return;
+				}
+				REPORT_ERROR_V("`{0}' is not defined"_format(id->name), factor)
+			}
+			// constant
+			else if (factor->is(Tag::Number | Tag::StringLiteral | Tag::Character)) {
+				Value* V = TypeUtil::createConstant(factor);
+				rvalue(V); return;
+			}
+			// ( expression )
+			else if (exp) {
+				exp->gen();
+				setAddr(exp->getAddr(), exp->isLValue);
+				return;
+			}
+			assert(!"invalid primary");
+		}
+		assert(!"Not implemented yet");
+	}
 
-    }
+	void Miyuki::AST::CastExpression::gen() {
+		if (unaryExpr) {
+			unaryExpr->gen();
+			setAddr(unaryExpr->getAddr(), unaryExpr->isLValue);
+			return;
+		}
+		
+		PackedTypeInformationPtr PP = typeName->getType();
+		TypePtr typeCastTo = PP->type;
+		castExpr->gen();
+		TypePtr typeToCast = castExpr->getAddr()->getType();
+		
+		// Check compatiblity
+		TypePtr raisedTy = nullptr;
+		if (!TypeUtil::raiseType(typeCastTo, typeCastTo)) {
+			REPORT_ERROR_V("type not compatible", getErrorToken());
+		}
+
+		// Convert
+
+		assert(!"Not implemented yet");
+
+	}
+
 }
 
 /// TODO: In all eval functions, 对于无法求值的情况，如果出现了常量，那么说明尝试对常量进行求值

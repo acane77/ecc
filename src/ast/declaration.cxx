@@ -706,6 +706,7 @@ namespace Miyuki::AST {
         string name = static_pointer_cast<WordToken>(enumConstant)->name;
         IdentifierPtr ID = make_shared<Identifier>(name, ty, true);
         addIdentifier(ID);
+		// Enumeration is a constant!  ADD TO A CONSTANT LIST AT RUN-TIME
         cout << "[Add Enumerator] " << name << ": " << intval;
     }
 

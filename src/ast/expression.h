@@ -174,7 +174,7 @@ namespace Miyuki::AST {
         CastExpression(const UnaryPtr &unaryExpr);
         CastExpression(const TypeNamePtr &typeName, const CastExpressionPtr &castExpr);
 
-        virtual void gen() { assert( false && "unimplemented" ); }
+		virtual void gen();
         int getKind() { return Kind::CastExpression; }
 
         virtual void eval() override;

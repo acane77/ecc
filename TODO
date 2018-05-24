@@ -4,3 +4,7 @@
 2. switch
 
 考虑把translateUnit改成数组，不然可能会炸掉。
+
+把所有转换的写到工具类里面
+
+设置初始的basicblock
