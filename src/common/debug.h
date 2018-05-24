@@ -20,9 +20,9 @@
 #define _MIYUKI_LOG_STDOUT(msg, title) _MIYUKI_LOG_OUTPUT(msg, title, std::cout)
 
 #if _MIYUKI_DEBUG_FLAG & _MIYUKI_DEBUG_LEVEL__SRCMGR
-#define DebugSM(msg, title) _MIYUKI_LOG_STDOUT(msg, title)
+#define LogSM(msg, title) _MIYUKI_LOG_STDOUT(msg, title)
 #else
-#define DebugSM(msg, title) 
+#define LogSM(msg, title) 
 #endif // _MIYUKI_DEBUG_FLAG & _MIYUKI_DEBUG_LEVEL__SRCMGR
 
 #if _MIYUKI_DEBUG_FLAG & _MIYUKI_DEBUG_LEVEL__LEXER

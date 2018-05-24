@@ -384,7 +384,7 @@ namespace Miyuki::AST {
         else {
             // neither type nor follow-up symbols specified
             if (!ty) {
-                reportError("no type specified. tok is '{0}'"_format(static_pointer_cast<TypeSpecifier>(decSpec->spec)->getTypeName()), tok);
+                reportError("no type specified.", tok);
                 return Type::getInt32Ty(getGlobalContext());
             }
             // other spec & qualifier
@@ -517,9 +517,8 @@ namespace Miyuki::AST {
 
     // Declarator
     TypePtr Declarator::getType(TypePtr baseType) {
-        TypePtr type;
         if (pointer) {
-            type = pointer->getType(baseType);
+            baseType = pointer->getType(baseType);
         }
         assert(directDecl && "directDecl == nullptr");
         return directDecl->getType(baseType);
@@ -551,7 +550,8 @@ namespace Miyuki::AST {
     }
 
     TypePtr DirectDeclarator::getType(TypePtr baseType) {
-        // if is ID token
+		Type* Ty = nullptr;
+		// if is ID token
         if (id) {
             return baseType;
         }
@@ -566,16 +566,20 @@ namespace Miyuki::AST {
             /// In order to simplify, I completely process [ expression ] like a pointer,
             /// and varible-length array is not allowed
             setTypeName(getPointerTypeName());
-            return PointerType::get(directDecl->getType(baseType), 0);
+            Ty = PointerType::get(directDecl->getType(baseType), 0);
+			return Ty;
         }
         // is function definition
         else if (isFunctionPrototypeDeclaration) {
             vector<TypePtr> params;
-            paramList->generateTypeList(params);
-            FunctionType* FT = FunctionType::get(baseType, params, paramList->isParameterVarible);
+			if (paramList)
+				paramList->generateTypeList(params);
+            FunctionType* FT = FunctionType::get(baseType, params, paramList && paramList->isParameterVarible);
             /// TODO: set function type name
             setTypeName("<function>");
-            return FT;
+			Ty = FT;
+
+			return Ty;
         }
         else if (isOldStyleFunctionPrototypeDeclaration) {
             reportError("K&R C Grammar is not supported.", nullptr);

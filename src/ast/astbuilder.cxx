@@ -855,6 +855,9 @@ new_style_paramster_list:
                     ParameterTypeListPtr param = parameterTypeList();
                     directDecl = make_shared<DirectDeclarator>(directDecl, param);
                 }
+				else if (look->is(')')) {
+					directDecl = make_shared<DirectDeclarator>(directDecl, (ParameterTypeListPtr)nullptr);
+				}
                 match(')');
             }
             else if (look->is('[')) {

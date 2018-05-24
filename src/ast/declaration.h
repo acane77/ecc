@@ -141,6 +141,7 @@ namespace Miyuki::AST {
         virtual int getKind() { return Kind::typeSpecifier; }
         virtual void gen() { assert ( false && "unimplemented" ); }
         virtual TypePtr getType();
+		virtual bool isTypeSpecifier() { return true; }
     };
 
     class TypeQualifier : public SpecifierAndQualifier {

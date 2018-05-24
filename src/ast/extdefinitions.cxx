@@ -37,13 +37,18 @@ namespace Miyuki::AST {
 		getGlobalScope().isInFunctionDefPrototypePart = true;
 		getCurrentScope()->enterScope();
 
-		FunctionType* FT = dyn_cast<FunctionType>(decr->getType(spec->getType()));
+		Type* T = decr->getType(spec->getType());
+		FunctionType* FT = dyn_cast<FunctionType>(T);
 		string FName = decr->getName();
-		
+		//cout << "Type Name: ";   T->dump();
 		assert(FT && "not a function at all!!!");
 		getGlobalScope().isInFunctionDefPrototypePart = false;
 
 		Function* F = nullptr;
+
+		// Insert a function
+		F = Function::Create(FT, GlobalValue::LinkageTypes::ExternalLinkage, FName, TheModule);
+		
 		// If F conflicted, there was already something named 'Name'.  If it has a
 		// body, don't allow redefinition or reextern.
 		if (F->getName() != FName) {
@@ -82,11 +87,12 @@ namespace Miyuki::AST {
 			}
 		}
 
-		F = Function::Create(FT, GlobalValue::LinkageTypes::ExternalLinkage, FName, TheModule);
 		GlobalScope::getInstance().currentFunction = F;
 
 		if (stmt)
 			stmt->gen();
+
+		GlobalScope::getInstance().currentFunction = nullptr;
 
 		getCurrentScope()->leaveScope();
 	}
