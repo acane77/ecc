@@ -112,6 +112,8 @@ namespace Miyuki::AST {
     BasicBlock* switchBasicBlock(string name);
     // set as current insert Basic Block
     void switchBasicBlock(BasicBlock* BB);
+	// set insert basic block
+	void setAsCurrentBasicBlock(BasicBlock* BB);
     // LLVM Global Context
     LLVMContext& getGlobalContext();
     // get current insert Basic Block

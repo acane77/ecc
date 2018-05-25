@@ -89,6 +89,9 @@ namespace Miyuki::AST {
 
 		GlobalScope::getInstance().currentFunction = F;
 
+		DefineBasicBlock(Entry);
+		setAsCurrentBasicBlock(BB_Entry);
+
 		if (stmt)
 			stmt->gen();
 

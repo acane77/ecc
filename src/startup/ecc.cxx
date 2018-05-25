@@ -6,6 +6,7 @@
 #include "common/exception.h"
 #include "common/console.h"
 #include "parse/parser.h"
+#include "ast/env.h"
 
 using namespace std;
 using namespace Miyuki;
@@ -19,14 +20,19 @@ int main(int argc, const char ** argv) {
     const char * file_name = "test.c";
     if (argc > 1) file_name = argv[1];
 
-    //try {
-        Parser parser(file_name);
+	Parser parser(file_name);
+	AST::TranslationUnitPtr AST;
+
+    try {
         parser.parse();
-		AST::TranslationUnitPtr AST = parser.getAST();
-		AST->gen();
-    //}
-    //catch (exception& e) {
-    //    cout << Miyuki::Console::Error("fatal:") << e.what() << endl << endl;
-   // }
+		AST = parser.getAST();
+    }
+    catch (exception& e) {
+        cout << Miyuki::Console::Error("fatal:") << e.what() << endl << endl;
+		return -1;
+    }
+
+	AST->gen();
+	AST::TheModule->dump();
 
 }

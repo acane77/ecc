@@ -1484,6 +1484,7 @@ this_is_a_declaration:
             if (FIRST_EXPRESSION()) {
                 expr = expression();
             }
+			match(';');
             return make_shared<Return>(expr);
         }
     }

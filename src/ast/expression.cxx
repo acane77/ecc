@@ -1039,7 +1039,8 @@ namespace Miyuki::AST {
 			// identifier
 			if (WordTokenPtr id = dynamic_pointer_cast<WordToken>(factor)) {
 				if (IdentifierPtr ID = getIdentifier(id->name)) {
-					lvalue(ID->getAddr()); return;
+					Value* V = Builder.CreateLoad(ID->getAddr(), ID->getName() + ".ld");
+					lvalue(V); return;
 				}
 				REPORT_ERROR_V("`{0}' is not defined"_format(id->name), factor)
 			}

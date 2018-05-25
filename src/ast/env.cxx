@@ -40,6 +40,11 @@ namespace Miyuki::AST {
         GlobalScope::getInstance().currentBasicBlock = BB;
     }
 
+	void setAsCurrentBasicBlock(BasicBlock * BB) {
+		Builder.SetInsertPoint(BB);
+		GlobalScope::getInstance().currentBasicBlock = BB;
+	}
+
     // Scope
     uint32_t Scope::__scopeID = 0;
     ScopePtr Scope::__currentScope = GlobalScope::instance;
@@ -95,9 +100,11 @@ namespace Miyuki::AST {
 	}
 
     void Miyuki::AST::Scope::leaveScope() {
-        child->parent = nullptr;
-        child = nullptr;
-        Scope::__currentScope = shared_from_this();
+		// leave this scope
+		assert(parent && "no scope to leave");
+		Scope::__currentScope = parent;
+        parent->child = nullptr;
+        parent = nullptr;
     }
 
     ScopePtr Miyuki::AST::Scope::getCurrentScope() {

@@ -120,7 +120,8 @@ namespace Miyuki::AST {
 	}
 
 	void ExpressionStatement::gen() {
-		expr->gen();
+		if (expr)
+			expr->gen();
 	}
 
 	void If::gen() {
