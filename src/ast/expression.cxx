@@ -1039,6 +1039,7 @@ namespace Miyuki::AST {
 			// identifier
 			if (WordTokenPtr id = dynamic_pointer_cast<WordToken>(factor)) {
 				if (IdentifierPtr ID = getIdentifier(id->name)) {
+					// TODO: 如果是左值  给地址  如果是右值  给load后的值
 					Value* V = Builder.CreateLoad(ID->getAddr(), ID->getName() + ".ld");
 					lvalue(V); return;
 				}

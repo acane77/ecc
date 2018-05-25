@@ -403,7 +403,7 @@ this_is_a_primary_expression:
         AssignmentExpressionPtr exp = make_shared<AssignmentExpression>( conditionalExpression() );
         while ( F_ASSIGNMENT_OPERATOR() ) {
             TokenPtr op = look; next();
-            exp = make_shared<AssignmentExpression>( op, conditionalExpression(), exp );
+            exp = make_shared<AssignmentExpression>( op, exp->condExp, make_shared<AssignmentExpression>(conditionalExpression()));
         }
         return exp;
     }

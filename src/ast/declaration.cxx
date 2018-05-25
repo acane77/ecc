@@ -572,7 +572,7 @@ namespace Miyuki::AST {
 				return baseType;
 			}
 			unsigned arrayLength = assignExpr->getCalculatedToken()->toInt();
-			setTypeName(decl->getTypeName() + "[{0}]"_format(arrayLength));
+			setTypeName(getTypeName() + "[{0}] [May Error]"_format(arrayLength));
 			Ty = ArrayType::get(baseType, arrayLength);
 			return Ty;
         }
@@ -656,7 +656,7 @@ namespace Miyuki::AST {
 				return baseType;
 			}
 			unsigned arrayLength = assignExpr->getCalculatedToken()->toInt();
-			setTypeName(abstracrDecr->getTypeName() + "[{0}]"_format(arrayLength));
+			setTypeName(getTypeName() + "[{0}] [may error]"_format(arrayLength));
 			Type* Ty = ArrayType::get(baseType, arrayLength);
 			return Ty;
         }
@@ -765,13 +765,25 @@ namespace Miyuki::AST {
 		addIdentifier(ID);
 
 		if (init) {
-			init->gen(Ty, IdName);
+			init->baseTypeDetail = baseTypeDetail;
+			init->gen(Ty, allocaAddr);
 		}
 	}
 
-	void Initializer::gen(Type * ty, string name) {
+	void Initializer::gen(Type * ty, Value* allocAddr) {
 		LogAST("[Declaration]", "entering Initializer");
-		// TODO
+		assignExpr->gen();
+		Value* VInit = assignExpr->getAddr();
+		if (VInit->getType() != ty) {
+			if (!CastInst::isCastable(VInit->getType(), ty)) {
+				reportError("type is not castable", getErrorToken());
+				return;
+			}
+			/// TODO: unsigned/signed in getCastOpcode
+			Instruction::CastOps castOp = CastInst::getCastOpcode(VInit, /*isSigned*/ true, ty, /*isSigned*/ true);
+			VInit = Builder.CreateCast(castOp, VInit, ty, "assign.cast");
+		}
+		Builder.CreateStore(VInit, allocAddr);
 	}
 
 	/// *** IDeclaration

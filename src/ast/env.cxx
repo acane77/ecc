@@ -151,7 +151,7 @@ namespace Miyuki::AST {
     }
 
     bool addIdentifier(IdentifierPtr id) {
-		LogAST("addIdetifier", id->name);
+		LogAST("addIdetifier", "Identifier Name: {0}    Scope: {1}"_format(id->name, getCurrentScope()->getScopeID()));
         return getCurrentScope()->addIdentifier(id);
     }
 

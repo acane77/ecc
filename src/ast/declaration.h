@@ -399,7 +399,7 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::init; }
         virtual void gen() { assert(!"call gen(type, name) instead"); }
-		virtual void gen(Type* ty, string name);
+		virtual void gen(Type* ty, Value* allocAddr);
         TypePtr getType();
     };
 

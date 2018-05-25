@@ -26,13 +26,14 @@ int main(int argc, const char ** argv) {
     try {
         parser.parse();
 		AST = parser.getAST();
+		parser.parseDone();
+		AST->gen();
+		parser.parseDone();
+		AST::TheModule->dump();
     }
     catch (exception& e) {
         cout << Miyuki::Console::Error("fatal:") << e.what() << endl << endl;
 		return -1;
     }
-
-	AST->gen();
-	AST::TheModule->dump();
 
 }
