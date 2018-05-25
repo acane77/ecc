@@ -1,5 +1,6 @@
 #include "env.h"
 #include "llvm/IR/Type.h"
+#include "common/debug.h"
 
 namespace Miyuki::AST {
     GlobalScopePtr GlobalScope::instance = make_shared<GlobalScope>();
@@ -150,6 +151,7 @@ namespace Miyuki::AST {
     }
 
     bool addIdentifier(IdentifierPtr id) {
+		LogAST("addIdetifier", id->name);
         return getCurrentScope()->addIdentifier(id);
     }
 
@@ -200,4 +202,47 @@ namespace Miyuki::AST {
     DetailedTypeInfo::value_type::second_type getTypeDetail(DetailedTypeInfo::key_type ty) {
         return getCurrentScope()->getDetail(ty);
     }
+
+	Value * allocateIdentifier(string idname, Type* ty) {
+		if (!getCurrentFunction()) {
+			return TheModule->getOrInsertGlobal(idname, ty);
+		}
+		else {
+			BasicBlock* BB = getCurrentBasicBlock();
+			Builder.SetInsertPoint(getGlobalScope().functionInitBasicBlock);
+			Value* V = Builder.CreateAlloca(ty, nullptr, idname);
+			Builder.SetInsertPoint(BB);
+			return V;
+		}
+	}
+
+	Type* getFinalElemTyOfArrayTy(Type* ty) {
+		if (ty->isArrayTy())
+			return getFinalElemTyOfArrayTy(dyn_cast<ArrayType>(ty)->getElementType());
+		return ty;
+	}
+
+	unsigned getNumAllocatedOfArrayTy(Type* ty) {
+		unsigned thisSize = 1;
+		if (ty->isArrayTy()) {
+			ArrayType* AT = dyn_cast<ArrayType>(ty);
+			thisSize = AT->getArrayNumElements() * getNumAllocatedOfArrayTy(AT->getElementType());
+		}
+		return thisSize;
+	}
+
+	Value * allocateArray(string name, Type * ele_ty, unsigned arraySize) {
+		if (!getCurrentFunction()) {
+			return TheModule->getOrInsertGlobal(name, ArrayType::get(ele_ty, arraySize));
+		}
+		BasicBlock* BB = getCurrentBasicBlock();
+		Builder.SetInsertPoint(getGlobalScope().functionInitBasicBlock);
+		Value* V = Builder.CreateAlloca(ele_ty, ConstantInt::get(GetIntNType(32), arraySize), name);
+		Builder.SetInsertPoint(BB);
+		return V;
+	}
+
+	Value * allocateArray(string name, Type * arr_ty) {
+		return allocateIdentifier(name, arr_ty);
+	}
 }

@@ -4,6 +4,7 @@
 #include "symbols.h"
 #include "expression.h"
 #include "ast/typename.h"
+#include "ast/type.h"
 
 // Declaration contains compile-time information
 
@@ -55,14 +56,26 @@ namespace Miyuki::AST {
     DEFINE_SHARED_PTR(IDirectDeclarator)
     DEFINE_SHARED_PTR(FunctionSpecifier)
 
-    class IDeclaration : public Symbol {
+	class IBaseTy {
+	private:
+		Type * __baseTy;
+	public:
+		TypeDetailPtr baseTypeDetail;
+
+		Type * getBaseType();
+		void setBaseType(Type* baseType);
+	};
+
+    class IDeclaration : public Symbol, public IBaseTy {
     public:
         virtual void gen() { assert(false && "IDeclaration::gen():  unimplemented"); }
     };
 
     class IDeclarator : public IDeclaration, public WithTypeName {
+	
     public:
         virtual void gen() { assert(false && "not implemented"); }
+		
     };
 
     class IDirectDeclarator : public IDeclaration, public WithTypeName {
@@ -90,7 +103,7 @@ namespace Miyuki::AST {
         DeclarationSpecifier(const SpecifierAndQualifierPtr &spec, const DeclarationSpecifierPtr &decSpec);
 
         int getKind() override { return Kind::declarationSpecifier; }
-        virtual void gen() {}
+		virtual void gen();
         virtual TypePtr getType();
 
         SpecifierAndQualifierListPtr generateSpecifierQualifierList();
@@ -240,7 +253,6 @@ namespace Miyuki::AST {
         explicit Declarator(const DirectDeclaratorPtr &directDecl);
         Declarator(const PointerDeclPtr &pointer, const DirectDeclaratorPtr &directDecl);
 
-
         virtual int getKind() { return Kind::declarator; }
         virtual void gen() { assert(!"call getName() and/or getType() instead"); }
         virtual TypePtr getType(TypePtr baseType);
@@ -386,8 +398,8 @@ namespace Miyuki::AST {
         explicit Initializer(const InitializerListPtr &initList);
 
         virtual int getKind() { return Kind::init; }
-        virtual void gen() { assert(!"call gen(ptr) instead"); }
-        virtual void gen(Value* Ptr) {}
+        virtual void gen() { assert(!"call gen(type, name) instead"); }
+		virtual void gen(Type* ty, string name);
         TypePtr getType();
     };
 
@@ -436,7 +448,7 @@ namespace Miyuki::AST {
         explicit InitDeclarator(const DeclaratorPtr &desOr, const InitializerPtr &init = nullptr);
 
         virtual int getKind() { return Kind::initDeclr; }
-        virtual void gen() {}
+		virtual void gen();
     };
 
 }

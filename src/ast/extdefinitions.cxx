@@ -89,7 +89,13 @@ namespace Miyuki::AST {
 
 		GlobalScope::getInstance().currentFunction = F;
 
+		DefineBasicBlock(varinit);
 		DefineBasicBlock(Entry);
+
+		getGlobalScope().functionInitBasicBlock = BB_varinit;
+		// Insert this block before Entry
+		BB_varinit->insertInto(F);
+
 		setAsCurrentBasicBlock(BB_Entry);
 
 		if (stmt)
@@ -98,6 +104,12 @@ namespace Miyuki::AST {
 		GlobalScope::getInstance().currentFunction = nullptr;
 
 		getCurrentScope()->leaveScope();
+
+		// Insert a branch to BB_entry
+		Builder.SetInsertPoint(BB_varinit);
+		Builder.CreateBr(BB_Entry);
+
+		// TODO:  leave function and return to global init function
 	}
 
 }

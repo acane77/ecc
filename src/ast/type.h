@@ -78,6 +78,9 @@ namespace Miyuki::AST {
         virtual string getName() { return typeName; }
     };
 
+	typedef PackedTypeInformation TypeDetail;
+	typedef PackedTypeInformationPtr TypeDetailPtr;
+
     class IndexedTypeInformation : public PackedTypeInformation {
     public:
         typedef uint32_t IndexType;

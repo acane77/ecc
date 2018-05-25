@@ -1,6 +1,7 @@
 #include "declaration.h"
 #include "ast/env.h"
 #include "ast/irutils.h"
+#include "common/debug.h"
 
 namespace Miyuki::AST {
 
@@ -563,10 +564,16 @@ namespace Miyuki::AST {
         // is-array
         else if (isArrayDeclarator) {
             /// NOTE: ignore static and type-qualifier
-            /// In order to simplify, I completely process [ expression ] like a pointer,
-            /// and varible-length array is not allowed
-            setTypeName(getPointerTypeName());
-            Ty = PointerType::get(directDecl->getType(baseType), 0);
+            /// in order to simplify varible-length array is not allowed
+			//setTypeName(getPointerTypeName());
+			assignExpr->eval();
+			if (!assignExpr->IsCalculated()) {
+				reportError("array length must be a constant expression", getErrorToken());
+				return baseType;
+			}
+			unsigned arrayLength = assignExpr->getCalculatedToken()->toInt();
+			setTypeName(decl->getTypeName() + "[{0}]"_format(arrayLength));
+			Ty = ArrayType::get(baseType, arrayLength);
 			return Ty;
         }
         // is function definition
@@ -578,7 +585,6 @@ namespace Miyuki::AST {
             /// TODO: set function type name
             setTypeName("<function>");
 			Ty = FT;
-
 			return Ty;
         }
         else if (isOldStyleFunctionPrototypeDeclaration) {
@@ -641,11 +647,18 @@ namespace Miyuki::AST {
         }
         // is-array
         else if (isArrayDeclarator) {
-            /// NOTE: ignore static and type-qualifier
-            /// In order to simplify, I completely process [ expression ] like a pointer,
-            /// and varible-length array is not allowed
-            setTypeName(directAbstractDecr->getPointerTypeName());
-            return PointerType::get(directAbstractDecr->getType(baseType), 0);
+			/// NOTE: ignore static and type-qualifier
+			/// in order to simplify varible-length array is not allowed
+			//setTypeName(getPointerTypeName());
+			assignExpr->eval();
+			if (!assignExpr->IsCalculated()) {
+				reportError("array length must be a constant expression", getErrorToken());
+				return baseType;
+			}
+			unsigned arrayLength = assignExpr->getCalculatedToken()->toInt();
+			setTypeName(abstracrDecr->getTypeName() + "[{0}]"_format(arrayLength));
+			Type* Ty = ArrayType::get(baseType, arrayLength);
+			return Ty;
         }
         // is function definition
         else if (isFunctionPrototypeDeclaration) {
@@ -707,10 +720,66 @@ namespace Miyuki::AST {
         IdentifierPtr ID = make_shared<Identifier>(name, ty, true);
         addIdentifier(ID);
 		// Enumeration is a constant!  ADD TO A CONSTANT LIST AT RUN-TIME
-        cout << "[Add Enumerator] " << name << ": " << intval;
+		LogAST("Enumerator::gen()", "TODO");
+        //cout << "[Add Enumerator] " << name << ": " << intval;
     }
 
 	void Declaration::gen() {
-		cout << "Generating Declaration\n";
+		LogAST("Declaration::gen()", "Generating Declaration");
+		// aka decSpec->gen();
+		PackedTypeInformationPtr TI = getMemberTypeFromSpecifierAndQualifierList(decSpec->generateSpecifierQualifierList());
+		Type* Ty = decSpec->getType();
+
+		if (initDeclList) {
+			for (InitDeclaratorPtr& ID : *initDeclList) {
+				ID->setBaseType(Ty);
+				ID->baseTypeDetail = TI;
+				ID->gen();
+			}
+		}
+	}
+
+	void DeclarationSpecifier::gen() {
+		LogAST("[Declaration]", "entering DeclarationSpecifier");
+		assert(!"call getMemberTypeFromSpecifierAndQualifierList & generateSpecifierQualifierList instead");
+	}
+
+	void InitDeclarator::gen() {
+		LogAST("[Declaration]", "entering InitDeclarator");
+		assert(getBaseType() && "base type not set");
+		desOr->setBaseType(getBaseType());
+		Type* Ty = desOr->getType(getBaseType());
+		string IdName = desOr->getName();
+
+		// Insert to symbol table
+		Value* allocaAddr = allocateIdentifier(IdName, Ty);
+		assert(allocaAddr && "invalid address");
+
+		IdentifierPtr ID = make_shared<Identifier>(
+			IdName, Ty,
+			baseTypeDetail->storageClass,
+			baseTypeDetail->functionSpec,
+			baseTypeDetail->typeQual,
+			allocaAddr
+			);
+		addIdentifier(ID);
+
+		if (init) {
+			init->gen(Ty, IdName);
+		}
+	}
+
+	void Initializer::gen(Type * ty, string name) {
+		LogAST("[Declaration]", "entering Initializer");
+		// TODO
+	}
+
+	/// *** IDeclaration
+	Type * IBaseTy::getBaseType() {
+		return __baseTy;
+	}
+
+	void IBaseTy::setBaseType(Type * baseType) {
+		__baseTy = baseType;
 	}
 }

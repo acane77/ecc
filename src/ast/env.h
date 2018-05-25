@@ -84,6 +84,7 @@ namespace Miyuki::AST {
         LLVMContext   context;
         BasicBlock*   currentBasicBlock;
         Function*     currentFunction;
+		BasicBlock*   functionInitBasicBlock;
         Function*     globalInitFunction;
         IRBuilder<>   Builder;
 
@@ -166,6 +167,15 @@ namespace Miyuki::AST {
 #define ZeroValueN(n) ConstantInt::getIntegerValue(Type::getIntNTy(getGlobalContext(), n), APInt(n, (uint64_t)0))
 #define ZeroValue ZeroValueN(32)
 #define ZeroValue64 ZeroValueN(64)
+
+	// Function initialization block
+
+	/// Allocate Identifier Related
+	Value* allocateIdentifier(string idname, Type* ty);
+	//  Allocate array with specified array-element size
+	Value* allocateArray(string name, Type* ele_ty, unsigned arraySize);
+	//  Allocate array with specified 
+	inline Value* allocateArray(string name, Type* arr_ty);
 
 }
 
