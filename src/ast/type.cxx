@@ -1,6 +1,7 @@
 #include "i:\git\ecc\src\ast\type.h"
 #include "ast/type.h"
 #include "ast/env.h"
+#include "common/debug.h"
 
 namespace Miyuki::AST {
 
@@ -116,7 +117,7 @@ namespace Miyuki::AST {
             if (a == b) return a;
             else return nullptr; //error
         }
-        cout << "[ScalarSizeInBits] " << a->getScalarSizeInBits() << "  " << b->getScalarSizeInBits() << "\n";
+        //cout << "[ScalarSizeInBits] " << a->getScalarSizeInBits() << "  " << b->getScalarSizeInBits() << "\n";
         if (a->getScalarSizeInBits() > b->getScalarSizeInBits()) {
             if (a->isDoubleTy()) return a;
             if (b->isFloatTy()) return b; // with int64_t and float
@@ -157,8 +158,14 @@ namespace Miyuki::AST {
 			return ConstantInt::get(GetIntNType(8), APInt(8, I->value));
 		}
 		else if (StringTokenPtr S = dynamic_pointer_cast<StringToken>(constTok)) {
+			string N = "@str.{0}"_format(S->value);
+			Comdat* comdat = TheModule->getOrInsertComdat(N);
+			comdat->setSelectionKind(Comdat::SelectionKind::Any);
 			GlobalVariable* GV = new GlobalVariable(ArrayType::get(GetIntNType(8), S->value.size() + 1),
-				true, GlobalValue::LinkageTypes::InternalLinkage, ConstantDataArray::getString(getGlobalContext(), S->value), ".str");
+				true, GlobalValue::LinkageTypes::LinkOnceODRLinkage, ConstantDataArray::getString(getGlobalContext(), S->value), N);
+			GV->setComdat(comdat);
+			TheModule->getGlobalList().addNodeToList(GV);
+			bool t = TheModule->getGlobalVariable(N) == GV;
 			return GV;
 		}
 		assert(!"invalid constant");

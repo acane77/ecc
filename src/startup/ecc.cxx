@@ -7,6 +7,7 @@
 #include "common/console.h"
 #include "parse/parser.h"
 #include "ast/env.h"
+#include "argmgr.h"
 
 using namespace std;
 using namespace Miyuki;
@@ -17,13 +18,23 @@ int main(int argc, const char ** argv) {
     cout << "ECC - Emilia C Compiler\n";
     cout << "Licensed under MIT License\n\n";
 
-    const char * file_name = "test.c";
-    if (argc > 1) file_name = argv[1];
+	ArgumentManager& AM = ArgumentManager::getInstance();
+	AM.enableArgCountCheck = false;
+	AM.enableFileNameCountCheck = false;
+	AM.filename = "test.c";
+	bool AMInitSuccess = AM.init(argc, argv);
+	if (!AMInitSuccess) {
+		cout << AM.errMsg;
+		return 1;
+	}
 
-	Parser parser(file_name);
-	AST::TranslationUnitPtr AST;
+    const char * file_name = AM.filename.c_str();
+	AST::TheModule->setSourceFileName(AM.filename);
 
     try {
+		Parser parser(file_name);
+		AST::TranslationUnitPtr AST;
+
         parser.parse();
 		AST = parser.getAST();
 		parser.parseDone();

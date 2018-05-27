@@ -938,11 +938,12 @@ namespace Miyuki::AST {
         }
         assignExp->gen();
         Value * LHS = condExp->getAddr(), *RHS = assignExp->getAddr();
+		Value* LHSPtr = condExp->getAddr();
         Value * V = nullptr; // Value of calculation result
         
         SetOperatorToken(assignOp)
-        //LoadIfIsPointer(LHS)
-        //LoadIfIsPointer(RHS)
+        LoadIfIsPointer(LHS)
+        LoadIfIsPointer(RHS)
         RequireLValue(condExp)
         RequireNonConst(condExp)
 
