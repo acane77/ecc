@@ -1,7 +1,8 @@
-#include "expression.h"
+#include "ast/expression.h"
 #include "parse/ifparser.h"
 #include "ast/value.h"
 #include "ast/env.h"
+#include "ast/util.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/TypeName.h"
 #include "llvm/ADT/APInt.h"
@@ -9,6 +10,10 @@
 namespace Miyuki::AST {
 
     using namespace std;
+
+	//// *** static *** ////
+	bool askForLValue = false;
+
 
 #define EVAL_EXPRESSION(siblingLevel, nextLevel, op) \
     /* if this symbol has already been calculated */\
@@ -473,22 +478,23 @@ namespace Miyuki::AST {
 
 			// Convert to int
 
-            Value * toBool = Builder.CreateICmpNE(logicalAndExp->getAddr(), ZeroValue, "toBool");
+            Value * toBool = Builder.CreateICmpNE(logicalAndExp->getAddr(), ZeroValueN(1), "toBool");
             Builder.CreateCondBr(toBool, BB_LOR_end, BB_LOR_rhs);
             
             // Right-hand Statement
             SetInsertBlock(BB_LOR_rhs);
             logicalOrExp->gen();
-            Value* toBool1 = Builder.CreateICmpNE(logicalOrExp->getAddr(), ZeroValue, "toBool");
+            Value* toBool1 = Builder.CreateICmpNE(logicalOrExp->getAddr(), ZeroValueN(1), "toBool");
             Builder.CreateBr(BB_LOR_end);
 
             // End
             SetInsertBlock(BB_LOR_end);
-            PHINode* phi = Builder.CreatePHI(Type::getInt8Ty(getGlobalContext()), 2, "");
+            PHINode* phi = Builder.CreatePHI(Type::getInt1Ty(getGlobalContext()), 2, "");
             phi->addIncoming(ConstantInt::getTrue(Type::getInt1Ty(getGlobalContext())), BB_entry);
             phi->addIncoming(toBool1, BB_LOR_rhs);
             
-            rvalue(Builder.CreateZExt(phi, GetIntNType(32), "landExt"));
+			rvalue(phi);
+            //rvalue(Builder.CreateZExt(phi, GetIntNType(32), "landExt"));
         }
         else {
 			logicalAndExp->gen();
@@ -506,6 +512,7 @@ namespace Miyuki::AST {
             DefineBasicBlock(LAND_rhs);
             DefineBasicBlock(LAND_end);
             exclusiveOrExpression->gen();
+			logicalAndExpression->gen();
 
             IntermediateCode({
                 toBool = [addr] != 0
@@ -521,23 +528,24 @@ namespace Miyuki::AST {
             LoadIfIsPointer(LHS)
             LoadIfIsPointer(RHS)
 
-            Value * toBool = Builder.CreateICmpNE(LHS, ZeroValue, "toBool");
+            Value * toBool = Builder.CreateICmpNE(LHS, ZeroValueN(1), "toBool");
             
             Builder.CreateCondBr(toBool, BB_LAND_rhs, BB_LAND_end);
 
             // Right-hand Statement
             SetInsertBlock(BB_LAND_rhs);
             logicalAndExpression->gen();
-            Value* toBool1 = Builder.CreateICmpNE(RHS, ZeroValue, "toBool");
+            Value* toBool1 = Builder.CreateICmpNE(RHS, ZeroValueN(1), "toBool");
             Builder.CreateBr(BB_LAND_end);
 
             // End
             SetInsertBlock(BB_LAND_end);
-            PHINode* phi = Builder.CreatePHI(Type::getInt8Ty(getGlobalContext()), 2, "");
+            PHINode* phi = Builder.CreatePHI(Type::getInt1Ty(getGlobalContext()), 2, "");
             phi->addIncoming(ConstantInt::getFalse(Type::getInt1Ty(getGlobalContext())), BB_entry);
             phi->addIncoming(toBool1, BB_LAND_rhs);
 
-            rvalue(Builder.CreateZExt(phi, GetIntNType(32), "landExt"));
+			rvalue(phi);
+            //rvalue(Builder.CreateZExt(phi, GetIntNType(32), "landExt"));
         }
         else {
 			exclusiveOrExpression->gen();
@@ -559,11 +567,15 @@ namespace Miyuki::AST {
         // ** load value of the rwo operands
         //  because LHS and RHS are all pointer pointed to their allocated location
         // so loading first is required (if they are pointer)
-        LoadIfIsPointer(LHS)
-        LoadIfIsPointer(RHS)
+		LoadIfIsPointer(LHS)
+		LoadIfIsPointer(RHS)
 
-        // Code Below ensures they are with same type
-
+		// Code Below ensures they are with same type
+		//if (RHS->getType() != LHS->getType())
+		//	if (!CodeGenUtils::CreateTypeConversion(LHS, RHS))
+		//		REPORT_ERROR_V("type not castable", op);
+		//Type* ty = LHS->getType();
+		
         // -- both operands are pointers to qualified or unqualified versions of compatible complete object types
         if (LHS->getType()->isPointerTy() && RHS->getType()->isPointerTy()) {
             // if the two types are not compatible
@@ -615,21 +627,31 @@ namespace Miyuki::AST {
 
         // the two types are not compatible
         if (ty == nullptr) REPORT_ERROR_V("Cannot apply `{0}' to type `{1}' and `{2}'"_format(op->toSourceLiteral(), "LHS", "RHS"), op);
-
+		
         // cast if one of them is float type, and calculate as float
         if (ty->isFloatTy() || ty->isDoubleTy()) {
+			
             // if coverted type is float type or double type
-            if (LHS->getType()->isIntegerTy())
-                LHS = Builder.CreateFPCast(LHS, ty, "expr_fconv");
-            if (RHS->getType()->isIntegerTy())
-                RHS = Builder.CreateFPCast(RHS, ty, "expr_fconv");
-
+			if (LHS->getType()->isIntegerTy()) {
+				bool isUnsigned = dyn_cast<IntegerType>(LHS->getType())->getSignBit();
+				if (isUnsigned)
+					LHS = Builder.CreateSIToFP(LHS, ty, "expr_sitofp");
+				else
+					LHS = Builder.CreateUIToFP(LHS, ty, "expr_uitofp");
+			}
+			if (RHS->getType()->isIntegerTy()) {
+				bool isUnsigned = dyn_cast<IntegerType>(RHS->getType())->getSignBit();
+				if (isUnsigned)
+					RHS = Builder.CreateSIToFP(RHS, ty, "expr_sitofp");
+				else
+					RHS = Builder.CreateUIToFP(RHS, ty, "expr_uitofp");
+			}
             // if they are not same type
-            if (LHS->getType() != ty)
-                LHS = Builder.CreateFPCast(LHS, ty, "expr_fconv");
-            if (RHS->getType() != ty)
-                RHS = Builder.CreateFPCast(RHS, ty, "expr_fconv");
-
+            //if (LHS->getType() != ty)
+            //    LHS = Builder.CreateFPCast(LHS, ty, "expr_fconv");
+            //if (RHS->getType() != ty)
+            //   RHS = Builder.CreateFPCast(RHS, ty, "expr_fconv");
+				
             // Calculate float value
             assert(LHS->getType() == RHS->getType() && "LHS and RHS is not with same type");
 
@@ -662,7 +684,7 @@ namespace Miyuki::AST {
             // covert to same type
             if (LHS_Ty != ty)  LHS = (isUnsigned ? Builder.CreateZExt(LHS, ty, "conv") : Builder.CreateSExt(LHS, ty, "conv"));
             else if (RHS_Ty != ty)  RHS = (isUnsigned ? Builder.CreateZExt(RHS, ty, "conv") : Builder.CreateSExt(RHS, ty, "conv"));
-
+			
             // Calculate Integer Value
             assert(LHS->getType() == RHS->getType() && "LHS and RHS is not with same type");
             if (op->is('^'))        rvalue(Builder.CreateXor(LHS, RHS, "bitwise_xor"));
@@ -693,9 +715,11 @@ namespace Miyuki::AST {
         /// WARNING: FloatType is NOT ConstantFP, SSA[!]
         RETURN_IF_CALCULATED();
 
+		askForLValue = true;
         expr->gen();
+		askForLValue = false;
 
-        Value * S = expr->getAddr();
+        Value * S = expr->getAddr(), *Ptr = expr->getAddr();
         // S is the address 
         if (op->is('&')) {
             RequireLValue(expr)
@@ -726,13 +750,14 @@ namespace Miyuki::AST {
                 return;
             }
             else if (op->is('*')) {
-                S = Builder.CreateLoad(S, "load_ptr");
                 lvalue(S);
                 return;
             }
             else REPORT_ERROR_V("cannot apply '{0}' on function designator"_format(op->toSourceLiteral()), op)
             
-            lvalue(GetElementPtrInst::CreateInBounds(S, ArrayRef<Value*>(*v), "ptr_incdec", getCurrentBasicBlock()));
+            Value * V = GetElementPtrInst::CreateInBounds(S, ArrayRef<Value*>(*v), "ptr_incdec", getCurrentBasicBlock());
+			Builder.CreateStore(V, Ptr);
+			lvalue(V);
             return;
         }
         // is function designator
@@ -748,16 +773,21 @@ namespace Miyuki::AST {
             return;
         }
         // else if is float
+		// Note: for ++ and --, result is its address, not de/increased value
         else if (Type* ty = S->getType(); ty->isFloatTy() || ty->isDoubleTy()) {
             if (op->is('+')) rvalue(S);
             else if (op->is('-')) rvalue(Builder.CreateFSub(ConstantFP::get(ty, 0), S, "expr_neg_f"));
             else if (op->is(Tag::Increase)) {
                 RequireLValue(expr)  RequireNonConst(expr)
-                lvalue(Builder.CreateAdd(S, ConstantFP::get(ty, 1)));
+                S = Builder.CreateAdd(S, ConstantFP::get(ty, 1));
+				Builder.CreateStore(S, Ptr);
+				lvalue(S); // address as lvalue
             }
             else if (op->is(Tag::Decrease)) {
                 RequireLValue(expr)  RequireNonConst(expr)
-                lvalue(Builder.CreateSub(S, ConstantFP::get(ty, 1)));
+                S = Builder.CreateSub(S, ConstantFP::get(ty, 1));
+				Builder.CreateStore(S, Ptr);
+				lvalue(S); // address as lvalue
             }
             else assert(false && "invalid operator");
             return;
@@ -773,20 +803,23 @@ namespace Miyuki::AST {
             }
             else if (op->is('~')) rvalue(Builder.CreateXor(S, ConstantInt::get(ty, -1)));
             else if (op->is('&')) {
+				assert(!"????");
                 RequireLValue(expr)
-                rvalue(S);
+                rvalue(Ptr);
             }
+			// For a ++ and --
+			// load them and inc/dec then set address as lvalue
             else if (op->is(Tag::Increase)) { 
                 RequireLValue(expr)  RequireNonConst(expr)
                 Value* inc = Builder.CreateAdd(S, ConstantInt::get(ty, 1, true), "inc");
-                lvalue(inc);
-                Builder.CreateStore(inc, S);
+                Builder.CreateStore(inc, Ptr);
+				lvalue(inc);
             }
             else if (op->is(Tag::Decrease)) { 
                 RequireLValue(expr)  RequireNonConst(expr)
-                Value* newVal = Builder.CreateSub(S, ConstantInt::get(ty, 1, true));
-                lvalue(newVal); 
-                Builder.CreateStore(newVal, S);
+                Value* newVal = Builder.CreateSub(S, ConstantInt::get(ty, 1, true), "dec");
+                Builder.CreateStore(newVal, Ptr);
+				lvalue(newVal);
             }
             else assert(false && "invalid operator");
             return;
@@ -825,7 +858,10 @@ namespace Miyuki::AST {
     void PostfixExpression::gen() {
         // Note: only postfix ++ -- generate here
         assert((op->is(Tag::Increase) || op->is(Tag::Decrease)) && "invalid operators");
+		PostfixExpressionPtr expr = postfixExp;
+		askForLValue = true;
         postfixExp->gen();
+		askForLValue = false;
         Value * S = postfixExp->getAddr();
         // load actual value of S
         LoadIfIsPointer(S)
@@ -891,7 +927,11 @@ namespace Miyuki::AST {
     if (cannotDoThisOperation) REPORT_ERROR_V("cannot do this operationn on LHS & RHS", getErrorToken());\
 }
     void AssignmentExpression::gen() {
+
+		askForLValue = assignExp && true; // If is assign exp
         condExp->gen();
+		askForLValue = false;
+
         if (!assignExp) {
             setAddr(condExp->getAddr(), condExp->isLValue);
             return;
@@ -901,8 +941,8 @@ namespace Miyuki::AST {
         Value * V = nullptr; // Value of calculation result
         
         SetOperatorToken(assignOp)
-        LoadIfIsPointer(LHS)
-        LoadIfIsPointer(RHS)
+        //LoadIfIsPointer(LHS)
+        //LoadIfIsPointer(RHS)
         RequireLValue(condExp)
         RequireNonConst(condExp)
 
@@ -1039,9 +1079,14 @@ namespace Miyuki::AST {
 			// identifier
 			if (WordTokenPtr id = dynamic_pointer_cast<WordToken>(factor)) {
 				if (IdentifierPtr ID = getIdentifier(id->name)) {
-					// TODO: 如果是左值  给地址  如果是右值  给load后的值
-					Value* V = Builder.CreateLoad(ID->getAddr(), ID->getName() + ".ld");
-					lvalue(V); return;
+					// if ask for lvalue, return address
+					if (askForLValue) {
+						lvalue(ID->getAddr());
+						return;
+					}
+					// else return loaded value
+					Value* V = Builder.CreateLoad(ID->getAddr(), "{0}.ld"_format(id->name));
+					rvalue(V); return;
 				}
 				REPORT_ERROR_V("`{0}' is not defined"_format(id->name), factor)
 			}

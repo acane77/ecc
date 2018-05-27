@@ -53,6 +53,13 @@ reget_token:
     void IParser::reportError(std::ostream& os) {
         for (ParseError& e : errors) {
             TokenPtr tok = e.getToken();
+			if (!tok) {
+				cout << "<Unknown source>\n^~~~~~~~~~~~~~~~\n";
+				if (e.isWarning())  os << Miyuki::Console::Warning();
+				else os << Miyuki::Console::Error();
+				os << "<unknown location>: " << e.what() << endl << endl;
+				continue;
+			}
             string s = M_lex->getSourceManager()->getLine(tok->filenam, tok->row);
             for (int i=0 ; i < s.length() ; i++) {
                 if (s[i] == '\t') os << "    ";

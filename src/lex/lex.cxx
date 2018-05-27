@@ -402,7 +402,7 @@ add_exponment:
                 short bit;
                 if (hasLongLongSuffix) bit = 64;
                 else if (hasLongSuffix) bit = 32;
-                else if ((hasUnsignedSuffix && intValue < INT16_MAX) || (!hasUnsignedSuffix && intValue < INT16_MAX / 2) ) bit = 16;
+                //else if ((hasUnsignedSuffix && intValue < INT16_MAX) || (!hasUnsignedSuffix && intValue < INT16_MAX / 2) ) bit = 16;
                 else bit = 32;
                 return make_shared<IntToken>(intValue, hasUnsignedSuffix, bit);
             }

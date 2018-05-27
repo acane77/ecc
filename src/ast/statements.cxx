@@ -232,6 +232,9 @@ namespace Miyuki::AST {
 		DefineBasicBlock(Ret);
 		if (expr) {
 			expr->gen();
+
+			// TODO: 根据函数返回值进行类型转换
+
 			Builder.CreateRet(expr->getAddr());
 		}
 		else {
