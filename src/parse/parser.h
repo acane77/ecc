@@ -33,6 +33,9 @@ namespace Miyuki::Parse {
         // get preprocessed source file
         TokenSequencePtr getPreprocessedSource();
 
+		// print preprocessed
+		virtual void getPreprocessedSource(std::ostream& output_os);
+
 		// get AST
 		AST::TranslationUnitPtr getAST() { return M_ASTRoot; }
     };

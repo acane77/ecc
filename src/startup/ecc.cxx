@@ -8,6 +8,7 @@
 #include "parse/parser.h"
 #include "ast/env.h"
 #include "argmgr.h"
+#include "feature.h"
 
 using namespace std;
 using namespace Miyuki;
@@ -32,15 +33,21 @@ int main(int argc, const char ** argv) {
 	AST::TheModule->setSourceFileName(AM.filename);
 
     try {
-		Parser parser(file_name);
-		AST::TranslationUnitPtr AST;
-
-        parser.parse();
-		AST = parser.getAST();
-		parser.parseDone();
-		AST->gen();
-		parser.parseDone();
-		AST::TheModule->dump();
+		if (AM.flagEmitLLVMIR) {
+			cout << "Emit LLVM IR. // TODO";
+		}
+		else if (AM.flagEmitPreprocessed) {
+			startPreprocessor();
+		}
+		else if (AM.flagEnableQuickMath) {
+			cout << "Enable quick math // TODO";
+		}
+		else if (AM.flagLinkOnly) {
+			cout << "Enable link only // TODO";
+		}
+		else {
+			startCompiling();
+		}
     }
     catch (exception& e) {
         cout << Miyuki::Console::Error("fatal:") << e.what() << endl << endl;

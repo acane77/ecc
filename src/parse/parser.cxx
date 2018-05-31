@@ -63,4 +63,45 @@ namespace Miyuki::Parse {
         return toks;
     }
 
+	void Parser::getPreprocessedSource(std::ostream& output_os) {
+		TokenPtr tok = look;
+		int hierarchy = 0;
+		auto printTabByHierarchy = [&](bool no_new_line = false) {
+			if (!no_new_line)
+				output_os << "\n";
+			for (int i = 0; i < hierarchy; i++)
+				output_os << "    ";
+		};
+		do {
+			// If meets '{' then hierarchy + 1
+			if (tok->is('{')) {
+				hierarchy++;
+				cout << "{";
+				printTabByHierarchy();
+			}
+
+			// If meets '}' then hierarchy - 1
+			else if (tok->is('}')) {
+				hierarchy--;
+				printTabByHierarchy();
+				cout << "}";
+				printTabByHierarchy();
+			}
+
+			// If meets 'semicomma'  print a new line
+			else if (tok->is(';')) {
+				cout << ";";
+				printTabByHierarchy();
+			}
+
+			// print token
+			else
+				cout << tok->toSourceLiteral() << " ";
+
+			tok = next();
+		} while (tok->isNot(Tag::EndOfFile));
+
+		parseDone();
+	}
+
 }
