@@ -130,6 +130,13 @@ namespace Miyuki::AST {
 
     const char* MSG_ERROR_TYPE = "<error-type>";
 
+	void addIdentifierCheckingExistance(IdentifierPtr ID, TokenPtr errTok) {
+		if (!getCurrentScope()->getIndentifierFromThisScope(ID->name))
+			addIdentifier(ID);
+		else
+			reportError("redifinition of `{0}'"_format(ID->name), errTok);
+	}
+
     /// Type Related Function
     // Generate type information including storage class, specifiers and qualifiers and its return type
     PackedTypeInformationPtr getMemberTypeFromSpecifierAndQualifierList(SpecifierAndQualifierListPtr L) {
@@ -594,9 +601,20 @@ namespace Miyuki::AST {
     }
 
     void ParameterTypeList::generateTypeList(vector<TypePtr>& list) {
+		// Reset function parameter list
+		if (getGlobalScope().isInFunctionDefPrototypePart)
+			getGlobalScope().functionParameters.clear();
+
         for (const ParameterDecleartionPtr& PD : *paramList) {
             PackedTypeInformationPtr typeInfo = PD->getTypeInfo();
-            /// TODO: add function parameter here to ID list?
+
+            /// add function parameter here to ID list
+			if (PD->decr && getGlobalScope().isInFunctionDefPrototypePart) {
+				string PName = PD->decr->getName();
+				assert(typeInfo && typeInfo->type && "no type specified");
+				// Add to ID list
+				getGlobalScope().functionParameters[PName] = typeInfo->type;
+			}
             list.push_back(typeInfo->type);
         }
     }
@@ -723,7 +741,7 @@ namespace Miyuki::AST {
         IntegerLiteralType intval = expr->getCalculatedToken()->toInt();
         string name = static_pointer_cast<WordToken>(enumConstant)->name;
         IdentifierPtr ID = make_shared<Identifier>(name, ty, true);
-        addIdentifier(ID);
+		addIdentifierCheckingExistance(ID, tok);
 		// Enumeration is a constant!  ADD TO A CONSTANT LIST AT RUN-TIME
 		LogAST("Enumerator::gen()", "TODO");
         //cout << "[Add Enumerator] " << name << ": " << intval;
@@ -767,7 +785,7 @@ namespace Miyuki::AST {
 			baseTypeDetail->typeQual,
 			allocaAddr
 			);
-		addIdentifier(ID);
+		addIdentifierCheckingExistance(ID, getErrorToken());
 
 		if (init) {
 			init->baseTypeDetail = baseTypeDetail;

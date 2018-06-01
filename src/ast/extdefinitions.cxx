@@ -33,18 +33,12 @@ namespace Miyuki::AST {
 			reportError("K&R C-style function definition is not supported", getErrorToken());
 			return;
 		}
-		
-		// Defaine basic blocks
-		DefineBasicBlock(varinit);
-		DefineBasicBlock(Entry);
-
-		// Initial Basic Block
-		getGlobalScope().functionInitBasicBlock = BB_varinit;
 
 		getGlobalScope().isInFunctionDefPrototypePart = true;
 		getCurrentScope()->enterScope();
 
-		Type* T = decr->getType(spec->getType());
+		Type* T = spec->getType();
+		T = decr->getType(T);
 		FunctionType* FT = dyn_cast<FunctionType>(T);
 		string FName = decr->getName();
 		//cout << "Type Name: ";   T->dump();
@@ -94,10 +88,37 @@ namespace Miyuki::AST {
 			}
 		}
 
+		// set current function
 		GlobalScope::getInstance().currentFunction = F;
+
+		// Defaine basic blocks
+		DefineBasicBlock(varinit);
+		DefineBasicBlock(Entry);
+
+		// Initial Basic Block
+		getGlobalScope().functionInitBasicBlock = BB_varinit;
 
 		// Insert this block before Entry
 		BB_varinit->insertInto(F);
+		
+		// Allocate function paramters
+		for (const std::pair<string, Type*>& e : getGlobalScope().functionParameters) {
+			IdentifierPtr ID = make_shared<Identifier>(e.first, e.second, false,
+				allocateIdentifier(e.first, e.second));
+			if (!getCurrentScope()->getIndentifierFromThisScope(e.first))
+				addIdentifier(ID);
+			else
+				// TODO:  set error token???
+				reportError("redifinition of `{0}'"_format(e.first), nullptr);
+		}
+
+		// Save return type
+		Type* retTy = F->getReturnType();
+		getGlobalScope().functionReturnTy = retTy;
+		if (!retTy->isVoidTy()) {
+			// Allocate return value
+			allocateIdentifier("retval", retTy);
+		}
 
 		setAsCurrentBasicBlock(BB_Entry);
 

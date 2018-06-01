@@ -475,7 +475,9 @@ this_is_a_primary_expression:
                 break;
         }
         while (FIRST_DECLARATION_SPECIFIERS());
-        __sDeclSpec = declSpec;
+		// only accept first declaration-specifier
+		if (!__sDeclSpec)
+			__sDeclSpec = declSpec;
         return declSpec;
     }
 
@@ -1544,6 +1546,8 @@ this_is_a_declaration:
         DeclaratorPtr decr = __sDeclaeator;
         DeclarationListPtr declLst = nullptr;
         CompoundStatementPtr compStmt = nullptr;
+
+		__sDeclSpec = nullptr;
 
         // continue parsing at declaration-list(opt) compound-statement
         if (FIRST_DECLARATION_LIST()) {

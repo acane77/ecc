@@ -2,6 +2,7 @@
 #define _MIYUKI_ENV_H
 
 #include <map>
+#include <unordered_map>
 #include <vector>
 #include "ast/declaration.h"
 #include "ast/type.h"
@@ -80,11 +81,15 @@ namespace Miyuki::AST {
         // type list of all types
         TypeMapPtr    types;
          
-        // LLVM Gode Generation Related
+        // ** LLVM Gode Generation Related
         LLVMContext   context;
         BasicBlock*   currentBasicBlock;
         Function*     currentFunction;
 		BasicBlock*   functionInitBasicBlock;
+		// Parameters of current function
+		std::unordered_map<string, Type*> functionParameters;
+		Type*         functionReturnTy;
+
         Function*     globalInitFunction;
         IRBuilder<>   Builder;
 
