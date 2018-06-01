@@ -1066,10 +1066,14 @@ new_style_paramster_list:
         IDirectDeclaratorPtr dd = iDirectDeclarator();
         if (!dd) return nullptr;
         if (dd->getKind() == Symbol::directDeclarator) {
-            return make_shared<Declarator>(static_pointer_cast<DirectDeclarator>(dd));
+			DeclaratorPtr DP = make_shared<Declarator>(static_pointer_cast<DirectDeclarator>(dd));
+			DP->pointer = ptrDecl;
+			return DP;
         }
         else {
-            return make_shared<AbstractDeclarator>(ptrDecl, static_pointer_cast<DirectAbstractDeclarator>(dd));
+			AbstractDeclaratorPtr ADP = make_shared<AbstractDeclarator>(ptrDecl, static_pointer_cast<DirectAbstractDeclarator>(dd));
+			ADP->pointerDecl = ptrDecl;
+			return ADP;
         }
     }
 

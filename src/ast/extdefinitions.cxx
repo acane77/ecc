@@ -33,6 +33,13 @@ namespace Miyuki::AST {
 			reportError("K&R C-style function definition is not supported", getErrorToken());
 			return;
 		}
+		
+		// Defaine basic blocks
+		DefineBasicBlock(varinit);
+		DefineBasicBlock(Entry);
+
+		// Initial Basic Block
+		getGlobalScope().functionInitBasicBlock = BB_varinit;
 
 		getGlobalScope().isInFunctionDefPrototypePart = true;
 		getCurrentScope()->enterScope();
@@ -89,10 +96,6 @@ namespace Miyuki::AST {
 
 		GlobalScope::getInstance().currentFunction = F;
 
-		DefineBasicBlock(varinit);
-		DefineBasicBlock(Entry);
-
-		getGlobalScope().functionInitBasicBlock = BB_varinit;
 		// Insert this block before Entry
 		BB_varinit->insertInto(F);
 

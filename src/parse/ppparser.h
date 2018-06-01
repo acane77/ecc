@@ -242,8 +242,6 @@ namespace Miyuki::Parse {
         // get preprocessor lexer
         LexerPtr getPreprocessorLexer() { return M_lex; }
 
-		void printPreprocessedSource(std::ostream& output_os = std::cout);
-
     };
 
 	DEFINE_SHARED_PTR(PreprocessorParser);

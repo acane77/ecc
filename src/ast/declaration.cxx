@@ -608,10 +608,10 @@ namespace Miyuki::AST {
         if (decr) {
             typeInfo->type = decr->getType(typeInfo->type);
         }
-        else if (abstructDecr) {
+		// NOTE: abstract-declarator is optional
+        else if (abstructDecr) { 
             typeInfo->type = abstructDecr->getType(typeInfo->type);
         }
-        else assert(false && "decr == nullptr && abstructDecr == nullptr");
         return typeInfo;
     }
 
