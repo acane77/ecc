@@ -633,9 +633,14 @@ namespace Miyuki::AST {
         TypePtr type;
         if (pointerDecl) {
             type = pointerDecl->getType(baseType);
+			if (directAbstractDecr)
+				return directAbstractDecr->getType(type);
+			return type;
         }
-        assert(directAbstractDecr && "directDecl == nullptr");
-        return directAbstractDecr->getType(baseType);
+		else {
+			assert(directAbstractDecr && "directDecl == nullptr");
+			return directAbstractDecr->getType(baseType);
+		}
     }
 
     // DirectAbstractDeclarator
