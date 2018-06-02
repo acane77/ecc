@@ -1165,16 +1165,47 @@ namespace Miyuki::AST {
 				return -2;
 			// check every params
 			for (int i = 0; i < N; i++) {
-				if (!TypeUtil::raiseType(F->getType()->getPointerElementType()->getFunctionParamType(i), (*Args)[i]->getType()))
-					return i;
-
-				//try convert
 				Type* DstTy = F->getType()->getPointerElementType()->getFunctionParamType(i),
 					*SrcTy = (*Args)[i]->getType();
 
 				if (DstTy == SrcTy)
 					continue;
 
+				if (DstTy->isPointerTy() && SrcTy->isPointerTy()) {
+					// if any of them is array ty
+					auto getElemTy = [&](Type* T, Type* U)->Type* {
+						Type* A = (T->getPointerElementType()), *B = U->getPointerElementType();
+						if (A->isArrayTy()) {
+							A = A->getArrayElementType();
+						}
+						else if (B->isArrayTy()) {
+							B = B->getArrayElementType();
+						}
+						if (A == B) return A;
+						return nullptr;
+					};
+
+					if (Type* Dst=getElemTy(DstTy, SrcTy)) {
+						Type* A = (SrcTy->getPointerElementType()), *B = DstTy->getPointerElementType();
+						Dst = Dst->getPointerTo();
+						if (A != Dst) {
+							vector<Value*>* Idx = new vector<Value*>;
+							Idx->push_back(ConstantInt::get(GetIntNType(32), APInt(32, 0)));
+							Idx->push_back(ConstantInt::get(GetIntNType(32), APInt(32, 0)));
+							GetElementPtrInst * Inst = GetElementPtrInst::CreateInBounds((*Args)[i], *Idx, "cast.ptr.fc", getCurrentBasicBlock());
+							(*Args)[i] = Inst;
+						}
+						continue;
+					}
+					else {
+						return i;
+					}
+				}
+
+				if (!TypeUtil::raiseType(DstTy, SrcTy))
+					return i;
+
+				//try convert
 				Value* RHS = (*Args)[i];
 
 				if (PointerType* ty = dyn_cast<PointerType>(DstTy)) {
