@@ -1499,10 +1499,10 @@ this_is_a_declaration:
         /*translation-unit:
                 external-declaration
                 translation-unit external-declaration*/
-        TranslationUnitPtr unit = nullptr;
+        TranslationUnitPtr unit = make_shared<TranslationUnit>();
         while (true) {
             if (FIRST_EXTERNAL_DECLARATION()) {
-                unit = make_shared<TranslationUnit>(externalDeclaration(), unit);
+                unit->extDecls.push_back(externalDeclaration());
                 continue;
             }
             if (look->is(Tag::EndOfFile)) {
@@ -1547,6 +1547,7 @@ this_is_a_declaration:
         DeclarationListPtr declLst = nullptr;
         CompoundStatementPtr compStmt = nullptr;
 
+		// reset global values
 		__sDeclSpec = nullptr;
 
         // continue parsing at declaration-list(opt) compound-statement

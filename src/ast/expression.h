@@ -244,7 +244,7 @@ namespace Miyuki::AST {
         FunctionCall(const TokenPtr &op, const ExpressionPtr &expr,
                      const PostfixExpressionPtr &postfixExp, const ArgumentExpressionListPtr &argExprLst);
 
-        void gen() { assert( false && "unimplemented" ); }
+		void gen();
         int getKind() { return Kind::FunctionCall; }
     };
 
@@ -255,7 +255,8 @@ namespace Miyuki::AST {
 
         ArgumentExpressionList(const ArgumentExpressionListPtr &argExprLst, const AssignmentExpressionPtr &assignExpr);
 
-        void gen() { assert( false && "unimplemented" ); }
+		void gen(vector<Value*>* Args);
+		void gen() { assert(!"call gen(vector<Value*>*) instead"); }
         int getKind() { return Kind::ArgumentExpressionList; }
         virtual void eval() override { /* not evaluatable*/ }
     };

@@ -16,10 +16,9 @@ namespace Miyuki::AST {
 
     class TranslationUnit : public Symbol {
     public:
-        ExternalDeclarationPtr extDecl;
-        TranslationUnitPtr     unit;
+        deque<ExternalDeclarationPtr> extDecls;
 
-        TranslationUnit(const ExternalDeclarationPtr &extDecl, const TranslationUnitPtr &unit);
+        TranslationUnit();
 
 		virtual void gen();
         virtual int getKind() override { return Kind::translationUnit; }

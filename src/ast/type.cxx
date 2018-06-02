@@ -152,7 +152,8 @@ namespace Miyuki::AST {
 				ty = Type::getFP128Ty(getGlobalContext());
 			else
 				assert(!"invalid FP size in bit");
-			return ConstantFP::get(ty, F->value);
+			Value* V = ConstantFP::get(ty, (double)F->value);
+			return V;
 		}
 		else if (CharTokenPtr C = dynamic_pointer_cast<CharToken>(constTok)) {
 			return ConstantInt::get(GetIntNType(8), APInt(8, I->value));

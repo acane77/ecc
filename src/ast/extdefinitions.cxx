@@ -4,8 +4,7 @@
 
 namespace Miyuki::AST {
 
-    TranslationUnit::TranslationUnit(const ExternalDeclarationPtr &extDecl, const TranslationUnitPtr &unit) :
-            extDecl(extDecl), unit(unit) {}
+    TranslationUnit::TranslationUnit() {}
 
     ExternalDeclaration::ExternalDeclaration(const FunctionDefinitionPtr &funcDef) : funcDef(funcDef) {}
 
@@ -16,9 +15,8 @@ namespace Miyuki::AST {
             spec(spec), decr(decr), lst(lst), stmt(stmt) {}
 	
 	void TranslationUnit::gen() {
-		extDecl->gen();
-		if (unit)
-			unit->gen();
+		for (ExternalDeclarationPtr extDecl: extDecls)
+			extDecl->gen();
 	}
 
 	void ExternalDeclaration::gen() {
@@ -49,6 +47,9 @@ namespace Miyuki::AST {
 
 		// Insert a function
 		F = Function::Create(FT, GlobalValue::LinkageTypes::ExternalLinkage, FName, TheModule);
+
+		F = dyn_cast<Function>(TheModule->getOrInsertFunction(FName, FT));
+		assert(F && "F == nullptr");
 		
 		// If F conflicted, there was already something named 'Name'.  If it has a
 		// body, don't allow redefinition or reextern.

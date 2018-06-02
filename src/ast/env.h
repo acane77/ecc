@@ -83,14 +83,14 @@ namespace Miyuki::AST {
          
         // ** LLVM Gode Generation Related
         LLVMContext   context;
-        BasicBlock*   currentBasicBlock;
-        Function*     currentFunction;
-		BasicBlock*   functionInitBasicBlock;
+        BasicBlock*   currentBasicBlock = nullptr;
+        Function*     currentFunction = nullptr;
+		BasicBlock*   functionInitBasicBlock = nullptr;
 		// Parameters of current function
 		std::unordered_map<string, Type*> functionParameters;
-		Type*         functionReturnTy;
+		Type*         functionReturnTy = nullptr;
 
-        Function*     globalInitFunction;
+        Function*     globalInitFunction = nullptr;
         IRBuilder<>   Builder;
 
 		// SPECIFIY if currently is in prototype part of

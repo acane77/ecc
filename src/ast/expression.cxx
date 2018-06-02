@@ -1079,7 +1079,16 @@ namespace Miyuki::AST {
 		if (factor) {
 			// identifier
 			if (WordTokenPtr id = dynamic_pointer_cast<WordToken>(factor)) {
-				if (IdentifierPtr ID = getIdentifier(id->name)) {
+				// Get function from function list
+				if (Function* F = TheModule->getFunction(id->name)) {
+					if (askForLValue) {
+						REPORT_ERROR_V("`{0}' is a function name, which cannot be an lvalue"_format(id->name), factor)
+					}
+					rvalue(F);
+					return;
+				}
+				// Get from identifier list
+				else if (IdentifierPtr ID = getIdentifier(id->name)) {
 					// if ask for lvalue, return address
 					if (askForLValue) {
 						lvalue(ID->getAddr());
@@ -1129,6 +1138,67 @@ namespace Miyuki::AST {
 
 		assert(!"Not implemented yet");
 
+	}
+
+	void FunctionCall::gen() {
+		postfixExp->gen();
+		vector<Value*>* Args = new vector<Value*>();
+		if (argExprLst)
+			argExprLst->gen(Args);
+
+		Value* FAddr = postfixExp->getAddr();
+		Function * F = nullptr;
+
+		auto VerifyFunctionArgs = [&](Function* F)->int {
+			unsigned N = F->getType()->getPointerElementType()->getFunctionNumParams();
+			
+			// if num of para not the same as num of args
+			if (N > Args->size() || (N < Args->size() && !F->getType()->getPointerElementType()->isFunctionVarArg()))
+				return -2;
+			// check every params
+			for (int i = 0; i < N; i++) {
+				if (!TypeUtil::raiseType(F->getType()->getPointerElementType()->getFunctionParamType(i), (*Args)[i]->getType()))
+					return i;
+			}
+			return -1;
+		};
+		
+		/// Find function
+		F = dyn_cast<Function>(FAddr);
+		if (F = dyn_cast<Function>(FAddr)) {
+function:
+			int verify = VerifyFunctionArgs(F);
+			if (verify == -2) {
+				REPORT_ERROR_V("function parameter number does not match", postfixExp->getErrorToken());
+			}
+			else if (verify != -1) {
+				REPORT_ERROR_V("function parameter #{0} does not match"_format(verify), postfixExp->getErrorToken());
+			}
+			Value* V = Builder.CreateCall(FAddr, *Args, "call");
+			rvalue(V);
+			return;
+		}
+
+		/// else is function address
+		else if (FAddr->getType()->isPointerTy()) {
+			FunctionType* FT = dyn_cast<FunctionType>(FAddr->getType()->getPointerElementType());
+			if (!FT) {
+				REPORT_ERROR_V("postfix-expression is not function type", postfixExp->getErrorToken());
+			}
+			F = dyn_cast<Function>(Builder.CreateBitCast(FAddr, FT, "ptr.knr.cast"));
+			assert(F && "not a function type");
+			goto function;
+			return;
+		}
+
+		REPORT_ERROR_V("postfix-expression is not function type", postfixExp->getErrorToken());
+	}
+
+	void ArgumentExpressionList::gen(vector<Value*>* Args) {
+		assignExpr->gen();
+		Args->push_back(assignExpr->getAddr());
+		if (argExprLst)
+			argExprLst->gen(Args);
 	}
 
 }
