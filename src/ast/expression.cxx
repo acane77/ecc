@@ -651,6 +651,14 @@ namespace Miyuki::AST {
             //    LHS = Builder.CreateFPCast(LHS, ty, "expr_fconv");
             //if (RHS->getType() != ty)
             //   RHS = Builder.CreateFPCast(RHS, ty, "expr_fconv");
+			if (LHS->getType() != RHS->getType()) {
+				if (RHS->getType()->isFloatTy()) {
+					RHS = Builder.CreateFPExt(RHS, LHS->getType(), "fp.ext");
+				}
+				else if (LHS->getType()->isFloatTy()) {
+					LHS = Builder.CreateFPExt(LHS, RHS->getType(), "fp.ext");
+				}
+			}
 				
             // Calculate float value
             assert(LHS->getType() == RHS->getType() && "LHS and RHS is not with same type");
@@ -1159,6 +1167,86 @@ namespace Miyuki::AST {
 			for (int i = 0; i < N; i++) {
 				if (!TypeUtil::raiseType(F->getType()->getPointerElementType()->getFunctionParamType(i), (*Args)[i]->getType()))
 					return i;
+
+				//try convert
+				Type* DstTy = F->getType()->getPointerElementType()->getFunctionParamType(i),
+					*SrcTy = (*Args)[i]->getType();
+
+				if (DstTy == SrcTy)
+					continue;
+
+				Value* RHS = (*Args)[i];
+
+				if (PointerType* ty = dyn_cast<PointerType>(DstTy)) {
+					// try convert type of rvalue
+					Type * rt = SrcTy;
+
+					// convert type
+					if (ty == rt); //pass, no conversion required
+					else if (rt->isIntegerTy()) {
+						RHS = Builder.CreateIntCast(RHS, GetIntNType(32), true, "rhs.castToInt");
+					}
+					else if (rt->isFloatingPointTy()) {
+						errorvalue("pointer cannot assign floating-point", getErrorToken());
+						return i;
+					}
+					else if (rt->isPointerTy()) {
+						// only allowed for minus
+						RHS = Builder.CreateIntCast(RHS, GetIntNType(32), true, "sub.ptr.rhs.castToInt");
+					}
+					else {
+						errorvalue("pointer cannot assign object type", getErrorToken());
+						return i;
+					}
+				}
+				else if (IntegerType* ty = dyn_cast<IntegerType>(DstTy)) {
+					// try convert type of rvalue
+					Type * rt = SrcTy;
+
+					// convert type
+					if (ty == rt); //pass, no conversion required
+					else if (rt->isIntegerTy()) {
+						RHS = Builder.CreateIntCast(RHS, ty, !ty->getSignBit(), "castToInt");
+					}
+					else if (rt->isFloatingPointTy()) {
+						RHS = Builder.CreateIntCast(RHS, ty, !ty->getSignBit(), "castToInt");
+					}
+					else if (rt->isPointerTy()) {
+						errorvalue("pointer cannot assign to integer type", getErrorToken());
+						return i;
+					}
+					else {
+						errorvalue("integer cannot assign object type", getErrorToken());
+						return i;
+					}
+				}
+				else if (Type * ty = DstTy; ty->isFloatingPointTy()) {
+					// try convert type of rvalue
+					Type * rt = SrcTy;
+
+					// convert type
+					if (ty == rt); //pass, no conversion required
+					if (rt->isPointerTy()) {
+						errorvalue("cannot assign a pointer to float", getErrorToken());
+						return i;
+					}
+					else if (rt->isIntegerTy()) {
+						RHS = static_cast<IntegerType*>(rt)->getSignBit() ? Builder.CreateUIToFP(RHS, ty, "fp.cast") : Builder.CreateUIToFP(RHS, ty, "fp.cast");
+					}
+					else if (rt->isFloatingPointTy()) {
+						RHS = Builder.CreateFPTrunc(RHS, ty, "fp.cast");
+					}
+					else {
+						errorvalue("float cannot assign object type", getErrorToken());
+						return i;
+					}
+				}
+				else {
+					errorvalue("cannot convert such type", getErrorToken());
+					return i;
+				}
+
+				(*Args)[i] = RHS;
 			}
 			return -1;
 		};
@@ -1172,7 +1260,7 @@ function:
 				REPORT_ERROR_V("function parameter number does not match", postfixExp->getErrorToken());
 			}
 			else if (verify != -1) {
-				REPORT_ERROR_V("function parameter #{0} does not match"_format(verify), postfixExp->getErrorToken());
+				REPORT_ERROR_V("function parameter #{0} does not match and not castable"_format(verify), postfixExp->getErrorToken());
 			}
 			Value* V = Builder.CreateCall(FAddr, *Args, "call");
 			rvalue(V);
