@@ -596,6 +596,11 @@ namespace Miyuki::AST {
         // is-array
         else if (isArrayDeclarator) {
             /// NOTE: ignore static and type-qualifier
+			// Type[] => Type*
+			if (!assignExpr) {
+				Type* Ty = baseType->getPointerTo();
+				return Ty;
+			}
             /// in order to simplify varible-length array is not allowed
 			//setTypeName(getPointerTypeName());
 			assignExpr->eval();
@@ -695,6 +700,11 @@ namespace Miyuki::AST {
         }
         // is-array
         else if (isArrayDeclarator) {
+			// if there's no expression, means type[] => type*
+			if (!assignExpr) {
+				Type* Ty = baseType->getPointerTo();
+				return Ty;
+			}
 			/// NOTE: ignore static and type-qualifier
 			/// in order to simplify varible-length array is not allowed
 			//setTypeName(getPointerTypeName());
