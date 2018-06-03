@@ -1,6 +1,7 @@
 #include "ast/extdefinitions.h"
 #include "ast/env.h"
 #include "ast/irutils.h"
+#include "llvm/IR/Verifier.h"
 
 namespace Miyuki::AST {
 
@@ -135,6 +136,8 @@ namespace Miyuki::AST {
 		Builder.CreateBr(BB_Entry);
 
 		// TODO:  leave function and return to global init function
+
+		verifyFunction(*F);
 	}
 
 }

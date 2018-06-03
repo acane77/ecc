@@ -1,5 +1,5 @@
 build
-build-*
+build*
 SDT.txt
 CMakeLists.txt.user
 *.autosave
