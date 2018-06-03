@@ -127,6 +127,13 @@ namespace Miyuki::AST {
         return nullptr;
     }
 
+	TypedefMap::value_type::second_type Miyuki::AST::Scope::_getTypedef(string name) {
+		auto it = typedefs.find(name);
+		if (it != typedefs.end())
+			return it->second;
+		return nullptr;
+	}
+
     TypeMap::value_type::second_type Miyuki::AST::Scope::getType(string name) {
         ScopePtr theScope = shared_from_this();
         TypeMap::value_type::second_type theType = nullptr;
@@ -172,12 +179,16 @@ namespace Miyuki::AST {
         ScopePtr theScope = shared_from_this();
         TypedefMap::value_type::second_type theType = nullptr;
         while (theScope != nullptr && theType == nullptr) {
-            auto _t = theScope->_getType(name);
-            theType = _t ? _t->type : nullptr;
+            auto _t = theScope->_getTypedef(name);
+            theType = _t;
             theScope = theScope->parent;
         }
         return theType;
     }
+
+	TypedefMap::value_type::second_type Miyuki::AST::Scope::getTypedefTyFromThisScope(string name) {
+		return _getTypedef(name);
+	}
 
     DetailedTypeInfo::value_type::second_type getDetailedTypeInfo(DetailedTypeInfo::key_type ty) {
         return getCurrentScope()->getDetail(ty);

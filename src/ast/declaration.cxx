@@ -199,7 +199,10 @@ namespace Miyuki::AST {
             // else is type specifier
             else {
                 if (_ret) {
-                    reportError("duplicate tye qualifier here", static_pointer_cast<TypeSpecifier>(SQ)->tok);
+					if (static_pointer_cast<TypeSpecifier>(SQ)->tok->is(Tag::Identifier)) {
+						continue;
+					}
+					reportError("duplicate tye qualifier here", static_pointer_cast<TypeSpecifier>(SQ)->tok);
                     continue;
                 }
                 _ret = SQ->getType();
@@ -223,8 +226,14 @@ namespace Miyuki::AST {
         TypePtr ty = nullptr;
         if (tok->is(Tag::Identifier)) {
             // if token is identifier, then it is a  typedef name
-            ty = getTypedefType(static_pointer_cast<WordToken>(tok)->name);
-            if (!ty) reportError("'{0}' does not name a type."_format(static_pointer_cast<WordToken>(tok)->name), tok);
+			// is typedef name
+			WordTokenPtr W = dynamic_pointer_cast<WordToken>(tok);
+			ty = getTypedefType(W->name);
+			if (!ty) {
+				reportError("`{0}' does not name a type"_format(W->name), tok);
+				return GetIntNType(32);
+			}
+			setTypeName(W->name);
         }
         else if (tok->is(Tag::Void)) {
             ty = Type::getVoidTy(getGlobalContext());
@@ -776,8 +785,18 @@ namespace Miyuki::AST {
 			// Refact:  This work is do for what?
 			Ty = decSpec->getType();
 		}
-		
+
 		if (initDeclList) {
+			// if is typedef
+			if (TI->storageClass.hasTypedef) {
+				for (InitDeclaratorPtr& ID : *initDeclList) {
+					ID->setBaseType(Ty);
+					ID->baseTypeDetail = TI;
+					ID->genTypedef();
+				}
+				return;
+			}
+			// else is id init
 			for (InitDeclaratorPtr& ID : *initDeclList) {
 				ID->setBaseType(Ty);
 				ID->baseTypeDetail = TI;
@@ -815,6 +834,29 @@ namespace Miyuki::AST {
 			init->baseTypeDetail = baseTypeDetail;
 			init->gen(Ty, allocaAddr);
 		}
+	}
+
+	void InitDeclarator::genTypedef() {
+		LogAST("[Declaration]", "entering InitDeclarator [typedef]");
+		assert(getBaseType() && "base type not set");
+		desOr->setBaseType(getBaseType());
+		Type* Ty = desOr->getType(getBaseType());
+		string IdName = desOr->getName();
+
+		Type* ty = getCurrentScope()->getTypedefTyFromThisScope(IdName);
+		
+		if (ty && Ty != ty) {
+			reportError("conflict typedef, previously defined.", getErrorToken());
+			return;
+		}
+
+		if (init) {
+			reportError("invalid initializer", getErrorToken());
+			return;
+		}
+
+		LogAST("[Declaration]", "identifier add to typedef list: {0}"_format(IdName));
+		setTypedefTy(IdName, Ty);
 	}
 
 	void Initializer::gen(Type * ty, Value* allocAddr) {

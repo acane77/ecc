@@ -60,7 +60,7 @@ namespace Miyuki::AST {
 	private:
 		Type * __baseTy = nullptr;
 	public:
-		TypeDetailPtr baseTypeDetail;
+		TypeDetailPtr baseTypeDetail = nullptr;
 
 		Type * getBaseType();
 		void setBaseType(Type* baseType);
@@ -449,6 +449,7 @@ namespace Miyuki::AST {
 
         virtual int getKind() { return Kind::initDeclr; }
 		virtual void gen();
+		virtual void genTypedef();
     };
 
 }

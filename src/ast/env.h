@@ -60,6 +60,7 @@ namespace Miyuki::AST {
         bool addType(string name, TypeMap::value_type::second_type ty);
         TypeMap::value_type::second_type getTypeFromThisScope(string name);
         TypedefMap::value_type::second_type getTypedefTy(string name);
+		TypedefMap::value_type::second_type getTypedefTyFromThisScope(string name);
         void setTypedefTy(string name, TypedefMap::value_type::second_type ty);
         static DetailedTypeInfo::value_type::second_type getDetail(DetailedTypeInfo::key_type ty);
         static ScopePtr getCurrentScope();
@@ -68,6 +69,7 @@ namespace Miyuki::AST {
         //TVal _getElementByName(TKey key);
         IdentifierPtr _getIdentifier(string id);
         TypeMap::value_type::second_type _getType(string name);
+		TypedefMap::value_type::second_type _getTypedef(string name);
         
         static uint32_t __scopeID;
         static ScopePtr __currentScope;

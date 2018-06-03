@@ -462,6 +462,8 @@ this_is_a_primary_expression:
                 spec = make_shared<TypeQualifier>(look); next();
             }
             else if (FIRST_TYPE_SPECIFIER()) {
+				if (look->is(Tag::Identifier) && !isTypedefName(look))
+					break;
                 spec = typeSpecifier();
             }
             else if (FIRST_FUNCTION_SPECIFIER()) {
