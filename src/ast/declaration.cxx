@@ -199,11 +199,13 @@ namespace Miyuki::AST {
             // else is type specifier
             else {
                 if (_ret) {
-					if (static_pointer_cast<TypeSpecifier>(SQ)->tok->is(Tag::Identifier)) {
+					continue;
+					// Skip type info
+					/*if (static_pointer_cast<TypeSpecifier>(SQ)->tok->is(Tag::Identifier)) {
 						continue;
 					}
 					reportError("duplicate tye qualifier here", static_pointer_cast<TypeSpecifier>(SQ)->tok);
-                    continue;
+                    continue;*/
                 }
                 _ret = SQ->getType();
             }
@@ -346,13 +348,14 @@ namespace Miyuki::AST {
                 // signed char, unsigned char
                 // signed short, or signed (short int)
                 // signed
+				bool oldSignMark = tsp->hasSignMark;
                 tsp->hasSignMark = true;
-                if (ty->isIntegerTy(8) && ty->isIntegerTy(16) && ty->isIntegerTy(32) && !tsp->hasSignMark) {
+                if ((ty->isIntegerTy(8) || ty->isIntegerTy(16) || ty->isIntegerTy(32)) && !oldSignMark) {
                     /// TODO: differentiabte between u/s
                     spec->setTypeName(tsp->getTypeName());
                     return ty;
                 }
-                else if (tsp->hasSignMark)
+                else if (oldSignMark)
                     reportError("multiply signed/unsigned specified.", tok);
                 else 
                     reportError("signed/unsigned can only designate integer types", tok);
