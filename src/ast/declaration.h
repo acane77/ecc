@@ -58,7 +58,7 @@ namespace Miyuki::AST {
 
 	class IBaseTy {
 	private:
-		Type * __baseTy;
+		Type * __baseTy = nullptr;
 	public:
 		TypeDetailPtr baseTypeDetail;
 

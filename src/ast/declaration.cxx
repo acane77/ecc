@@ -183,7 +183,7 @@ namespace Miyuki::AST {
                     /// DO NOTHING due to unsupport of atomic 
                 }
 
-                // only const type qualifier stores TypeQualifier object
+                // only const ty	pe qualifier stores TypeQualifier object
                 typeQualifier = nullptr;
                 continue;
             }
@@ -455,7 +455,22 @@ namespace Miyuki::AST {
             static_pointer_cast<WordToken>(id)->name :
             "unnamed.struct";
         StructTyPtr TY = nullptr;
-        if (PackedTypeInformationPtr PT = getCurrentScope()->getTypeFromThisScope(structName); PT) {
+
+		// if nodeclaration-list, means get struct
+		if (!declList) {
+			if (!id) {
+				reportError("must specify struct name", structOrUnion);
+				return GetIntNType(32);
+			}
+			TypeMap::value_type::second_type Ty = getTypeFromScope(structName);
+			if (!Ty) {
+				reportError("`struct {0}' is not defined"_format(structName), id);
+				return GetIntNType(32);
+			}
+			return Ty->type;
+		}
+		// otherwise if struct declaration list exist, stands for struct def.
+        if (PackedTypeInformationPtr PT = getCurrentScope()->getTypeFromThisScope(structName)) {
             reportError("struct {0} redefined."_format(structName), id);
             return PT->type;
         }
@@ -496,12 +511,13 @@ namespace Miyuki::AST {
         PackedTypeInformationPtr typeInfo = getMemberTypeFromSpecifierAndQualifierList(specList);
         static uint32_t unamedMemberID = 1;
         // if has no member names
-        if (structDecrList) {
+        if (!structDecrList) {
             // add members with no name
             //StructDef::StructMemberPtr member = make_shared<StructDef::StructMember>("<unnamed_member_{0}>"_format(unamedMemberID), typeInfo);
             memList.push_back(typeInfo->type);
             IndexedTypeInformationPtr IT = make_shared<IndexedTypeInformation>(*typeInfo, index++);
             (*typeMap)[".unamed.{0}"_format(unamedMemberID)] = IT;
+			return;
         }
 
         /// reconize members
@@ -751,8 +767,16 @@ namespace Miyuki::AST {
 		LogAST("Declaration::gen()", "Generating Declaration");
 		// aka decSpec->gen();
 		PackedTypeInformationPtr TI = getMemberTypeFromSpecifierAndQualifierList(decSpec->generateSpecifierQualifierList());
-		Type* Ty = decSpec->getType();
+		Type* Ty = nullptr;
 
+		if (TI->type->isStructTy()) {
+			Ty = TI->type;
+		}
+		else {
+			// Refact:  This work is do for what?
+			Ty = decSpec->getType();
+		}
+		
 		if (initDeclList) {
 			for (InitDeclaratorPtr& ID : *initDeclList) {
 				ID->setBaseType(Ty);
@@ -816,5 +840,6 @@ namespace Miyuki::AST {
 
 	void IBaseTy::setBaseType(Type * baseType) {
 		__baseTy = baseType;
+		assert(__baseTy->getTypeID() || true);
 	}
 }

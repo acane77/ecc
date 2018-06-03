@@ -528,7 +528,8 @@ this_is_a_primary_expression:
         // already judegd
         DeclaratorPtr decr = declarator();
         InitializerPtr init = nullptr;
-        __sDeclaeator = decr;
+		if (!__sDeclaeator)
+			__sDeclaeator = decr;
         if (look->is('=')) {
             next();
             init = initializer();
@@ -1501,6 +1502,10 @@ this_is_a_declaration:
                 translation-unit external-declaration*/
         TranslationUnitPtr unit = make_shared<TranslationUnit>();
         while (true) {
+			// reset global values
+			__sDeclSpec = nullptr;
+			__sDeclaeator = nullptr;
+
             if (FIRST_EXTERNAL_DECLARATION()) {
                 unit->extDecls.push_back(externalDeclaration());
                 continue;
@@ -1549,6 +1554,7 @@ this_is_a_declaration:
 
 		// reset global values
 		__sDeclSpec = nullptr;
+		__sDeclaeator = nullptr;
 
         // continue parsing at declaration-list(opt) compound-statement
         if (FIRST_DECLARATION_LIST()) {

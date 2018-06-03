@@ -109,6 +109,7 @@ namespace Miyuki::AST {
         template <class... Args>
         StructTy(const IndexedTypeMapPtr& tm, string StructName, Args... paramPassToGet) {
             type = StructType::create(paramPassToGet...);
+			PackedTypeInformation::type = type;
             type->setName(StructName);
             setName(StructName);
             memberMap = tm;
