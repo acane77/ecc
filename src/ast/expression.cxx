@@ -1113,15 +1113,14 @@ namespace Miyuki::AST {
 				Value* V = TypeUtil::createConstant(factor);
 				rvalue(V); return;
 			}
-			// ( expression )
-			else if (exp) {
-				exp->gen();
-				setAddr(exp->getAddr(), exp->isLValue);
-				return;
-			}
-			assert(!"invalid primary");
 		}
-		assert(!"Not implemented yet");
+		// ( expression )
+		else if (exp) {
+			exp->gen();
+			setAddr(exp->getAddr(), exp->isLValue);
+			return;
+		}
+		assert(!"invalid primary");
 	}
 
 	void Miyuki::AST::CastExpression::gen() {

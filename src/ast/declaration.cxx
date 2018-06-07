@@ -2,6 +2,8 @@
 #include "ast/env.h"
 #include "ast/irutils.h"
 #include "common/debug.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/Mangler.h"
 
 namespace Miyuki::AST {
 
@@ -833,6 +835,24 @@ namespace Miyuki::AST {
 		// Insert to symbol table
 		Value* allocaAddr = allocateIdentifier(IdName, Ty);
 		assert(allocaAddr && "invalid address");
+
+		// if is function declaration
+		if (Ty->isFunctionTy()) {
+			Function* F = TheModule->getFunction(IdName);
+			if (F && F->getType() != Ty) {
+				reportError("confilct function type", getErrorToken());
+				return;
+			}
+			Value* V = TheModule->getOrInsertFunction(IdName, Ty);
+			LogAST("Add Function", "function name: {0}"_format(IdName));
+			Function* Func = dyn_cast<Function>(V);
+
+			std::string mangledName;
+			raw_string_ostream mangledNameStream(mangledName);
+			Mangler::getNameWithPrefix(mangledNameStream, IdName, TheModule->getDataLayout());
+			assert(TheModule->getFunction(mangledName) && "errror inserting function");
+			return;
+		}
 
 		IdentifierPtr ID = make_shared<Identifier>(
 			IdName, Ty,
